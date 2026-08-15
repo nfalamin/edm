@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+	<PackageReference Include="ModernWpf" Version="0.10.0" />
+	<PackageReference Include="FluentWPF" Version="0.9.3" />
+  </ItemGroup>
+</Project>

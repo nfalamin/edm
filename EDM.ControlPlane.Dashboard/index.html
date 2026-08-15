@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDM — Central Control Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="dark-theme">
+    <!-- AUTHENTICATION OVERLAY -->
+    <div id="login-modal" class="auth-overlay hidden">
+        <div class="auth-card">
+            <div class="brand-badge">EDM CONTROL PLANE</div>
+            <h2>Administrative Sign-In</h2>
+            <p class="auth-subtitle">Production-grade cryptographic authentication</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Admin Email / Username</label>
+                    <input type="text" id="login-username" required placeholder="admin@edm.com" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••••••" autocomplete="current-password">
+                </div>
+                <div id="login-error" class="error-msg hidden"></div>
+                <button type="submit" id="btn-login" class="btn-primary w-full">Sign In to Control Center</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTAINER -->
+    <div id="app-container" class="dashboard-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="app-logo">
+                    <span class="logo-icon">⚡</span>
+                    <div class="logo-text">
+                        <span class="logo-title">EDM</span>
+                        <span class="logo-sub">CONTROL PLANE</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="dashboard">
+                    <span class="nav-icon">📊</span> Dashboard
+                </button>
+                <button class="nav-item" data-view="users">
+                    <span class="nav-icon">👥</span> Users
+                </button>
+                <button class="nav-item" data-view="devices">
+                    <span class="nav-icon">💻</span> Devices
+                </button>
+                <button class="nav-item" data-view="sessions">
+                    <span class="nav-icon">🔑</span> Sessions
+                </button>
+                <button class="nav-item" data-view="telemetry">
+                    <span class="nav-icon">📡</span> Telemetry
+                </button>
+                <button class="nav-item" data-view="analytics">
+                    <span class="nav-icon">📈</span> Analytics
+                </button>
+                <button class="nav-item" data-view="releases">
+                    <span class="nav-icon">🚀</span> Releases
+                </button>
+                <button class="nav-item" data-view="security">
+                    <span class="nav-icon">🛡️</span> Security
+                </button>
+                <button class="nav-item" data-view="audit">
+                    <span class="nav-icon">📜</span> Audit Log
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <span class="nav-icon">⚙️</span> Settings
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-pill">
+                    <div class="admin-avatar" id="current-user-avatar">AD</div>
+                    <div class="admin-info">
+                        <span class="admin-name" id="current-user-name">Admin</span>
+                        <span class="admin-role" id="current-user-role">SUPER_ADMIN</span>
+                    </div>
+                </div>
+                <button id="btn-logout" class="btn-logout" title="Sign Out">🚪</button>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW CONTENT -->
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <header class="top-bar">
+                <div class="top-left">
+                    <h1 id="view-title">System Overview</h1>
+                    <span class="server-time" id="server-clock">UTC: --:--:--</span>
+                </div>
+                <div class="top-right">
+                    <span class="status-indicator live">● Real API Connected</span>
+                    <button id="btn-manual-refresh" class="btn-secondary btn-sm">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <!-- DYNAMIC VIEW PANELS -->
+            <div id="view-container" class="content-body">
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="view-dashboard" class="view-panel active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">TOTAL USERS</span>
+                            <span class="stat-value" id="card-total-users">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">ACTIVE SESSIONS</span>
+                            <span class="stat-value" id="card-active-sessions">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">REGISTERED DEVICES</span>
+                            <span class="stat-value" id="card-registered-devices">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">DOWNLOADS (TOTAL)</span>
+                            <span class="stat-value" id="card-total-downloads">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">DOWNLOADS (TODAY)</span>
+                            <span class="stat-value" id="card-today-downloads">--</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">LATEST RELEASE</span>
+                            <span class="stat-value" id="card-current-release">--</span>
+                        </div>
+                        <div class="stat-card alert">
+                            <span class="stat-label">SECURITY EVENTS</span>
+                            <span class="stat-value" id="card-security-events">--</span>
+                        </div>
+                        <div class="stat-card alert">
+                            <span class="stat-label">BANNED ACCOUNTS</span>
+                            <span class="stat-value" id="card-banned-accounts">--</span>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid mt-4">
+                        <div class="chart-box">
+                            <h3>Download Throughput & Events (7 Days)</h3>
+                            <canvas id="chart-downloads-overview"></canvas>
+                        </div>
+                        <div class="chart-box">
+                            <h3>Active Platform Distribution</h3>
+                            <canvas id="chart-platforms-overview"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. USERS VIEW -->
+                <section id="view-users" class="view-panel hidden">
+                    <div class="action-bar">
+                        <input type="text" id="users-search" class="input-search" placeholder="Search by username or email...">
+                        <div class="action-group">
+                            <button id="btn-refresh-users" class="btn-secondary">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Devices</th>
+                                    <th>Sessions</th>
+                                    <th>Registered</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr><td colspan="8" class="text-center">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 3. DEVICES VIEW -->
+                <section id="view-devices" class="view-panel hidden">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Installation ID</th>
+                                    <th>Platform</th>
+                                    <th>OS Version</th>
+                                    <th>App Version</th>
+                                    <th>Country</th>
+                                    <th>Sessions</th>
+                                    <th>Last Seen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="devices-table-body">
+                                <tr><td colspan="7" class="text-center">Loading devices...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. SESSIONS VIEW -->
+                <section id="view-sessions" class="view-panel hidden">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Installation ID</th>
+                                    <th>Coarse IP</th>
+                                    <th>User Agent</th>
+                                    <th>Status</th>
+                                    <th>Last Activity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessions-table-body">
+                                <tr><td colspan="7" class="text-center">Loading sessions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 5. TELEMETRY VIEW -->
+                <section id="view-telemetry" class="view-panel hidden">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp (UTC)</th>
+                                    <th>Event Name</th>
+                                    <th>Client Type</th>
+                                    <th>Installation ID</th>
+                                    <th>Payload</th>
+                                </tr>
+                            </thead>
+                            <tbody id="telemetry-table-body">
+                                <tr><td colspan="5" class="text-center">Loading telemetry...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 6. ANALYTICS VIEW -->
+                <section id="view-analytics" class="view-panel hidden">
+                    <div class="range-selector mb-3">
+                        <button class="btn-tab active" data-range="7d">7 Days</button>
+                        <button class="btn-tab" data-range="30d">30 Days</button>
+                        <button class="btn-tab" data-range="90d">90 Days</button>
+                        <button class="btn-tab" data-range="1y">1 Year</button>
+                    </div>
+                    <div class="charts-grid">
+                        <div class="chart-box">
+                            <h3>User Registrations Over Time</h3>
+                            <canvas id="chart-users-growth"></canvas>
+                        </div>
+                        <div class="chart-box">
+                            <h3>Client Version Distribution</h3>
+                            <canvas id="chart-versions-dist"></canvas>
+                        </div>
+                        <div class="chart-box col-span-2">
+                            <h3>24-Hour Hourly Activity Heatmap</h3>
+                            <canvas id="chart-hourly-activity"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. RELEASES VIEW -->
+                <section id="view-releases" class="view-panel hidden">
+                    <div class="action-bar">
+                        <h2>Release Management</h2>
+                        <button id="btn-create-release-modal" class="btn-primary">+ Create New Release</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Platform</th>
+                                    <th>Severity</th>
+                                    <th>Min Supported</th>
+                                    <th>Mandatory</th>
+                                    <th>Status</th>
+                                    <th>Published</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="releases-table-body">
+                                <tr><td colspan="8" class="text-center">Loading releases...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 8. SECURITY & BANS VIEW -->
+                <section id="view-security" class="view-panel hidden">
+                    <div class="action-bar">
+                        <h2>Security Administration & Bans</h2>
+                        <button id="btn-open-ban-modal" class="btn-danger">+ Ban Target</button>
+                    </div>
+                    <div class="charts-grid mb-4">
+                        <div class="chart-box">
+                            <h3>Security & Authentication Audit Breakdown</h3>
+                            <canvas id="chart-security-audit"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. AUDIT LOG VIEW -->
+                <section id="view-audit" class="view-panel hidden">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp (UTC)</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Target Entity</th>
+                                    <th>Target ID</th>
+                                    <th>Status</th>
+                                    <th>Coarse IP</th>
+                                    <th>Correlation ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-table-body">
+                                <tr><td colspan="8" class="text-center">Loading audit log...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 10. SETTINGS VIEW -->
+                <section id="view-settings" class="view-panel hidden">
+                    <div class="settings-card">
+                        <h3>Control Plane API Settings</h3>
+                        <p>Real-time configuration parameters loaded from server.</p>
+                        <div class="form-group mt-3">
+                            <label>API Host URL</label>
+                            <input type="text" id="setting-api-url" readonly value="">
+                        </div>
+                        <div class="form-group">
+                            <label>JWT Access Token Lifetime</label>
+                            <input type="text" readonly value="15 Minutes (HMAC-SHA256)">
+                        </div>
+                        <div class="form-group">
+                            <label>Password Hasher Algorithm</label>
+                            <input type="text" readonly value="Argon2id (m=64MB, t=3, p=4)">
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- USER DETAIL MODAL -->
+    <div id="user-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>User Details</h3>
+                <button class="modal-close" id="btn-close-user-modal">×</button>
+            </div>
+            <div class="modal-body" id="user-modal-body">
+                Loading...
+            </div>
+            <div class="modal-footer" id="user-modal-footer">
+                <!-- Dynamic Actions -->
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE RELEASE MODAL -->
+    <div id="create-release-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Release</h3>
+                <button class="modal-close" id="btn-close-release-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-create-release">
+                    <div class="form-group">
+                        <label>Platform</label>
+                        <select id="rel-platform">
+                            <option value="0">DesktopWindows</option>
+                            <option value="1">ChromeExtension</option>
+                            <option value="2">EdgeExtension</option>
+                            <option value="3">FirefoxExtension</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Version (e.g. 2.1.0)</label>
+                        <input type="text" id="rel-version" required placeholder="2.1.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Supported Version</label>
+                        <input type="text" id="rel-min-ver" value="1.0.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="rel-title" required placeholder="EDM 2.1.0 High Performance Update">
+                    </div>
+                    <div class="form-group">
+                        <label>Release Notes</label>
+                        <textarea id="rel-notes" rows="3" placeholder="Changelog..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Artifact Download URL</label>
+                        <input type="url" id="rel-art-url" required placeholder="https://releases.edm.com/desktop/EDM_Setup.exe">
+                    </div>
+                    <div class="form-group">
+                        <label>Artifact SHA-256 Checksum</label>
+                        <input type="text" id="rel-art-sha" required placeholder="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855">
+                    </div>
+                    <button type="submit" class="btn-primary w-full mt-3">Publish Release</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- BAN TARGET MODAL -->
+    <div id="ban-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ban Target</h3>
+                <button class="modal-close" id="btn-close-ban-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-ban-target">
+                    <div class="form-group">
+                        <label>Target Type</label>
+                        <select id="ban-type">
+                            <option value="0">UserId</option>
+                            <option value="1">InstallationId</option>
+                            <option value="2">IpRange</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Value (User GUID / Installation GUID / IP)</label>
+                        <input type="text" id="ban-value" required placeholder="Enter GUID or IP">
+                    </div>
+                    <div class="form-group">
+                        <label>Reason</label>
+                        <input type="text" id="ban-reason" required placeholder="Abuse / Violation">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (Days, empty for Permanent)</label>
+                        <input type="number" id="ban-days" placeholder="Permanent">
+                    </div>
+                    <button type="submit" class="btn-danger w-full mt-3">Confirm Ban</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

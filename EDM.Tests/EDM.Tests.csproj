@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+	<TargetFramework>net10.0-windows7.0</TargetFramework>
+	<UseWPF>true</UseWPF>
+	<IsPackable>false</IsPackable>
+	<Nullable>enable</Nullable>
+	<ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+	<!-- Standardized test framework: xUnit -->
+	<PackageReference Include="xunit" Version="2.9.3" />
+	<PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+	<!-- Mocking and assertions -->
+	<PackageReference Include="Moq" Version="4.20.72" />
+	<PackageReference Include="FluentAssertions" Version="6.12.1" />
+	<!-- Test SDK runner and coverage -->
+	<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+	<PackageReference Include="coverlet.collector" Version="6.0.4" />
+	<PackageReference Include="coverlet.msbuild" Version="6.0.4" />
+	<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\EDM\EDM.csproj" />
+	<ProjectReference Include="..\EDM.ControlPlane.Api\EDM.ControlPlane.Api.csproj" />
+  </ItemGroup>
+</Project>

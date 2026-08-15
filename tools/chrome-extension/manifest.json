@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Exclusive Download Manager (EDM) Capturer",
+  "version": "1.0.0",
+  "description": "Capture video, audio, and media streams from web pages and download them at maximum speed with EDM Desktop App.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "downloads",
+    "nativeMessaging",
+    "storage",
+    "activeTab",
+    "scripting",
+    "webRequest",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Exclusive Download Manager (EDM)",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  }
+}

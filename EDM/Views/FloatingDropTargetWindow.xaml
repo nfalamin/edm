@@ -1,0 +1,82 @@
+<Window x:Class="EDM.Views.FloatingDropTargetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EDM Drop Basket"
+        Height="100" Width="180"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        MouseLeftButtonDown="OnWindowDrag"
+        AllowDrop="True"
+        DragEnter="OnDragEnter"
+        DragLeave="OnDragLeave"
+        Drop="OnDrop">
+
+    <Border x:Name="BasketBorder"
+            Background="#E61E1E2E"
+            BorderBrush="#FF7C4DFF"
+            BorderThickness="1.5"
+            CornerRadius="14"
+            Padding="8"
+            Cursor="Hand">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Color="#000000" Opacity="0.5" ShadowDepth="2" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Top Header & Close -->
+            <Grid Grid.Row="0">
+                <TextBlock Text="⚡ EDM DROP BASKET"
+                           FontSize="9"
+                           FontWeight="Bold"
+                           Foreground="#B39DDB"
+                           VerticalAlignment="Center" />
+                <Button Content="✕"
+                        Click="OnCloseWidget"
+                        HorizontalAlignment="Right"
+                        Background="Transparent"
+                        Foreground="#888888"
+                        BorderThickness="0"
+                        FontSize="10"
+                        Padding="2,0" />
+            </Grid>
+
+            <!-- Middle Icon / Speed Text -->
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
+                <TextBlock x:Name="StatusIcon"
+                           Text="📥 Drop URL or File"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           Foreground="#FFFFFF"
+                           HorizontalAlignment="Center" />
+                <TextBlock x:Name="SpeedText"
+                           Text="0.0 KB/s"
+                           FontSize="10"
+                           Foreground="#81C784"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed" />
+            </StackPanel>
+
+            <!-- Bottom Queue Selector -->
+            <ComboBox Grid.Row="2"
+                      x:Name="QueueSelector"
+                      FontSize="9"
+                      Height="18"
+                      Background="#2A2A3C"
+                      Foreground="#FFFFFF"
+                      BorderThickness="0">
+                <ComboBoxItem Content="Default Queue" IsSelected="True" />
+                <ComboBoxItem Content="High Priority Queue" />
+                <ComboBoxItem Content="Media / Video Queue" />
+            </ComboBox>
+        </Grid>
+    </Border>
+</Window>

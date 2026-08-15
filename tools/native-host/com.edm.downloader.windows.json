@@ -1,0 +1,9 @@
+{
+  "name": "com.edm.downloader",
+  "description": "EDM Download capture native host",
+  "path": "{HOST_EXE_PATH}",
+  "type": "stdio",
+  "allowed_origins": [
+    "{ALLOWED_ORIGIN}"
+  ]
+}

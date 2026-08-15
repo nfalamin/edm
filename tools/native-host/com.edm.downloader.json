@@ -1,0 +1,10 @@
+﻿{
+    "path":  "D:\\Project 2\\5 AUG\\EDM\\EDM\\bin\\Debug\\net10.0-windows\\EDM.exe",
+    "description":  "Exclusive Download Manager Native Host Messaging Agent",
+    "name":  "com.edm.downloader",
+    "allowed_origins":  [
+                            "chrome-extension://*",
+                            "extension://*"
+                        ],
+    "type":  "stdio"
+}

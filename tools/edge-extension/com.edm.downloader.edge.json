@@ -1,0 +1,10 @@
+{
+  "name": "com.edm.downloader",
+  "description": "Exclusive Download Manager (EDM) Native Messaging Host for Microsoft Edge",
+  "path": "EDM.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "extension://*",
+    "chrome-extension://*"
+  ]
+}

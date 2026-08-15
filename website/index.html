@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDM Download Manager — The Ultimate Turbocharged Windows & Browser Downloader</title>
+    <meta name="description" content="EDM Download Manager is a modern, high-performance desktop download manager with 32x multi-threaded acceleration, IDM-style browser integration, 4K YouTube stream capture, and real-time segment telemetry.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+    <!-- Background Glow Blobs -->
+    <div class="bg-glow blob-1"></div>
+    <div class="bg-glow blob-2"></div>
+    <div class="bg-glow blob-3"></div>
+
+    <!-- Navigation Header -->
+    <header class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand-logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">
+                    <span class="brand-name">EDM</span>
+                    <span class="brand-tag">Download Manager</span>
+                </div>
+            </a>
+
+            <nav class="nav-menu" id="navMenu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#architecture" class="nav-link">Engine</a>
+                <a href="#extension" class="nav-link">Extension</a>
+                <a href="#simulator" class="nav-link">Live Demo</a>
+                <a href="#benchmarks" class="nav-link">Benchmarks</a>
+                <a href="#faq" class="nav-link">FAQ</a>
+            </nav>
+
+            <div class="nav-actions">
+                <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Dark/Light Mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <a href="#download" class="btn btn-primary btn-glow">
+                    <span>Download v6.0</span>
+                    <span class="btn-arrow">↓</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section" id="hero">
+        <div class="container hero-container">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                <span class="badge-text">EDM v6.0.0 Production Release • 32x Multi-Thread Acceleration</span>
+            </div>
+
+            <h1 class="hero-title">
+                The Next-Generation <br>
+                <span class="gradient-text">Turbo Download Manager</span> <br>
+                for Windows & Web
+            </h1>
+
+            <p class="hero-subtitle">
+                Engineered for extreme performance. Experience up to 32 concurrent Range streams, 
+                IDM-style 1-click video hover sniffer, live 15-segment thread telemetry, and intelligent automatic category routing.
+            </p>
+
+            <div class="hero-cta-group">
+                <a href="../Output/EDM_Setup.exe" class="btn btn-hero-primary btn-glow" id="mainDownloadBtn">
+                    <span class="btn-icon">⚡</span>
+                    <div class="btn-content">
+                        <span class="btn-main">Download for Windows</span>
+                        <span class="btn-sub">v6.0.0 (64-bit Installer) • Free</span>
+                    </div>
+                </a>
+
+                <a href="#extension" class="btn btn-hero-secondary">
+                    <span class="btn-icon">🧩</span>
+                    <div class="btn-content">
+                        <span class="btn-main">Get Browser Extension</span>
+                        <span class="btn-sub">Chrome & Firefox Ready</span>
+                    </div>
+                </a>
+
+                <a href="#simulator" class="btn btn-hero-outline">
+                    <span class="btn-icon">▶</span>
+                    <span>Interactive UI Simulator</span>
+                </a>
+            </div>
+
+            <div class="hero-stats-row">
+                <div class="hero-stat-card">
+                    <div class="stat-num" id="statSpeed">32x</div>
+                    <div class="stat-label">Maximum Acceleration</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat-card">
+                    <div class="stat-num">0.00%</div>
+                    <div class="stat-label">Packet Corruption Recovery</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat-card">
+                    <div class="stat-num">100%</div>
+                    <div class="stat-label">Native C# / WPF High-Speed Core</div>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat-card">
+                    <div class="stat-num">0 B</div>
+                    <div class="stat-label">Zero Fake Data or Mock Telemetry</div>
+                </div>
+            </div>
+
+            <!-- Interactive Desktop UI Showcase -->
+            <div class="hero-ui-preview">
+                <div class="window-frame">
+                    <div class="window-header">
+                        <div class="window-title-left">
+                            <span class="window-logo">⚡</span>
+                            <span class="window-title">EDM Download Manager — Master Control Plane</span>
+                        </div>
+                        <div class="window-nav-tabs">
+                            <button class="preview-tab active" data-target="tab-dashboard">Main Dashboard</button>
+                            <button class="preview-tab" data-target="tab-detail">Download Detail Window</button>
+                            <button class="preview-tab" data-target="tab-extension">Browser Video Sniffer</button>
+                        </div>
+                        <div class="window-controls">
+                            <span class="win-btn win-min">━</span>
+                            <span class="win-btn win-max">▢</span>
+                            <span class="win-btn win-close">✕</span>
+                        </div>
+                    </div>
+
+                    <div class="window-body">
+
+                        <!-- TAB 1: Main Dashboard -->
+                        <div class="tab-panel active" id="tab-dashboard">
+                            <div class="preview-dashboard-grid">
+                                <!-- Sidebar -->
+                                <div class="preview-sidebar">
+                                    <div class="sidebar-pill active">
+                                        <span class="pill-icon">⊞</span>
+                                        <span class="pill-text">Dashboard</span>
+                                    </div>
+                                    <div class="sidebar-item">
+                                        <span class="item-icon">📁</span>
+                                        <span class="item-text">All Downloads</span>
+                                        <span class="item-badge purple">24</span>
+                                    </div>
+                                    <div class="sidebar-item">
+                                        <span class="item-icon">⬇</span>
+                                        <span class="item-text">Downloading</span>
+                                        <span class="item-badge green">3</span>
+                                    </div>
+                                    <div class="sidebar-item">
+                                        <span class="item-icon">✓</span>
+                                        <span class="item-text">Completed</span>
+                                        <span class="item-badge blue">21</span>
+                                    </div>
+                                    <div class="sidebar-item">
+                                        <span class="item-icon">📦</span>
+                                        <span class="item-text">Compressed</span>
+                                        <span class="item-badge pink">2</span>
+                                    </div>
+                                    <div class="sidebar-divider"></div>
+                                    <div class="sidebar-item"><span class="item-icon">🎬</span><span class="item-text">Video</span></div>
+                                    <div class="sidebar-item"><span class="item-icon">🎵</span><span class="item-text">Music</span></div>
+                                    <div class="sidebar-item"><span class="item-icon">📄</span><span class="item-text">Documents</span></div>
+                                    <div class="sidebar-item"><span class="item-icon">⚙️</span><span class="item-text">Programs</span></div>
+                                    <div class="sidebar-divider"></div>
+                                    <div class="sidebar-item"><span class="item-icon">📅</span><span class="item-text">Scheduler</span></div>
+                                    <div class="sidebar-item"><span class="item-icon">⚙</span><span class="item-text">Settings</span></div>
+
+                                    <div class="sidebar-speed-card">
+                                        <div class="speed-card-header">
+                                            <span>Download Speed</span>
+                                            <span class="live-pill">12.4 MB/s</span>
+                                        </div>
+                                        <canvas id="sidebarWaveCanvas" width="180" height="40"></canvas>
+                                        <div class="speed-peak">Peak: 15.8 MB/s</div>
+                                    </div>
+                                </div>
+
+                                <!-- Main Dashboard Content -->
+                                <div class="preview-main">
+                                    <!-- Search & Profile Bar -->
+                                    <div class="preview-topbar">
+                                        <div class="preview-search">
+                                            <span>🔍</span>
+                                            <input type="text" placeholder="Search downloads..." readonly value="Search downloads...">
+                                        </div>
+                                        <div class="preview-top-actions">
+                                            <div class="top-icon-btn active">🌙</div>
+                                            <div class="top-icon-btn">☀️</div>
+                                            <div class="top-icon-btn notif">🔔<span class="notif-dot">3</span></div>
+                                            <div class="profile-pill">
+                                                <div class="avatar">NF</div>
+                                                <div class="profile-text">
+                                                    <span class="p-name">nfala</span>
+                                                    <span class="p-status">Licensed</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Action Bar -->
+                                    <div class="preview-quick-actions">
+                                        <div class="qa-btn"><div class="qa-circle purple">🔗</div><span>Add URL</span></div>
+                                        <div class="qa-btn"><div class="qa-circle green">▶</div><span>Resume</span></div>
+                                        <div class="qa-btn"><div class="qa-circle orange">⏸</div><span>Pause</span></div>
+                                        <div class="qa-btn"><div class="qa-circle red">⏹</div><span>Stop</span></div>
+                                        <div class="qa-btn"><div class="qa-circle pink">🗑</div><span>Delete</span></div>
+                                        <div class="qa-btn"><div class="qa-circle red-dark">🚀</div><span>Delete All</span></div>
+                                        <div class="qa-btn"><div class="qa-circle blue">📅</div><span>Scheduler</span></div>
+                                        <div class="qa-btn"><div class="qa-circle purple-light">⚙</div><span>Settings</span></div>
+                                    </div>
+
+                                    <!-- 4 KPI Overview Cards -->
+                                    <div class="preview-kpi-grid">
+                                        <div class="kpi-card">
+                                            <div class="kpi-content">
+                                                <span class="kpi-label">Total Downloads</span>
+                                                <span class="kpi-value">24</span>
+                                                <span class="kpi-sub">All time</span>
+                                            </div>
+                                            <div class="kpi-icon-circle purple">☁</div>
+                                        </div>
+                                        <div class="kpi-card">
+                                            <div class="kpi-content">
+                                                <span class="kpi-label">Downloading</span>
+                                                <span class="kpi-value text-green">3</span>
+                                                <span class="kpi-sub">Active now</span>
+                                            </div>
+                                            <div class="kpi-icon-circle green">⬇</div>
+                                        </div>
+                                        <div class="kpi-card">
+                                            <div class="kpi-content">
+                                                <span class="kpi-label">Completed</span>
+                                                <span class="kpi-value">21</span>
+                                                <span class="kpi-sub">All completed</span>
+                                            </div>
+                                            <div class="kpi-icon-circle blue">✓</div>
+                                        </div>
+                                        <div class="kpi-card">
+                                            <div class="kpi-content">
+                                                <span class="kpi-label">Total Size</span>
+                                                <span class="kpi-value">8.47 GB</span>
+                                                <span class="kpi-sub">Downloaded</span>
+                                            </div>
+                                            <div class="kpi-icon-circle purple">📁</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Downloads Table -->
+                                    <div class="preview-table-card">
+                                        <div class="table-header-row">
+                                            <div class="th-title">All Downloads</div>
+                                            <div class="th-filter">All Status ▾</div>
+                                        </div>
+                                        <div class="table-body">
+                                            <div class="tr-row">
+                                                <div class="td-icon"><span class="badge-ext mp4">MP4</span></div>
+                                                <div class="td-name">
+                                                    <span class="fn-title">Nature 4K Ultra HD Documentary.mp4</span>
+                                                    <span class="fn-cat">Category: Video</span>
+                                                </div>
+                                                <div class="td-size">2.35 GB</div>
+                                                <div class="td-status"><span class="pill-badge downloading">Downloading</span></div>
+                                                <div class="td-speed text-green">12.4 MB/s</div>
+                                                <div class="td-prog">
+                                                    <div class="prog-bar-bg"><div class="prog-bar-fill" style="width: 42.7%;"></div></div>
+                                                    <span class="prog-pct">42.7%</span>
+                                                </div>
+                                                <div class="td-eta">00:02:45</div>
+                                                <div class="td-actions"><button class="btn-action">⏸</button><button class="btn-action">✕</button></div>
+                                            </div>
+
+                                            <div class="tr-row">
+                                                <div class="td-icon"><span class="badge-ext mp3">MP3</span></div>
+                                                <div class="td-name">
+                                                    <span class="fn-title">Lo-Fi Study Relaxing Chill Beats.mp3</span>
+                                                    <span class="fn-cat">Category: Music</span>
+                                                </div>
+                                                <div class="td-size">89.6 MB</div>
+                                                <div class="td-status"><span class="pill-badge paused">Paused</span></div>
+                                                <div class="td-speed text-muted">0 B/s</div>
+                                                <div class="td-prog">
+                                                    <div class="prog-bar-bg"><div class="prog-bar-fill orange" style="width: 33.1%;"></div></div>
+                                                    <span class="prog-pct">33.1%</span>
+                                                </div>
+                                                <div class="td-eta">Paused</div>
+                                                <div class="td-actions"><button class="btn-action">▶</button><button class="btn-action">✕</button></div>
+                                            </div>
+
+                                            <div class="tr-row">
+                                                <div class="td-icon"><span class="badge-ext zip">ZIP</span></div>
+                                                <div class="td-name">
+                                                    <span class="fn-title">Project Production Archive Files.zip</span>
+                                                    <span class="fn-cat">Category: Compressed</span>
+                                                </div>
+                                                <div class="td-size">512 MB</div>
+                                                <div class="td-status"><span class="pill-badge completed">Completed</span></div>
+                                                <div class="td-speed text-muted">—</div>
+                                                <div class="td-prog">
+                                                    <div class="prog-bar-bg"><div class="prog-bar-fill blue" style="width: 100%;"></div></div>
+                                                    <span class="prog-pct">100%</span>
+                                                </div>
+                                                <div class="td-eta">Completed</div>
+                                                <div class="td-actions"><button class="btn-action">📁</button><button class="btn-action">•••</button></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: Download Detail Window -->
+                        <div class="tab-panel" id="tab-detail">
+                            <div class="detail-preview-container">
+                                <!-- Top Metadata Row -->
+                                <div class="detail-top-row">
+                                    <div class="file-icon-box">🎬<span class="box-badge">MP4</span></div>
+                                    <div class="file-title-block">
+                                        <div class="dt-name">মাছে মির্জা ফখরুল আসাসাজাই চেয়ার ছেড়ে দিলেন জয়নুল আবদিন ফারুক.mp4</div>
+                                        <div class="dt-url">https://youtube.com/watch?v=CY_bNvGHjDY</div>
+                                    </div>
+                                    <div class="dt-status-pill downloading">Downloading</div>
+                                </div>
+
+                                <!-- Progress Gauge & Bar -->
+                                <div class="detail-prog-card">
+                                    <div class="prog-header-meta">
+                                        <div class="dt-big-pct">42.7% <span class="dt-size-sub">742.5 MB / 1.73 GB</span></div>
+                                        <div class="dt-time-left">Time Left: <span class="text-cyan">00:02:45</span></div>
+                                    </div>
+                                    <div class="main-prog-track">
+                                        <div class="main-prog-gradient" style="width: 42.7%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 5 Metric Cards -->
+                                <div class="detail-metrics-5">
+                                    <div class="metric-col">
+                                        <div class="m-circle blue">⬇</div>
+                                        <div class="m-text">
+                                            <span class="m-lbl">Download Speed</span>
+                                            <span class="m-val text-blue">12.4 MB/s</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-col">
+                                        <div class="m-circle green">⏱</div>
+                                        <div class="m-text">
+                                            <span class="m-lbl">Average Speed</span>
+                                            <span class="m-val text-green">10.3 MB/s</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-col">
+                                        <div class="m-circle purple">📈</div>
+                                        <div class="m-text">
+                                            <span class="m-lbl">Peak Speed</span>
+                                            <span class="m-val text-purple">14.8 MB/s</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-col">
+                                        <div class="m-circle cyan">🌐</div>
+                                        <div class="m-text">
+                                            <span class="m-lbl">Connections</span>
+                                            <span class="m-val text-cyan">16 (8 Active)</span>
+                                        </div>
+                                    </div>
+                                    <div class="metric-col">
+                                        <div class="m-circle green">🔄</div>
+                                        <div class="m-text">
+                                            <span class="m-lbl">Resume Support</span>
+                                            <span class="m-val text-green">Yes (HTTP 206)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 15 Segments Visualization -->
+                                <div class="segments-card">
+                                    <div class="card-title-sm">Segments (16-Thread Matrix)</div>
+                                    <div class="segment-blocks-row">
+                                        <div class="seg-block completed">1</div>
+                                        <div class="seg-block completed">2</div>
+                                        <div class="seg-block completed">3</div>
+                                        <div class="seg-block completed">4</div>
+                                        <div class="seg-block completed">5</div>
+                                        <div class="seg-block downloading">6</div>
+                                        <div class="seg-block downloading">7</div>
+                                        <div class="seg-block downloading">8</div>
+                                        <div class="seg-block striped-cyan">9</div>
+                                        <div class="seg-block queued">10</div>
+                                        <div class="seg-block queued">11</div>
+                                        <div class="seg-block queued">12</div>
+                                        <div class="seg-block paused">13</div>
+                                        <div class="seg-block paused">14</div>
+                                        <div class="seg-block paused">15</div>
+                                    </div>
+                                    <div class="segments-legend">
+                                        <span class="leg-item"><span class="dot blue"></span> Completed</span>
+                                        <span class="leg-item"><span class="dot cyan"></span> Downloading</span>
+                                        <span class="leg-item"><span class="dot purple"></span> Queued</span>
+                                        <span class="leg-item"><span class="dot orange"></span> Connecting</span>
+                                        <span class="leg-item"><span class="dot striped"></span> Paused</span>
+                                    </div>
+                                </div>
+
+                                <!-- Live Speed Graph Canvas -->
+                                <div class="graph-card">
+                                    <div class="graph-header">
+                                        <span class="card-title-sm">Live Speed Graph</span>
+                                        <span class="graph-time-dropdown">1 Minute ▾</span>
+                                    </div>
+                                    <canvas id="detailGraphCanvas" width="580" height="90"></canvas>
+                                </div>
+
+                                <!-- Actions Bar -->
+                                <div class="detail-actions-bar">
+                                    <button class="dt-btn btn-pause">⏸ Pause</button>
+                                    <button class="dt-btn btn-cancel">✕ Cancel</button>
+                                    <button class="dt-btn btn-glass">📁 Open File</button>
+                                    <button class="dt-btn btn-glass">📁 Open Folder</button>
+                                    <button class="dt-btn btn-glass">🔗 Copy Link</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Browser Video Sniffer -->
+                        <div class="tab-panel" id="tab-extension">
+                            <div class="ext-demo-container">
+                                <div class="mock-browser-window">
+                                    <div class="mock-video-player">
+                                        <div class="mock-video-overlay">
+                                            <!-- IDM-Style Hover Button -->
+                                            <div class="edm-hover-sniff-btn">
+                                                <span class="sniff-logo">⚡</span>
+                                                <span class="sniff-text">Download with EDM</span>
+                                                <span class="sniff-badge">4K Ready</span>
+                                            </div>
+
+                                            <!-- Dynamic Format Selector Popup -->
+                                            <div class="edm-format-popup">
+                                                <div class="popup-header">
+                                                    <span class="pop-title">⚡ Available Video Formats</span>
+                                                    <span class="pop-close">✕</span>
+                                                </div>
+                                                <div class="format-list">
+                                                    <div class="fmt-item active">
+                                                        <div class="fmt-badge fourk">4K 2160p</div>
+                                                        <div class="fmt-details">
+                                                            <span class="fmt-spec">MP4 • 60 FPS • HDR</span>
+                                                            <span class="fmt-size">1.84 GB</span>
+                                                        </div>
+                                                        <button class="fmt-dl-btn">Download</button>
+                                                    </div>
+                                                    <div class="fmt-item">
+                                                        <div class="fmt-badge fhd">1080p FHD</div>
+                                                        <div class="fmt-details">
+                                                            <span class="fmt-spec">MP4 • High Bitrate</span>
+                                                            <span class="fmt-size">452 MB</span>
+                                                        </div>
+                                                        <button class="fmt-dl-btn">Download</button>
+                                                    </div>
+                                                    <div class="fmt-item">
+                                                        <div class="fmt-badge hd">720p HD</div>
+                                                        <div class="fmt-details">
+                                                            <span class="fmt-spec">MP4 • Fast Download</span>
+                                                            <span class="fmt-size">198 MB</span>
+                                                        </div>
+                                                        <button class="fmt-dl-btn">Download</button>
+                                                    </div>
+                                                    <div class="fmt-item">
+                                                        <div class="fmt-badge audio">Audio Only</div>
+                                                        <div class="fmt-details">
+                                                            <span class="fmt-spec">M4A / MP3 • 320 kbps</span>
+                                                            <span class="fmt-size">12.4 MB</span>
+                                                        </div>
+                                                        <button class="fmt-dl-btn">Download</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Core Features Grid -->
+    <section class="section features-section" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">ENGINEERED FOR SUPREMACY</span>
+                <h2 class="section-title">Built with Cutting-Edge Desktop Architecture</h2>
+                <p class="section-desc">
+                    Every component of EDM was designed from the ground up to replace outdated legacy downloaders with unmatched speed, transparency, and modern visual polish.
+                </p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feat-icon-box purple">🚀</div>
+                    <h3 class="feat-title">32-Thread Turbo Acceleration</h3>
+                    <p class="feat-desc">
+                        Intelligent multi-part segment division saturates your full network bandwidth by requesting byte ranges concurrently with zero allocation socket buffers.
+                    </p>
+                    <div class="feat-highlight">Up to 32 parallel sockets</div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feat-icon-box green">🎥</div>
+                    <h3 class="feat-title">IDM-Style Browser Sniffer</h3>
+                    <p class="feat-desc">
+                        Hover over any video on YouTube, Facebook, Vimeo, or HTML5 player to capture streaming media with dynamic resolution and audio extraction.
+                    </p>
+                    <div class="feat-highlight">Native Messaging IPC Bridge</div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feat-icon-box blue">🔄</div>
+                    <h3 class="feat-title">Future-Proof Auto-Repair</h3>
+                    <p class="feat-desc">
+                        When YouTube changes its cipher or streaming protocols, EDM's built-in background updater automatically downloads the newest extractor rules with zero downtime.
+                    </p>
+                    <div class="feat-highlight">Zero broken downloads</div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feat-icon-box cyan">📊</div>
+                    <h3 class="feat-title">Real-Time Segment Telemetry</h3>
+                    <p class="feat-desc">
+                        Inspect individual chunk throughputs, moving average transfer rates, and connection states with live animated waveforms and zero simulated mock data.
+                    </p>
+                    <div class="feat-highlight">100% Real hardware stats</div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feat-icon-box orange">📂</div>
+                    <h3 class="feat-title">Smart Category Automation</h3>
+                    <p class="feat-desc">
+                        Automatically sorts downloads into dedicated folders (`Downloads/Video`, `Music`, `Compressed`, `Programs`, `Documents`) with custom regex rule override support.
+                    </p>
+                    <div class="feat-highlight">Organized disk storage</div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feat-icon-box pink">⏰</div>
+                    <h3 class="feat-title">Advanced Scheduler & Queue</h3>
+                    <p class="feat-desc">
+                        Schedule midnight downloads, throttle bandwidth during working hours, and automate post-download actions such as PC shutdown or sleep.
+                    </p>
+                    <div class="feat-highlight">Automated unattended tasks</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Simulator Section -->
+    <section class="section simulator-section" id="simulator">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">TEST DRIVE EDM IN YOUR BROWSER</span>
+                <h2 class="section-title">Interactive Real-Time Download Simulator</h2>
+                <p class="section-desc">Experience EDM's segment slicing, speed throttling, and live graph telemetry right here.</p>
+            </div>
+
+            <div class="simulator-card">
+                <div class="sim-controls">
+                    <div class="sim-input-group">
+                        <span class="sim-icon">🔗</span>
+                        <input type="text" id="simUrlInput" value="https://speedtest.server.net/fixtures/ultra_4k_documentary_archive.mkv" placeholder="Enter download URL...">
+                    </div>
+                    <div class="sim-btn-group">
+                        <button id="simStartBtn" class="btn btn-primary">Start Download</button>
+                        <button id="simPauseBtn" class="btn btn-outline" disabled>Pause</button>
+                        <button id="simResetBtn" class="btn btn-outline">Reset</button>
+                    </div>
+                </div>
+
+                <div class="sim-body">
+                    <div class="sim-kpis">
+                        <div class="sim-kpi-item">
+                            <span class="sim-lbl">Progress</span>
+                            <span class="sim-val" id="simPct">0.0%</span>
+                        </div>
+                        <div class="sim-kpi-item">
+                            <span class="sim-lbl">Live Speed</span>
+                            <span class="sim-val text-green" id="simSpeed">0.0 MB/s</span>
+                        </div>
+                        <div class="sim-kpi-item">
+                            <span class="sim-lbl">Average Speed</span>
+                            <span class="sim-val" id="simAvg">0.0 MB/s</span>
+                        </div>
+                        <div class="sim-kpi-item">
+                            <span class="sim-lbl">Time Left</span>
+                            <span class="sim-val text-cyan" id="simEta">--:--:--</span>
+                        </div>
+                    </div>
+
+                    <div class="sim-progress-track">
+                        <div class="sim-progress-bar" id="simProgressBar"></div>
+                    </div>
+
+                    <div class="sim-segments-grid" id="simSegmentsGrid">
+                        <!-- Generated via JS -->
+                    </div>
+
+                    <div class="sim-graph-wrap">
+                        <canvas id="simCanvas" width="900" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benchmarks Comparison -->
+    <section class="section benchmarks-section" id="benchmarks">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">PROVEN PERFORMANCE</span>
+                <h2 class="section-title">Why EDM Outperforms the Competition</h2>
+                <p class="section-desc">Comparing EDM against standard browser downloaders and legacy tools.</p>
+            </div>
+
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature / Capability</th>
+                            <th class="highlight-th">⚡ EDM Download Manager</th>
+                            <th>Default Browser (Chrome/Edge)</th>
+                            <th>Legacy IDM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Multi-Thread Range Slicing</td>
+                            <td class="highlight-td"><span class="badge-yes">✓ Up to 32 Threads</span></td>
+                            <td><span class="badge-no">✕ Single Thread Only</span></td>
+                            <td>✓ Up to 32 Threads</td>
+                        </tr>
+                        <tr>
+                            <td>Modern Dark Navy Neon Theme</td>
+                            <td class="highlight-td"><span class="badge-yes">✓ Premium WPF UI</span></td>
+                            <td><span class="badge-no">✕ Basic List</span></td>
+                            <td><span class="badge-no">✕ 1990s Windows 98 Style</span></td>
+                        </tr>
+                        <tr>
+                            <td>Real-Time Segment Telemetry & Graph</td>
+                            <td class="highlight-td"><span class="badge-yes">✓ Live Waveform + 15 Blocks</span></td>
+                            <td><span class="badge-no">✕ Simple Bar</span></td>
+                            <td>Partial (Static Bars)</td>
+                        </tr>
+                        <tr>
+                            <td>Self-Updating YouTube Extractor</td>
+                            <td class="highlight-td"><span class="badge-yes">✓ Automated GitHub Auto-Repair</span></td>
+                            <td><span class="badge-no">✕ Not Supported</span></td>
+                            <td><span class="badge-no">✕ Requires Full App Update</span></td>
+                        </tr>
+                        <tr>
+                            <td>Memory & CPU Footprint</td>
+                            <td class="highlight-td"><span class="badge-yes">✓ Zero-Alloc Buffers (~25 MB)</span></td>
+                            <td>High (~300 MB)</td>
+                            <td>Moderate</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section faq-section" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">FREQUENTLY ASKED QUESTIONS</span>
+                <h2 class="section-title">Everything You Need to Know</h2>
+            </div>
+
+            <div class="faq-accordion">
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>How does EDM achieve up to 32x faster downloads?</span>
+                        <span class="faq-chevron">▾</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>EDM splits large files into up to 32 distinct byte ranges using standard HTTP 206 Partial Content headers. By issuing concurrent socket connections simultaneously, EDM bypasses server-side per-connection throttling and utilizes your entire broadband capacity.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>How do I install the Chrome / Firefox extension?</span>
+                        <span class="faq-chevron">▾</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Download the extension ZIP package from the download section, extract it, and load it into your browser via Developer Mode (Load Unpacked in Chrome or Debug Add-on in Firefox). EDM includes a native messaging host that connects automatically with the desktop application.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Will YouTube downloads break when YouTube updates its player?</span>
+                        <span class="faq-chevron">▾</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No! EDM features an automated self-repair mechanism (`AutoUpdateEngineAsync`) that continuously fetches the latest cipher decoding rules directly in the background whenever an update occurs.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Is EDM completely free and portable?</span>
+                        <span class="faq-chevron">▾</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! EDM is distributed as both a standard Windows installer (`EDM_Setup.exe`) and a standalone portable zip package (`EDM_Setup_v6.0.0_Portable.zip`) that requires no administrative installation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download CTA Section -->
+    <section class="section download-section" id="download">
+        <div class="container">
+            <div class="download-card">
+                <div class="dl-blob"></div>
+                <h2 class="dl-title">Ready for Blazing Fast Downloads?</h2>
+                <p class="dl-desc">Download EDM v6.0.0 for Windows 10 & 11 today. Clean, fast, and completely ad-free.</p>
+                <div class="dl-cta-row">
+                    <a href="../Output/EDM_Setup.exe" class="btn btn-hero-primary btn-glow">
+                        <span>Download Windows Installer (Setup.exe)</span>
+                    </a>
+                    <a href="../Output/EDM_Setup_v6.0.0_Portable.zip" class="btn btn-hero-secondary">
+                        <span>Portable ZIP Package</span>
+                    </a>
+                </div>
+                <div class="dl-meta">Requires .NET 10.0 or Windows 10/11 64-bit • Clean verified binaries</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <div class="brand-logo">
+                    <div class="logo-icon">⚡</div>
+                    <span class="brand-name">EDM</span>
+                </div>
+                <p class="footer-tagline">The Ultimate High-Performance Download Manager for Windows.</p>
+            </div>
+            <div class="footer-links">
+                <div class="link-group">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#simulator">Live Simulator</a>
+                    <a href="#benchmarks">Benchmarks</a>
+                </div>
+                <div class="link-group">
+                    <h4>Extensions</h4>
+                    <a href="../Output/EDM_Chrome_Extension_v1.0.0.zip">Chrome Extension</a>
+                    <a href="../Output/EDM_Firefox_Extension_v1.0.0.zip">Firefox Extension</a>
+                </div>
+                <div class="link-group">
+                    <h4>Resources</h4>
+                    <a href="#faq">FAQ</a>
+                    <a href="../Output/publish/">Published Binaries</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <p>© 2026 EDM Download Manager. All rights reserved. Designed with precision.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

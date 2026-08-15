@@ -1,0 +1,9 @@
+{
+  "name": "com.edm.downloader",
+  "description": "Exclusive Download Manager (EDM) Native Messaging Host for Mozilla Firefox",
+  "path": "EDM.exe",
+  "type": "stdio",
+  "allowed_extensions": [
+    "edm@exclusive-download-manager.com"
+  ]
+}

@@ -1,0 +1,33 @@
+/* EDM Floating Video Download Overlay Panel CSS */
+.edm-video-overlay-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 999999;
+    background: linear-gradient(135deg, #0078D4 0%, #005A9E 100%);
+    color: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.edm-video-overlay-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 120, 212, 0.6);
+}
+
+.edm-video-overlay-icon {
+    width: 14px;
+    height: 14px;
+    fill: #FFFFFF;
+}

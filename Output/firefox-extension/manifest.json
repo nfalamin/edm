@@ -1,0 +1,33 @@
+{
+  "manifest_version": 2,
+  "name": "Exclusive Download Manager (EDM)",
+  "version": "1.0.0",
+  "description": "High-speed multi-threaded browser download interception & media sniffer for EDM",
+  "permissions": [
+    "downloads",
+    "nativeMessaging",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "edm-extension@edm.app",
+      "strict_min_version": "109.0"
+    }
+  }
+}

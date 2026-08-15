@@ -1,0 +1,275 @@
+/* EDM Browser Video Downloader & Floating Control Panel Stylesheet */
+/* Version: 2.0.0 — Modern Glassmorphic Theme with Subtle Blue Accent */
+
+.edm-floating-panel {
+    position: absolute;
+    z-index: 2147483647;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    user-select: none;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
+    opacity: 0.96;
+}
+
+.edm-floating-panel:hover {
+    opacity: 1 !important;
+}
+
+/* Compact Floating Download Pill Button */
+.edm-floating-btn,
+.edm-video-overlay-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(13, 22, 46, 0.88) 0%, rgba(23, 37, 84, 0.88) 100%);
+    color: #F8FAFC;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.2);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+.edm-floating-btn:hover {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 58, 138, 0.95) 100%);
+    border-color: #38BDF8;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.4);
+    transform: translateY(-1px);
+}
+
+.edm-floating-btn:active {
+    transform: translateY(0);
+}
+
+.edm-btn-icon {
+    font-size: 11px;
+    color: #38BDF8;
+    line-height: 1;
+}
+
+.edm-btn-text {
+    letter-spacing: 0.2px;
+    font-weight: 600;
+}
+
+.edm-btn-arrow {
+    font-size: 10px;
+    color: #94A3B8;
+    margin-left: 2px;
+    transition: transform 0.2s ease;
+}
+
+.edm-floating-panel.edm-open .edm-btn-arrow {
+    transform: rotate(180deg);
+}
+
+/* DRM Protected Badge */
+.edm-drm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 15, 20, 0.85);
+    color: #FDA4AF;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: not-allowed;
+    backdrop-filter: blur(8px);
+}
+
+.edm-drm-icon {
+    font-size: 12px;
+}
+
+/* Format / Resolution Selection Popup Dropdown Card */
+.edm-dropdown-card {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 360px;
+    max-height: 420px;
+    background: rgba(13, 22, 46, 0.92);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: edmFadeIn 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes edmFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.edm-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    background: rgba(7, 13, 30, 0.85);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.edm-dropdown-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.edm-header-icon {
+    color: #38BDF8;
+    font-size: 13px;
+}
+
+.edm-dropdown-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #F1F5F9;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.edm-dropdown-close {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.edm-dropdown-close:hover {
+    color: #F8FAFC;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Variant List Container */
+.edm-variants-container {
+    overflow-y: auto;
+    max-height: 340px;
+    padding: 6px;
+}
+
+.edm-variants-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.edm-variants-container::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.25);
+    border-radius: 4px;
+}
+
+/* Numbered Variant Row */
+.edm-variant-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    margin-bottom: 3px;
+    border: 1px solid transparent;
+}
+
+.edm-variant-item:hover {
+    background: rgba(30, 58, 138, 0.5);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.edm-variant-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    overflow: hidden;
+    margin-right: 8px;
+}
+
+.edm-variant-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: #38BDF8;
+    min-width: 14px;
+    padding-top: 1px;
+}
+
+.edm-variant-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+}
+
+.edm-variant-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.edm-variant-meta {
+    font-size: 10px;
+    color: #94A3B8;
+}
+
+.edm-variant-size {
+    font-size: 10px;
+    font-weight: 600;
+    color: #38BDF8;
+    background: rgba(56, 189, 248, 0.12);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.edm-variant-audio .edm-variant-num {
+    color: #F59E0B;
+}
+
+.edm-variant-audio .edm-variant-size {
+    color: #F59E0B;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+/* Loading & Empty State Boxes */
+.edm-loading-box, .edm-empty-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 16px;
+    gap: 10px;
+    color: #94A3B8;
+    font-size: 12px;
+    text-align: center;
+}
+
+.edm-loading-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2px solid rgba(56, 189, 248, 0.2);
+    border-top-color: #38BDF8;
+    border-radius: 50%;
+    animation: edmSpin 0.8s linear infinite;
+}
+
+@keyframes edmSpin {
+    to { transform: rotate(360deg); }
+}
