@@ -105,6 +105,7 @@ namespace EDM.NativeHost
                             RequestId = req.RequestId,
                             Result = variants,
                             Data = variants.Variants,
+                            Variants = variants.Variants,
                             Error = variants.ErrorMessage
                         }).ConfigureAwait(false);
                         continue;
@@ -112,6 +113,8 @@ namespace EDM.NativeHost
 
                     if (string.Equals(action, "download_url", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(action, "START_DOWNLOAD", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "START_EDM_DOWNLOAD", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "DOWNLOAD_REQUEST", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(action, "intercept", StringComparison.OrdinalIgnoreCase))
                     {
                         string downloadUrl = req.Url ?? string.Empty;
@@ -171,7 +174,20 @@ namespace EDM.NativeHost
                 Quality = req.Quality,
                 Format = req.Format,
                 Browser = req.Browser,
-                CorrelationId = req.CorrelationId
+                CorrelationId = req.CorrelationId,
+                DownloadIdentity = req.DownloadIdentity,
+                Source = req.Browser ?? "BrowserExtension",
+                AudioUrl = req.AudioUrl,
+                VideoUrl = req.VideoUrl,
+                FormatArg = req.FormatArg,
+                RequiresFfmpegMerge = req.RequiresFfmpegMerge ?? false,
+                Title = req.Title,
+                ManifestUrl = req.ManifestUrl,
+                AudioCodec = req.AudioCodec,
+                Codec = req.Codec,
+                Container = req.Container,
+                EstimatedSizeBytes = req.EstimatedSizeBytes,
+                IsAudioOnly = req.IsAudioOnly
             };
 
             string jsonPayload = JsonSerializer.Serialize(payload);

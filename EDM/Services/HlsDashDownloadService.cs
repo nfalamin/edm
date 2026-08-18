@@ -58,7 +58,116 @@ namespace EDM.Services
                 throw new InvalidOperationException("No media segments found in HLS playlist.");
             }
 
+            // Check if separate audio track needs downloading & muxing
+            if (playlist.IsMaster && playlist.AudioTracks.Any(a => !string.IsNullOrEmpty(a.Uri)))
+            {
+                var audioTrack = playlist.AudioTracks.FirstOrDefault(a => a.IsDefault) ?? playlist.AudioTracks.First();
+                string tempVideo = targetFilePath + ".vid.tmp";
+                string tempAudio = targetFilePath + ".aud.tmp";
+
+                try
+                {
+                    // 1. Download video segments
+                    await DownloadAndConcatSegmentsAsync(segmentUrls, tempVideo, cookies, progress, cancellationToken).ConfigureAwait(false);
+
+                    // 2. Resolve and download audio segments
+                    var audioUri = new Uri(audioTrack.Uri);
+                    string audioM3u8 = await FetchTextAsync(audioUri, cookies, cancellationToken).ConfigureAwait(false);
+                    var audioPlaylist = HlsParser.Parse(audioM3u8, audioUri);
+
+                    if (audioPlaylist.SegmentUrls.Any())
+                    {
+                        await DownloadAndConcatSegmentsAsync(audioPlaylist.SegmentUrls, tempAudio, cookies, null, cancellationToken).ConfigureAwait(false);
+
+                        // 3. Merge video + audio using MediaMergeService / FFmpeg
+                        var mergeService = new MediaMergeService(SharedHttpClient.Instance);
+                        string ffmpegPath = new SettingsService().GetFfmpegPath();
+                        await mergeService.MergeAudioVideoAsync(tempVideo, tempAudio, targetFilePath, ffmpegPath, cancellationToken).ConfigureAwait(false);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Log($"[HlsDashDownloadService] Separate audio mux failed, falling back to video only: {ex.Message}");
+                    if (File.Exists(tempVideo))
+                    {
+                        File.Move(tempVideo, targetFilePath, true);
+                        return;
+                    }
+                }
+                finally
+                {
+                    try { if (File.Exists(tempVideo)) File.Delete(tempVideo); } catch { }
+                    try { if (File.Exists(tempAudio)) File.Delete(tempAudio); } catch { }
+                }
+            }
+
             await DownloadAndConcatSegmentsAsync(segmentUrls, targetFilePath, cookies, progress, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task DownloadDashStreamAsync(
+            string manifestUrl,
+            string targetFilePath,
+            string? cookies = null,
+            IProgress<double>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            var baseUri = new Uri(manifestUrl);
+            string manifestXml = await FetchTextAsync(baseUri, cookies, cancellationToken).ConfigureAwait(false);
+
+            var manifest = DashParser.Parse(manifestXml, baseUri);
+
+            if (manifest.IsDrmProtected)
+            {
+                throw new InvalidOperationException("This stream is DRM-protected and cannot be downloaded.");
+            }
+
+            var bestVideo = manifest.VideoRepresentations.OrderByDescending(v => v.Height).ThenByDescending(v => v.Bandwidth).FirstOrDefault();
+            var bestAudio = manifest.AudioRepresentations.OrderByDescending(a => a.Bandwidth).FirstOrDefault();
+
+            if (bestVideo == null && bestAudio == null)
+            {
+                throw new InvalidOperationException("No video or audio representations found in DASH manifest.");
+            }
+
+            if (bestVideo != null && bestAudio != null && bestVideo.SegmentUrls.Any() && bestAudio.SegmentUrls.Any())
+            {
+                string tempVideo = targetFilePath + ".dash_vid.tmp";
+                string tempAudio = targetFilePath + ".dash_aud.tmp";
+
+                try
+                {
+                    await DownloadAndConcatSegmentsAsync(bestVideo.SegmentUrls, tempVideo, cookies, progress, cancellationToken).ConfigureAwait(false);
+                    await DownloadAndConcatSegmentsAsync(bestAudio.SegmentUrls, tempAudio, cookies, null, cancellationToken).ConfigureAwait(false);
+
+                    var mergeService = new MediaMergeService(SharedHttpClient.Instance);
+                    string ffmpegPath = new SettingsService().GetFfmpegPath();
+                    await mergeService.MergeAudioVideoAsync(tempVideo, tempAudio, targetFilePath, ffmpegPath, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Log($"[HlsDashDownloadService] DASH audio+video merge failed, falling back: {ex.Message}");
+                    if (File.Exists(tempVideo))
+                    {
+                        File.Move(tempVideo, targetFilePath, true);
+                        return;
+                    }
+                }
+                finally
+                {
+                    try { if (File.Exists(tempVideo)) File.Delete(tempVideo); } catch { }
+                    try { if (File.Exists(tempAudio)) File.Delete(tempAudio); } catch { }
+                }
+            }
+
+            var targetRep = bestVideo ?? bestAudio!;
+            if (!targetRep.SegmentUrls.Any())
+            {
+                throw new InvalidOperationException("No media segments found in selected DASH representation.");
+            }
+
+            await DownloadAndConcatSegmentsAsync(targetRep.SegmentUrls, targetFilePath, cookies, progress, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task<string> FetchTextAsync(Uri uri, string? cookies, CancellationToken ct)

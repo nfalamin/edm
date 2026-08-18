@@ -1,0 +1,29 @@
+=================================================================
+ EXCLUSIVE DOWNLOAD MANAGER (EDM) - SHA-256 CHECKSUMS MANIFEST    
+ Generated: 2026-08-17 21:32:36 UTC        
+=================================================================
+
+93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023  EDM_Setup_v1.0.exe
+b3a261d14bc00d47ea1edb44e9689a2878e3ee8fc622dc636e5d4506cc8ad113  Quick_Start_Guide.txt
+68f96f422d05347cbc87a6d42e5d5d2521192ab4ef5970747d91f2d22430e8f6  SECURITY_AND_ANTI_TAMPER.txt
+44e8caf21abe18e5bb437fa0b8c6db8d4695f2fb3c761e6f19597f114e1470f8  Verify_Integrity.bat
+abddebe28b995645eeb83f0e1b9e3303b03a677b3dcfcc9209098df638d9b2a9  Verify_Integrity.ps1
+a02bbc2632afb0d3b4808b73723cc2f8082a456b870cafd9d41012375d6eb68d  Browser_Extensions\background.js
+d5a7432a3c6feb0eaf87e2226490b6ca3e4052b00d7f3296a8bc32f917a1201a  Browser_Extensions\content.css
+b21330b39587366e6b0c275cac2178eeb9baabdbf61628d779d923899c383fce  Browser_Extensions\content.js
+54fc7f8099a3f0374769bc7557e2021bee34b70e8eed5cc276aa69bfe39ae3bb  Browser_Extensions\edm-chrome-extension-v1.0.0.zip
+54fc7f8099a3f0374769bc7557e2021bee34b70e8eed5cc276aa69bfe39ae3bb  Browser_Extensions\edm-edge-extension-v1.0.0.zip
+0c33dc6e25d3a358f7dfa8d9f2d0cd80ef32d288376d86c822b192cfa9caf864  Browser_Extensions\edm-firefox-extension-v1.0.0.zip
+46033bec94b779007f56964044d08f1a4f5c4e6a172890e1805eeaab9819c86a  Browser_Extensions\icon128.png
+71bafd8dbcdbe88508e8f975602e32d4b9434e4951d3fd38f274d5774e3f5504  Browser_Extensions\icon16.png
+2d752a8f0dc5d05de339e992fbef88e63a2f8ec0feb51883816f71de16fa8632  Browser_Extensions\icon32.png
+ee6c239d510667ae8eeac4249b6d5a805d0b9f42026bffedd3a7a988ca19aafb  Browser_Extensions\icon48.png
+1a1304057cd14cf89869acdea312a7c443912f7e1fd3c3e74f8900d6033aedae  Browser_Extensions\manifest.json
+a6c7f71d72166e353b5e4a1ac426eb7281d919757161523f7974dd59acc15848  Browser_Extensions\icons\icon-128.png
+acfda6901c9fb93cf94cad5b8b9de652354dc567df8df8ea1238b5c8c285eb05  Browser_Extensions\icons\icon-16.png
+9c42889f1f2ad46ce99619fb4d212932bee733650a39c626e8b7639032626512  Browser_Extensions\icons\icon-48.png
+46033bec94b779007f56964044d08f1a4f5c4e6a172890e1805eeaab9819c86a  Browser_Extensions\icons\icon128.png
+71bafd8dbcdbe88508e8f975602e32d4b9434e4951d3fd38f274d5774e3f5504  Browser_Extensions\icons\icon16.png
+2d752a8f0dc5d05de339e992fbef88e63a2f8ec0feb51883816f71de16fa8632  Browser_Extensions\icons\icon32.png
+ee6c239d510667ae8eeac4249b6d5a805d0b9f42026bffedd3a7a988ca19aafb  Browser_Extensions\icons\icon48.png
+

@@ -48,6 +48,11 @@ namespace EDM.Services
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Download URL is empty.", nameof(url));
 
+            if (DownloadService.IsVideoStreamingUrl(url))
+            {
+                throw new InvalidOperationException($"'{url}' is a streaming media page and cannot be probed as a direct file. Use media resolution engine.");
+            }
+
             if (!FileNamingHelper.TryCreateHttpUri(url.Trim(), out var requestUri) || requestUri == null)
             {
                 LoggingService.Log($"[HttpProbeService] Invalid request URI: '{url}'");
@@ -210,7 +215,7 @@ namespace EDM.Services
             {
                 RequestUri = requestUri,
                 FinalUri = finalUri,
-                SavePath = savePath,
+                SavePath = savePath ?? string.Empty,
                 TotalBytes = totalBytes,
                 ServerSupportsResume = serverSupportsResume,
                 ContentDisposition = capturedCd,

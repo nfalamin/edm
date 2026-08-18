@@ -51,18 +51,45 @@ namespace EDM.Views
             if (DownloadsTableControl != null)
                 DownloadsTableControl.ViewModel = _viewModel;
 
+            UpdateProfilePill();
+            EDM.Services.Cloud.CloudSyncService.Instance.StateChanged += () =>
+            {
+                Dispatcher.BeginInvoke(UpdateProfilePill);
+            };
+
+            _ = _viewModel.StartMetricsUpdates(500);
+
+            // Hook notification updates
+            EDM.Services.NotificationService.Instance.UnreadCountChanged += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(UpdateNotificationBadge);
+            };
+            EDM.Services.NotificationService.Instance.NotificationReceived += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(UpdateNotificationBadge);
+            };
+            UpdateNotificationBadge();
+        }
+
+        private void UpdateNotificationBadge()
+        {
             try
             {
-                string uName = Environment.UserName;
-                if (!string.IsNullOrWhiteSpace(uName) && UserNameTextBlock != null && UserAvatarInitials != null)
+                int unread = EDM.Services.NotificationService.Instance.GetUnreadCount();
+                if (NotificationBadgeGrid != null && NotificationCountText != null)
                 {
-                    UserNameTextBlock.Text = uName;
-                    UserAvatarInitials.Text = uName.Length >= 2 ? uName.Substring(0, 2).ToUpper() : uName.ToUpper();
+                    if (unread > 0)
+                    {
+                        NotificationBadgeGrid.Visibility = System.Windows.Visibility.Visible;
+                        NotificationCountText.Text = unread > 9 ? "9+" : unread.ToString();
+                    }
+                    else
+                    {
+                        NotificationBadgeGrid.Visibility = System.Windows.Visibility.Collapsed;
+                    }
                 }
             }
             catch { }
-
-            _ = _viewModel.StartMetricsUpdates(500);
         }
 
         // ===================================================================
@@ -132,6 +159,15 @@ namespace EDM.Views
             // Inject new theme — all DynamicResource bindings in XAML update automatically
             mergedDicts.Add(new WpfResDict { Source = isDark ? DarkThemeUri : LightThemeUri });
 
+            if (ThemeToggleBtn != null)
+            {
+                ThemeToggleBtn.ToolTip = isDark ? "Switch to Light Mode" : "Switch to Dark Mode";
+                if (FindVisualChildByName<System.Windows.Controls.TextBlock>(ThemeToggleBtn, "ThemeIconText") is System.Windows.Controls.TextBlock icon)
+                {
+                    icon.Text = isDark ? "☀️" : "🌙";
+                }
+            }
+
             System.Diagnostics.Debug.WriteLine(
                 $"[EDM Theme] Applied: {(isDark ? "Dark" : "Light")}");
         }
@@ -163,32 +199,9 @@ namespace EDM.Views
             return null;
         }
 
-        private void LightModeBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void TopSettingsBtn_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            ApplyTheme(false, updateButton: true);
-            try
-            {
-                var settings = new EDM.Services.SettingsService();
-                settings.SaveSetting("SelectedTheme", "Light");
-            }
-            catch (Exception ex)
-            {
-                EDM.Services.LoggingService.LogException("[Dashboard] Failed to persist SelectedTheme", ex);
-            }
-        }
-
-        private void DarkModeBtn_Click(object sender, System.Windows.RoutedEventArgs e)
-        {
-            ApplyTheme(true, updateButton: true);
-            try
-            {
-                var settings = new EDM.Services.SettingsService();
-                settings.SaveSetting("SelectedTheme", "Dark");
-            }
-            catch (Exception ex)
-            {
-                EDM.Services.LoggingService.LogException("[Dashboard] Failed to persist SelectedTheme", ex);
-            }
+            OnSettingsClicked();
         }
 
         private void ThemeToggle_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -248,40 +261,203 @@ namespace EDM.Views
 
         private void Notification_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            var notifs = EDM.Services.NotificationService.Instance.GetRecentNotifications();
-            if (notifs.Count == 0)
+            if (NotificationPopup != null)
             {
-                WpfMsgBox.Show(
-                    "No new notifications.",
-                    "EDM Notifications",
-                    WpfMsgBtn.OK,
-                    WpfMsgImg.Information);
-            }
-            else
-            {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine($"Notifications ({notifs.Count}):\n");
-                int idx = 1;
-                foreach (var n in notifs.Take(5))
-                {
-                    string icon = n.Severity == EDM.Services.NotificationSeverity.Success ? "✅" :
-                                 n.Severity == EDM.Services.NotificationSeverity.Error ? "❌" :
-                                 n.Severity == EDM.Services.NotificationSeverity.Warning ? "⚠️" : "ℹ️";
-                    sb.AppendLine($"{idx++}. {icon} {n.Title} - {n.Message} ({n.Timestamp:HH:mm:ss})");
-                }
-
-                EDM.Services.NotificationService.Instance.MarkAllAsRead();
-                WpfMsgBox.Show(
-                    sb.ToString(),
-                    "EDM Notifications",
-                    WpfMsgBtn.OK,
-                    WpfMsgImg.Information);
+                PopulateNotifications();
+                NotificationPopup.IsOpen = !NotificationPopup.IsOpen;
             }
         }
 
-        private void ProfilePill_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void PopulateNotifications()
         {
-            OnSettingsClicked();
+            if (NotificationListPanel == null) return;
+            NotificationListPanel.Children.Clear();
+
+            var notifs = EDM.Services.NotificationService.Instance.GetRecentNotifications();
+            if (notifs.Count == 0)
+            {
+                NotificationListPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = "No notifications yet.",
+                    Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush"),
+                    FontSize = 12,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new System.Windows.Thickness(0, 20, 0, 20)
+                });
+            }
+            else
+            {
+                foreach (var n in notifs.Take(10))
+                {
+                    var brd = new System.Windows.Controls.Border
+                    {
+                        Background = (System.Windows.Media.Brush)FindResource("CardInputBg"),
+                        BorderBrush = (System.Windows.Media.Brush)FindResource("BorderBrush"),
+                        BorderThickness = new System.Windows.Thickness(1),
+                        CornerRadius = new System.Windows.CornerRadius(8),
+                        Padding = new System.Windows.Thickness(10, 8, 10, 8),
+                        Margin = new System.Windows.Thickness(0, 0, 0, 6)
+                    };
+
+                    var sp = new System.Windows.Controls.StackPanel { Orientation = System.Windows.Controls.Orientation.Vertical };
+                    
+                    var headerGrid = new System.Windows.Controls.Grid();
+                    string icon = n.Severity == EDM.Services.NotificationSeverity.Success ? "✅" :
+                                 n.Severity == EDM.Services.NotificationSeverity.Error ? "❌" :
+                                 n.Severity == EDM.Services.NotificationSeverity.Warning ? "⚠️" : "ℹ️";
+
+                    var titleBlock = new System.Windows.Controls.TextBlock
+                    {
+                        Text = $"{icon} {n.Title}",
+                        FontWeight = System.Windows.FontWeights.SemiBold,
+                        FontSize = 12,
+                        Foreground = (System.Windows.Media.Brush)FindResource("PrimaryTextBrush"),
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Left
+                    };
+                    var timeBlock = new System.Windows.Controls.TextBlock
+                    {
+                        Text = n.Timestamp.ToString("HH:mm:ss"),
+                        FontSize = 10,
+                        Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush"),
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+                    };
+                    headerGrid.Children.Add(titleBlock);
+                    headerGrid.Children.Add(timeBlock);
+                    sp.Children.Add(headerGrid);
+
+                    if (!string.IsNullOrWhiteSpace(n.Message))
+                    {
+                        var msgBlock = new System.Windows.Controls.TextBlock
+                        {
+                            Text = n.Message,
+                            FontSize = 11,
+                            Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush"),
+                            TextWrapping = System.Windows.TextWrapping.Wrap,
+                            Margin = new System.Windows.Thickness(0, 4, 0, 0)
+                        };
+                        sp.Children.Add(msgBlock);
+                    }
+
+                    brd.Child = sp;
+                    NotificationListPanel.Children.Add(brd);
+                }
+            }
+        }
+
+        private void MarkAllRead_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            EDM.Services.NotificationService.Instance.MarkAllAsRead();
+            UpdateNotificationBadge();
+            PopulateNotifications();
+        }
+
+        private void ClearNotifications_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            EDM.Services.NotificationService.Instance.Clear();
+            UpdateNotificationBadge();
+            if (NotificationListPanel != null)
+            {
+                NotificationListPanel.Children.Clear();
+                NotificationListPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = "No notifications yet.",
+                    Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush"),
+                    FontSize = 12,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new System.Windows.Thickness(0, 20, 0, 20)
+                });
+            }
+        }
+
+        private void ProfilePill_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            try
+            {
+                var win = new UserProfileWindow();
+                win.Owner = WpfWindow.GetWindow(this);
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ProfilePill_Click] Failed: {ex.Message}");
+            }
+        }
+
+        private void UpdateProfilePill()
+        {
+            try
+            {
+                var cloud = EDM.Services.Cloud.CloudSyncService.Instance;
+                string uName = cloud.Account.IsAuthenticated ? cloud.Account.DisplayName : Environment.UserName;
+                if (!string.IsNullOrWhiteSpace(uName) && UserNameTextBlock != null && UserAvatarInitials != null)
+                {
+                    UserNameTextBlock.Text = uName;
+                    UserAvatarInitials.Text = uName.Length >= 2 ? uName.Substring(0, 2).ToUpper() : uName.ToUpper();
+                }
+            }
+            catch { }
+        }
+
+        private void TopAiBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new AiChatbotWindow(_viewModel);
+                win.Owner = WpfWindow.GetWindow(this);
+                win.Show();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TopAiBtn_Click] Failed: {ex.Message}");
+            }
+        }
+
+        private void LanguageBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (LanguagePopup != null)
+            {
+                LanguagePopup.IsOpen = !LanguagePopup.IsOpen;
+            }
+        }
+
+        private void SelectLanguage_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is string code)
+            {
+                EDM.Services.LocalizationService.Instance.SetLanguage(code);
+                if (LanguagePopup != null)
+                {
+                    LanguagePopup.IsOpen = false;
+                }
+            }
+        }
+
+        private void TopSupportBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new SupportCenterWindow();
+                win.Owner = WpfWindow.GetWindow(this);
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TopSupportBtn_Click] Failed: {ex.Message}");
+            }
+        }
+
+        private void TopAboutBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            try
+            {
+                var win = new AboutWindow();
+                win.Owner = WpfWindow.GetWindow(this);
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TopAboutBtn_Click] Failed: {ex.Message}");
+            }
         }
 
         // ===================================================================

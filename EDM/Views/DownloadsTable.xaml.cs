@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using EDM.Models;
+using EDM.Services;
 using EDM.ViewModels;
 
 namespace EDM.Views
@@ -213,7 +214,95 @@ namespace EDM.Views
             }
         }
 
+        /// <summary>
+        /// Handle row double click to open Turbo Progress Window or Properties Window
+        /// </summary>
+        private void Row_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2 && sender is Border border && border.Tag is DownloadItem download)
+            {
+                e.Handled = true;
+                OpenProgressOrPropertiesWindow(download);
+            }
+        }
+
+        private void OpenProgressOrPropertiesWindow(DownloadItem download)
+        {
+            if (download == null) return;
+            try
+            {
+                if (download.Status == "Completed" || download.Status == "Error" || download.Status == "Cancelled")
+                {
+                    var propWin = new DownloadPropertiesWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    propWin.Show();
+                }
+                else
+                {
+                    var progWin = new DownloadProgressWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    progWin.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[DownloadsTable] Failed to open Progress/Properties window", ex);
+            }
+        }
+
         // ==================== CONTEXT MENU HANDLERS ====================
+
+        /// <summary>
+        /// Context Menu: Show Turbo Progress Window
+        /// </summary>
+        private void MenuItem_ShowProgressWindow(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                try
+                {
+                    var progWin = new DownloadProgressWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    progWin.Show();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogException("[DownloadsTable] Failed to open Progress Window", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Context Menu: Download Properties
+        /// </summary>
+        private void MenuItem_Properties(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                try
+                {
+                    var propWin = new DownloadPropertiesWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    propWin.Show();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogException("[DownloadsTable] Failed to open Properties Window", ex);
+                }
+            }
+        }
 
         /// <summary>
         /// Context Menu: Open File - Opens the downloaded file in its default application

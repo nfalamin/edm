@@ -19,7 +19,17 @@ namespace EDM.ControlPlane.Api.Middleware
             context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
             context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
             context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-            context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'";
+            context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+            
+            // Content Security Policy permitting local assets, Lucide CDN, Chart.js CDN, and Google Auth
+            context.Response.Headers["Content-Security-Policy"] = 
+                "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://accounts.google.com; " +
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                "img-src 'self' data: https:; " +
+                "font-src 'self' https://fonts.gstatic.com data:; " +
+                "connect-src 'self' https://cdn.jsdelivr.net https://accounts.google.com; " +
+                "frame-ancestors 'none';";
 
             await _next(context);
         }

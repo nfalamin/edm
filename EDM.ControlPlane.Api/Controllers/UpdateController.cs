@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EDM.ControlPlane.Api.Data;
 using EDM.ControlPlane.Api.Models;
+using EDM.ControlPlane.Api.Services;
 
 namespace EDM.ControlPlane.Api.Controllers
 {
@@ -33,10 +34,12 @@ namespace EDM.ControlPlane.Api.Controllers
     [Route("api/v1/updates")]
     public class UpdateController : ControllerBase
     {
+        private readonly IReleaseService _releaseService;
         private readonly ControlPlaneDbContext _dbContext;
 
-        public UpdateController(ControlPlaneDbContext dbContext)
+        public UpdateController(IReleaseService releaseService, ControlPlaneDbContext dbContext)
         {
+            _releaseService = releaseService ?? throw new ArgumentNullException(nameof(releaseService));
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
@@ -45,12 +48,8 @@ namespace EDM.ControlPlane.Api.Controllers
         {
             if (request == null) return BadRequest("Invalid update request");
 
-            // Look up latest active release for requested platform
-            var latestRelease = await _dbContext.Releases
-                .Include(r => r.Artifacts)
-                .Where(r => r.Platform == request.Platform && !r.IsWithdrawn)
-                .OrderByDescending(r => r.PublishedAtUtc)
-                .FirstOrDefaultAsync();
+            // Query single source of truth for active published release
+            var latestRelease = await _releaseService.GetLatestActiveReleaseAsync(request.Platform, request.Channel ?? "stable");
 
             if (latestRelease == null)
             {
@@ -60,7 +59,7 @@ namespace EDM.ControlPlane.Api.Controllers
                     LatestVersion: request.CurrentVersion,
                     MinimumSupportedVersion: "1.0.0",
                     IsMandatory: false,
-                    Severity: "Standard",
+                    Severity: "OPTIONAL",
                     Title: "Up to date",
                     ReleaseNotes: string.Empty,
                     PublishedAtUtc: DateTime.UtcNow,
@@ -72,20 +71,26 @@ namespace EDM.ControlPlane.Api.Controllers
 
             bool isNewer = IsVersionNewer(latestRelease.Version, request.CurrentVersion);
             bool isBelowMin = IsVersionNewer(latestRelease.MinimumSupportedVersion, request.CurrentVersion);
+            bool isRequired = latestRelease.IsMandatory || isBelowMin || latestRelease.Severity == ReleaseSeverity.Critical;
+
+            string severityStr = isRequired ? "REQUIRED" : (latestRelease.Severity == ReleaseSeverity.Recommended ? "RECOMMENDED" : "OPTIONAL");
 
             var primaryArtifact = latestRelease.Artifacts.FirstOrDefault();
+            string? downloadUrl = primaryArtifact != null
+                ? (primaryArtifact.DownloadUrl ?? $"/api/v1/releases/artifacts/{primaryArtifact.Id}/download")
+                : null;
 
             return Ok(new UpdateCheckResponse(
                 UpdateAvailable: isNewer,
                 CurrentVersion: request.CurrentVersion,
                 LatestVersion: latestRelease.Version,
                 MinimumSupportedVersion: latestRelease.MinimumSupportedVersion,
-                IsMandatory: latestRelease.IsMandatory || isBelowMin,
-                Severity: latestRelease.Severity.ToString(),
+                IsMandatory: isRequired,
+                Severity: severityStr,
                 Title: latestRelease.Title,
                 ReleaseNotes: latestRelease.ReleaseNotes,
                 PublishedAtUtc: latestRelease.PublishedAtUtc,
-                DownloadUrl: primaryArtifact?.DownloadUrl,
+                DownloadUrl: downloadUrl,
                 Sha256Hash: primaryArtifact?.Sha256Hash,
                 FileSizeBytes: primaryArtifact?.FileSizeBytes ?? 0,
                 SignatureBase64: primaryArtifact?.SignatureBase64));

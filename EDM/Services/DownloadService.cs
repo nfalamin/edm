@@ -261,6 +261,25 @@ namespace EDM.Services
             return false;
         }
 
+        // Start a download for the provided DownloadItem. Delegates to DownloadOrchestrator.
+        public async Task StartDownloadAsync(
+            DownloadItem item,
+            IProgress<DownloadProgressInfo> progressReporter,
+            PauseTokenSource pauseToken,
+            Func<double> speedLimitProvider,
+            CancellationToken cancellationToken,
+            int? segmentCount = null)
+        {
+            await _orchestrator.StartDownloadAsync(
+                item,
+                progressReporter,
+                pauseToken,
+                speedLimitProvider,
+                cancellationToken,
+                segmentCount,
+                DiagnosticLog).ConfigureAwait(false);
+        }
+
         // Start a download for the provided url. Delegates to DownloadOrchestrator.
         public async Task StartDownloadAsync(
             string url,
@@ -500,17 +519,19 @@ namespace EDM.Services
                 // Remove temp part files and meta directories
                 CleanUpTempFiles(savePath);
 
-                // Remove persisted segmented metadata (.edm.json and tmp)
+                // Remove persisted segmented metadata (.edm.json, .bak, and .tmp)
                 try
                 {
                     var meta = savePath + ".edm.json";
-                    var metaTmp = meta + ".tmp";
                     FileDeleteHelper.DeleteFileSafe(meta);
-                    FileDeleteHelper.DeleteFileSafe(metaTmp);
+                    FileDeleteHelper.DeleteFileSafe(meta + ".tmp");
+                    FileDeleteHelper.DeleteFileSafe(meta + ".bak");
+                    FileDeleteHelper.DeleteFileSafe(savePath + ".merging");
+                    FileDeleteHelper.DeleteFileSafe(savePath + ".tmpdl");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogException("[DownloadService] Failed deleting metadata files", ex);
+                    LoggingService.LogException("[DownloadService] Failed deleting metadata/temp files", ex);
                 }
             }
             catch (Exception ex)

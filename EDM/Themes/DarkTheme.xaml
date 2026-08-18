@@ -3,11 +3,11 @@
 
     <!-- 
       Deep Midnight Indigo & Vibrant Neon Glow Theme (Exact Reference Matching)
-      Primary Surface: #030A17
-      Secondary Surface: #061327
+      Primary Surface: #030A17 (#070D1E)
+      Secondary Surface: #061327 (#0D162E)
       Main Card: #0B1424
       Card Border: #172B4A
-      Active Gradient: linear-gradient(90deg, #2E86FF, #8B4DFF)
+      Active Gradient: linear-gradient(90deg, #2E86FF, #8B4DFF / #7C3AED)
     -->
 
     <!-- Solid Colors -->

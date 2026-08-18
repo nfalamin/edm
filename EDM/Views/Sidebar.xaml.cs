@@ -205,11 +205,55 @@ namespace EDM.Views
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
                     return;
                 }
+                else if (category == "AiChat")
+                {
+                    try
+                    {
+                        var win = new AiChatbotWindow(ViewModel);
+                        win.Owner = Window.GetWindow(this);
+                        win.Show();
+                    }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                    return;
+                }
                 else if (category == "Settings")
                 {
                     try
                     {
                         var win = new SettingsWindow();
+                        win.Owner = Window.GetWindow(this);
+                        win.ShowDialog();
+                    }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                    return;
+                }
+                else if (category == "Support")
+                {
+                    try
+                    {
+                        var win = new SupportCenterWindow();
+                        win.Owner = Window.GetWindow(this);
+                        win.ShowDialog();
+                    }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                    return;
+                }
+                else if (category == "About")
+                {
+                    try
+                    {
+                        var win = new AboutWindow();
+                        win.Owner = Window.GetWindow(this);
+                        win.ShowDialog();
+                    }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                    return;
+                }
+                else if (category == "Privacy")
+                {
+                    try
+                    {
+                        var win = new PrivacyPolicyWindow();
                         win.Owner = Window.GetWindow(this);
                         win.ShowDialog();
                     }

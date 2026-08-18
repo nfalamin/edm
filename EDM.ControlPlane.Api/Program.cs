@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -13,12 +15,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using EDM.ControlPlane.Api.Data;
 using EDM.ControlPlane.Api.Middleware;
+using EDM.ControlPlane.Api.Models;
 using EDM.ControlPlane.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 builder.Services.AddEndpointsApiExplorer();
 
 // Database Configuration
@@ -41,29 +47,76 @@ builder.Services.AddDbContext<ControlPlaneDbContext>(options =>
 builder.Services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddSingleton<IPrivacySafeDeviceService, PrivacySafeDeviceService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddSingleton<ITotpService, TotpService>();
+builder.Services.AddSingleton<IPasskeyService, PasskeyService>();
+builder.Services.AddSingleton<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddSingleton<ICsrfProtectionService, CsrfProtectionService>();
 builder.Services.AddScoped<IAuditLoggingService, AuditLoggingService>();
 builder.Services.AddScoped<IBanEnforcementService, BanEnforcementService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<ILicenseService, LicenseService>();
+builder.Services.AddScoped<IReleaseService, ReleaseService>();
+builder.Services.AddScoped<IContentAndPricingService, ContentAndPricingService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<ISupportService, SupportService>();
+builder.Services.AddScoped<ISystemHealthService, SystemHealthService>();
 
-// Configure CORS for Dashboard
+// Configure Strict Environment-Specific CORS for Dashboard and Website
+string[] allowedOrigins;
+if (builder.Environment.IsDevelopment())
+{
+    allowedOrigins = new[]
+    {
+        "http://localhost:5000",
+        "https://localhost:5001",
+        "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "https://control.edm.local"
+    };
+}
+else
+{
+    string? configuredOrigins = builder.Configuration["Cors:AllowedOrigins"] ?? Environment.GetEnvironmentVariable("EDM_CORS_ALLOWED_ORIGINS");
+    if (!string.IsNullOrWhiteSpace(configuredOrigins))
+    {
+        allowedOrigins = configuredOrigins.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+    else
+    {
+        allowedOrigins = new[]
+        {
+            "https://control.edm-download.org",
+            "https://edm-download.org"
+        };
+    }
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DashboardCorsPolicy", policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5000",
-            "https://localhost:5001",
-            "http://127.0.0.1:5500",
-            "http://localhost:3000",
-            "https://control.edm.local")
-            .AllowAnyHeader()
+        policy.WithOrigins(allowedOrigins)
+            .WithHeaders("Content-Type", "Accept", "X-CSRF-Token", "X-XSRF-Token", "Authorization")
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
 
-// Configure JWT Bearer Authentication
-string jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? "EDM_Development_Super_Secret_Key_For_Jwt_Signing_2026_Minimum_256_Bits!";
+// Configure JWT Bearer Authentication (Header & Secure Cookie)
+string? configuredJwtSecret = builder.Configuration["Jwt:SecretKey"] ?? Environment.GetEnvironmentVariable("EDM_JWT_SECRET");
+
+if (builder.Environment.IsProduction())
+{
+    if (string.IsNullOrWhiteSpace(configuredJwtSecret) || 
+        configuredJwtSecret.Equals("EDM_Development_Super_Secret_Key_For_Jwt_Signing_2026_Minimum_256_Bits!", StringComparison.Ordinal) ||
+        configuredJwtSecret.Length < 32)
+    {
+        throw new InvalidOperationException("CRITICAL PRODUCTION SECURITY FAILURE: Production environment requires a valid secure JWT signing secret. Please set the EDM_JWT_SECRET environment variable or configure Jwt:SecretKey with a minimum of 256 bits.");
+    }
+}
+
+string jwtSecret = !string.IsNullOrWhiteSpace(configuredJwtSecret) ? configuredJwtSecret : "EDM_Development_Super_Secret_Key_For_Jwt_Signing_2026_Minimum_256_Bits!";
 string jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "EDM.ControlPlane";
 string jwtAudience = builder.Configuration["Jwt:Audience"] ?? "EDM.Clients";
 
@@ -74,7 +127,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // Configurable per deployment environment
+    options.RequireHttpsMetadata = builder.Environment.IsProduction();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -86,6 +139,19 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // First check Authorization header; if absent, read from secure HttpOnly cookie
+            if (string.IsNullOrEmpty(context.Token) && context.Request.Cookies.TryGetValue("edm_admin_jwt", out var cookieToken))
+            {
+                context.Token = cookieToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -104,7 +170,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    // Login rate limiter: max 10 requests per minute per IP
+    // Login & auth rate limiter: max 10 requests per minute per IP
     options.AddPolicy("AuthRateLimit", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -119,70 +185,294 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-// Ensure DB is initialized
+// Ensure DB is initialized & Seed Initial Data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ControlPlaneDbContext>();
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    var permService = scope.ServiceProvider.GetRequiredService<IPermissionService>();
     db.Database.EnsureCreated();
 
-    if (!db.Releases.Any(r => r.Platform == EDM.ControlPlane.Api.Models.ClientType.DesktopWindows && !r.IsWithdrawn))
+    // 1. Ensure Default Role Permissions
+    permService.EnsureDefaultRolePermissionsAsync().GetAwaiter().GetResult();
+
+    // 2. Seed Initial Super Admin if database has no users
+    if (!db.Users.Any())
     {
-        var rel = new EDM.ControlPlane.Api.Models.Release
+        bool isDev = app.Environment.IsDevelopment();
+        string? envPassword = Environment.GetEnvironmentVariable("EDM_SUPERADMIN_PASSWORD") ?? builder.Configuration["Admin:InitialPassword"];
+
+        if (!isDev && string.IsNullOrWhiteSpace(envPassword))
+        {
+            // In Production, require explicit administrator provisioning via /api/v1/auth/setup-initial-admin
+            Console.WriteLine("[SECURITY] Production DB initialized with 0 users. SuperAdmin must be provisioned via /api/v1/auth/setup-initial-admin or EDM_SUPERADMIN_PASSWORD.");
+        }
+        else
+        {
+            string initUsername = Environment.GetEnvironmentVariable("EDM_SUPERADMIN_USERNAME") 
+                ?? builder.Configuration["Admin:InitialUsername"] 
+                ?? "superadmin";
+            string initEmail = Environment.GetEnvironmentVariable("EDM_SUPERADMIN_EMAIL") 
+                ?? builder.Configuration["Admin:InitialEmail"] 
+                ?? "admin@edm.local";
+            string initPassword = !string.IsNullOrWhiteSpace(envPassword) 
+                ? envPassword 
+                : "Admin@EDM2026!SecureKey";
+
+            var superAdmin = new User
+            {
+                Id = Guid.NewGuid(),
+                Username = initUsername,
+                Email = initEmail.ToLowerInvariant().Trim(),
+                PasswordHash = hasher.HashPassword(initPassword),
+                Role = UserRole.SUPER_ADMIN,
+                IsActive = true,
+                IsEmailVerified = true,
+                TwoFactorEnabled = false,
+                MustChangePassword = false,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            db.Users.Add(superAdmin);
+            db.SaveChanges();
+        }
+    }
+
+    // 3. Seed Default Commercial Plans
+    if (!db.Plans.Any())
+    {
+        var freePlan = new Plan
+        {
+            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Code = "free",
+            Name = "EDM Free Community",
+            Tier = PlanTier.Free,
+            Description = "Standard multi-stream download acceleration with essential features.",
+            PriceMonthlyUsd = 0.00m,
+            PriceYearlyUsd = 0.00m,
+            MaxDevices = 1,
+            MaxConcurrentDownloads = 3,
+            FeaturesJson = "[\"Multi-stream 8-socket acceleration\",\"Browser extension integration\",\"Queue management\"]",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var proPlan = new Plan
+        {
+            Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Code = "pro",
+            Name = "EDM Pro Turbo",
+            Tier = PlanTier.Pro,
+            Description = "Full turbo 32-socket downloads, priority routing, automated media sniffing and cloud sync.",
+            PriceMonthlyUsd = 4.99m,
+            PriceYearlyUsd = 39.99m,
+            MaxDevices = 5,
+            MaxConcurrentDownloads = 10,
+            FeaturesJson = "[\"32-socket turbo acceleration\",\"Smart dynamic bandwidth allocation\",\"4K/8K Media Grabber & Stream Sniffer\",\"Zero ads & priority VIP support\"]",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var entPlan = new Plan
+        {
+            Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            Code = "enterprise",
+            Name = "EDM Enterprise Fleet",
+            Tier = PlanTier.Enterprise,
+            Description = "Unlimited high-speed concurrency, centralized policy deployment and API access.",
+            PriceMonthlyUsd = 19.99m,
+            PriceYearlyUsd = 199.99m,
+            MaxDevices = 50,
+            MaxConcurrentDownloads = 50,
+            FeaturesJson = "[\"Unlimited concurrent stream sockets\",\"Centralized device fleet policy\",\"Custom corporate branding\",\"Dedicated 24/7 SLA support\"]",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        db.Plans.AddRange(freePlan, proPlan, entPlan);
+        db.SaveChanges();
+
+        // Seed Pricing Tiers for Plans
+        db.PricingTiers.AddRange(
+            new PricingTier
+            {
+                Id = Guid.NewGuid(),
+                PlanId = proPlan.Id,
+                DisplayName = "Pro Monthly",
+                MonthlyPrice = 4.99m,
+                YearlyPrice = 4.99m * 12,
+                Currency = "USD",
+                FeaturesListJson = proPlan.FeaturesJson,
+                BadgeText = null,
+                IsHighlighted = false,
+                SortOrder = 1,
+                IsActive = true,
+                UpdatedAtUtc = DateTime.UtcNow
+            },
+            new PricingTier
+            {
+                Id = Guid.NewGuid(),
+                PlanId = proPlan.Id,
+                DisplayName = "Pro Yearly (Save 33%)",
+                MonthlyPrice = 3.33m,
+                YearlyPrice = 39.99m,
+                Currency = "USD",
+                FeaturesListJson = proPlan.FeaturesJson,
+                BadgeText = "Most Popular",
+                IsHighlighted = true,
+                SortOrder = 2,
+                IsActive = true,
+                UpdatedAtUtc = DateTime.UtcNow
+            }
+        );
+        db.SaveChanges();
+    }
+
+    // 4. Seed Default Authoritative Release with Real SHA-256 and Size
+    if (!db.Releases.Any(r => r.Platform == ClientType.DesktopWindows && !r.IsWithdrawn))
+    {
+        var rel = new Release
         {
             Id = Guid.NewGuid(),
-            Platform = EDM.ControlPlane.Api.Models.ClientType.DesktopWindows,
-            Version = "2.0.0",
+            Platform = ClientType.DesktopWindows,
+            Version = "2.1.0",
+            Channel = "stable",
             MinimumSupportedVersion = "1.0.0",
-            Title = "EDM 2.0.0 Official Release",
-            ReleaseNotes = "High performance multi-stream download engine.",
+            Title = "EDM 2.1.0 Turbo Release",
+            ReleaseNotes = "High performance multi-stream 32-socket download engine.",
             PublishedAtUtc = DateTime.UtcNow,
             IsMandatory = false,
-            Severity = EDM.ControlPlane.Api.Models.ReleaseSeverity.Standard
+            IsPublished = true,
+            Severity = ReleaseSeverity.Standard
         };
-        rel.Artifacts.Add(new EDM.ControlPlane.Api.Models.ReleaseArtifact
+
+        var artifactId = Guid.NewGuid();
+        rel.Artifacts.Add(new ReleaseArtifact
         {
-            Id = Guid.NewGuid(),
+            Id = artifactId,
             ReleaseId = rel.Id,
-            ArtifactName = "EDM_Setup.exe",
-            DownloadUrl = "https://releases.edm.com/desktop/EDM_Setup.exe",
-            Sha256Hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            FileSizeBytes = 3500000
+            ArtifactName = "EDM-Setup-v2.1.0.exe",
+            Architecture = "x64",
+            DownloadUrl = $"/api/v1/releases/artifacts/{artifactId}/download",
+            Sha256Hash = "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023",
+            FileSizeBytes = 19807971
         });
         db.Releases.Add(rel);
+        db.SaveChanges();
+    }
+
+    // 5. Seed Default Website Sections
+    if (!db.WebsiteContents.Any())
+    {
+        db.WebsiteContents.AddRange(
+            new WebsiteContent
+            {
+                Id = Guid.NewGuid(),
+                SectionKey = "hero",
+                Title = "The Fastest Download Manager on the Planet",
+                ContentJson = "{\"subtitle\":\"Engineered in C# and Native Win32 for maximum socket efficiency and ultra-fast download acceleration.\",\"ctaText\":\"Download EDM Free\",\"ctaUrl\":\"/download\"}",
+                Locale = "en",
+                IsPublished = true,
+                Version = 1,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            },
+            new WebsiteContent
+            {
+                Id = Guid.NewGuid(),
+                SectionKey = "features",
+                Title = "Next-Generation Download Engine",
+                ContentJson = "{\"features\":[{\"title\":\"32-Stream Parallel Multi-Socket Acceleration\",\"desc\":\"Splits large files dynamically for maximum bandwidth saturation.\"},{\"title\":\"Universal Browser Extensions\",\"desc\":\"Chrome, Edge, Firefox, Brave, and Opera native integration.\"}]}",
+                Locale = "en",
+                IsPublished = true,
+                Version = 1,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            }
+        );
         db.SaveChanges();
     }
 }
 
 // Middleware Pipeline
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
-
 app.UseCors("DashboardCorsPolicy");
 
-// Serve Dashboard Static Files if present
-string dashboardPath = Path.Combine(builder.Environment.ContentRootPath, "..", "EDM.ControlPlane.Dashboard");
+// 1. Serve Admin Dashboard at /edm-admin
+string dashboardPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "EDM.ControlPlane.Dashboard"));
 if (Directory.Exists(dashboardPath))
 {
+    var dashboardFileProvider = new PhysicalFileProvider(dashboardPath);
+
     app.UseDefaultFiles(new DefaultFilesOptions
     {
-        FileProvider = new PhysicalFileProvider(dashboardPath),
-        RequestPath = ""
+        FileProvider = dashboardFileProvider,
+        RequestPath = "/edm-admin"
     });
+
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(dashboardPath),
+        FileProvider = dashboardFileProvider,
+        RequestPath = "/edm-admin"
+    });
+}
+
+// 2. Serve Public Website at root /
+string websitePath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "website"));
+if (Directory.Exists(websitePath))
+{
+    var websiteFileProvider = new PhysicalFileProvider(websitePath);
+
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider = websiteFileProvider,
+        RequestPath = ""
+    });
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = websiteFileProvider,
         RequestPath = ""
     });
 }
 
 app.UseRateLimiter();
-
 app.UseAuthentication();
-
 app.UseMiddleware<BanEnforcementMiddleware>();
-
+app.UseMiddleware<CsrfProtectionMiddleware>();
 app.UseAuthorization();
 
+// Map API Controllers
 app.MapControllers();
+
+// SPA Fallback Routing for /edm-admin and /
+app.MapFallback(async context =>
+{
+    string path = context.Request.Path.Value ?? "";
+
+    if (path.StartsWith("/edm-admin", StringComparison.OrdinalIgnoreCase))
+    {
+        string adminIndexPath = Path.Combine(dashboardPath, "index.html");
+        if (File.Exists(adminIndexPath))
+        {
+            context.Response.ContentType = "text/html";
+            await context.Response.SendFileAsync(adminIndexPath);
+            return;
+        }
+    }
+
+    string webIndexPath = Path.Combine(websitePath, "index.html");
+    if (File.Exists(webIndexPath))
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(webIndexPath);
+        return;
+    }
+
+    context.Response.StatusCode = 404;
+    await context.Response.WriteAsync("Not Found");
+});
 
 app.Run();
 

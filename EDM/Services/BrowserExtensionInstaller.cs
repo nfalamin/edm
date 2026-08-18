@@ -81,9 +81,28 @@ namespace EDM.Services
                 type = "stdio",
                 allowed_origins = new[]
                 {
+                    "chrome-extension://fgnkgamjcmfccjmkifdhipjgnagfgioe/",
                     $"chrome-extension://{ChromeExtensionId}/",
                     "chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkda/",
-                    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/"
+                    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/",
+                    "chrome-extension://pjnefijmagpdjfhhkpljicbbpicelgko/",
+                    "chrome-extension://agionbommeaifngbhincahgmoflcikhm/",
+                    "chrome-extension://aapbdbdomjkkjkaonfhkkikfgjllcleb/",
+                    "chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/",
+                    "chrome-extension://aicmkgpgakddgnaphhhpliifpcfhicfo/",
+                    "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/",
+                    "chrome-extension://ngpampappnmepgilojfohadhhmbhlaek/",
+                    "chrome-extension://joalfcmoabjccbphlngocfcpkglmalkj/",
+                    "chrome-extension://omfoimoadhlddiepbagphpoccblokgem/",
+                    "chrome-extension://nmmhkkegccagdldgiimedpiccmgmieda/",
+                    "chrome-extension://bcmmjkglicliekcndffbfgcfopnidllp/",
+                    "chrome-extension://caidcmannjgahlnbpmidmiecjcoiiigg/",
+                    "chrome-extension://aohghmighlieiainnegkcijnfilokake/",
+                    "chrome-extension://aapocclcgogkmnckokdopfmhonfmgoek/",
+                    "chrome-extension://felcaaldnbdncclmgdcncolpebgiejap/",
+                    "chrome-extension://apdfllckaahabafndbhieahigkjlhalf/",
+                    "chrome-extension://pjkljhegncpnkpknbcohdijeoejaedia/",
+                    "chrome-extension://blpcfgokakmgnkcojhhkbfbldkacnbeo/"
                 }
             };
 

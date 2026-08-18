@@ -13,19 +13,42 @@ namespace EDM.Services
         Error
     }
 
+    public enum NotificationCategory
+    {
+        System,
+        DownloadCompleted,
+        DownloadFailed,
+        UpdateAvailable,
+        Licensing,
+        Security,
+        Support
+    }
+
     public class NotificationEvent
     {
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public string Title { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public NotificationSeverity Severity { get; set; } = NotificationSeverity.Info;
+        public NotificationCategory Category { get; set; } = NotificationCategory.System;
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public bool IsRead { get; set; }
+
+        public string CategoryIcon => Category switch
+        {
+            NotificationCategory.DownloadCompleted => "✅",
+            NotificationCategory.DownloadFailed => "❌",
+            NotificationCategory.UpdateAvailable => "🔄",
+            NotificationCategory.Licensing => "🔑",
+            NotificationCategory.Security => "🛡️",
+            NotificationCategory.Support => "❓",
+            _ => "🔔"
+        };
     }
 
     /// <summary>
     /// Production-grade Notification System for EDM.
-    /// Manages in-app notifications, event dispatching, unread counts, and settings persistence.
+    /// Manages in-app notifications, event dispatching, unread counts, categories, and settings persistence.
     /// </summary>
     public class NotificationService
     {
@@ -54,7 +77,7 @@ namespace EDM.Services
             }
         }
 
-        public void Notify(string title, string message, NotificationSeverity severity = NotificationSeverity.Info)
+        public void Notify(string title, string message, NotificationSeverity severity = NotificationSeverity.Info, NotificationCategory category = NotificationCategory.System)
         {
             if (!NotificationsEnabled) return;
 
@@ -63,6 +86,7 @@ namespace EDM.Services
                 Title = title,
                 Message = message,
                 Severity = severity,
+                Category = category,
                 Timestamp = DateTime.Now,
                 IsRead = false
             };
@@ -72,7 +96,7 @@ namespace EDM.Services
             // Maintain bounded queue
             while (_notifications.Count > MaxNotificationHistory && _notifications.TryDequeue(out _)) { }
 
-            LoggingService.Log($"[NotificationService] [{severity}] {title}: {message}");
+            LoggingService.Log($"[NotificationService] [{severity}|{category}] {title}: {message}");
 
             // Trigger events
             try

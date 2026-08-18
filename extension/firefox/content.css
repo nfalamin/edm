@@ -1,275 +1,544 @@
-/* EDM Browser Video Downloader & Floating Control Panel Stylesheet */
-/* Version: 2.0.0 — Modern Glassmorphic Theme with Subtle Blue Accent */
+/**
+ * EDM (Exclusive Download Manager) - Production Glassmorphism UI Theme
+ * IDM-Class Frosted-Glass Media Overlay & Format Selector
+ */
 
+/* ── 1. Root Floating Panel Scoping ── */
 .edm-floating-panel {
-    position: absolute;
-    z-index: 2147483647;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.4;
-    user-select: none;
-    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
-    opacity: 0.96;
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+    transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    line-height: 1.4 !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
 }
 
-.edm-floating-panel:hover {
-    opacity: 1 !important;
+.edm-thumb-panel {
+    top: 10px !important;
+    right: 10px !important;
 }
 
-/* Compact Floating Download Pill Button */
-.edm-floating-btn,
-.edm-video-overlay-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: linear-gradient(135deg, rgba(13, 22, 46, 0.88) 0%, rgba(23, 37, 84, 0.88) 100%);
-    color: #F8FAFC;
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(56, 189, 248, 0.2);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    outline: none;
+.edm-floating-panel * {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-.edm-floating-btn:hover {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 58, 138, 0.95) 100%);
-    border-color: #38BDF8;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.4);
-    transform: translateY(-1px);
+/* ── 2. Classic IDM-Style Compact Download Bar ── */
+.edm-idm-bar {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 22px !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0F4F8 40%, #DCE5EE 50%, #EBF1F7 100%) !important;
+    border: 1px solid #7B96B2 !important;
+    border-radius: 2px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    user-select: none !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    font-size: 11px !important;
+    color: #1E395B !important;
+    transition: all 0.15s ease !important;
 }
 
-.edm-floating-btn:active {
-    transform: translateY(0);
+.edm-idm-bar:hover {
+    border-color: #3880C7 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 #FFFFFF !important;
 }
 
-.edm-btn-icon {
-    font-size: 11px;
-    color: #38BDF8;
-    line-height: 1;
+.edm-idm-main-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 0 7px 0 5px !important;
+    height: 100% !important;
 }
 
-.edm-btn-text {
-    letter-spacing: 0.2px;
-    font-weight: 600;
+.edm-idm-logo-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 14px !important;
+    height: 14px !important;
 }
 
-.edm-btn-arrow {
-    font-size: 10px;
-    color: #94A3B8;
-    margin-left: 2px;
-    transition: transform 0.2s ease;
+.edm-idm-icon {
+    width: 12px !important;
+    height: 12px !important;
+    fill: #10B981 !important;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)) !important;
 }
 
-.edm-floating-panel.edm-open .edm-btn-arrow {
-    transform: rotate(180deg);
+.edm-idm-text {
+    font-size: 11px !important;
+    font-weight: bold !important;
+    color: #0A3158 !important;
+    white-space: nowrap !important;
+    line-height: 20px !important;
+    letter-spacing: 0.1px !important;
+    transition: color 0.15s ease, text-shadow 0.15s ease !important;
 }
 
-/* DRM Protected Badge */
-.edm-drm-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(30, 15, 20, 0.85);
-    color: #FDA4AF;
-    border: 1px solid rgba(244, 63, 94, 0.3);
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: not-allowed;
-    backdrop-filter: blur(8px);
+.edm-idm-bar:hover .edm-idm-text {
+    color: #0284C7 !important;
+    text-shadow: 0 0 1px rgba(2, 132, 199, 0.3) !important;
 }
 
-.edm-drm-icon {
-    font-size: 12px;
+.edm-idm-badge {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
+    font-size: 9.5px !important;
+    font-weight: 800 !important;
+    padding: 1px 5px !important;
+    border-radius: 8px !important;
+    margin-left: 2px !important;
 }
 
-/* Format / Resolution Selection Popup Dropdown Card */
-.edm-dropdown-card {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    width: 360px;
-    max-height: 420px;
-    background: rgba(13, 22, 46, 0.92);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    border-radius: 8px;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    animation: edmFadeIn 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+.edm-idm-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    border-left: 1px solid #B0C4DE !important;
 }
 
-@keyframes edmFadeIn {
-    from { opacity: 0; transform: translateY(-6px); }
+.edm-idm-btn-help,
+.edm-idm-btn-close {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 16px !important;
+    height: 100% !important;
+    font-size: 10.5px !important;
+    font-weight: bold !important;
+    color: #4B6A90 !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.edm-idm-btn-help:hover {
+    background: rgba(2, 132, 199, 0.15) !important;
+    color: #0284C7 !important;
+}
+
+.edm-idm-btn-close:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #EF4444 !important;
+}
+
+/* ── 3. Classic IDM Dark Popup Panel ── */
+.edm-idm-dropdown-panel {
+    position: absolute !important;
+    top: calc(100% + 2px) !important;
+    right: 0 !important;
+    min-width: 460px !important;
+    max-width: 650px !important;
+    background: #1C2028 !important;
+    border: 1px solid #3E4756 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75) !important;
+    border-radius: 1px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 3px 0 !important;
+    z-index: 2147483647 !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    user-select: none !important;
+    animation: edmIdmFade 0.12s ease !important;
+}
+
+@keyframes edmIdmFade {
+    from { opacity: 0; transform: translateY(-3px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.edm-dropdown-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 9px 12px;
-    background: rgba(7, 13, 30, 0.85);
-    border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+.edm-idm-header-opt {
+    padding: 4px 12px !important;
+    font-size: 11.5px !important;
+    color: #FFFFFF !important;
+    cursor: pointer !important;
+    line-height: 18px !important;
+    transition: background 0.1s ease !important;
 }
 
-.edm-dropdown-header-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.edm-idm-header-opt:hover {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
 }
 
-.edm-header-icon {
-    color: #38BDF8;
-    font-size: 13px;
+.edm-idm-divider {
+    height: 1px !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    margin: 2px 0 3px 0 !important;
 }
 
-.edm-dropdown-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #F1F5F9;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
+.edm-idm-variants-list {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 420px !important;
+    overflow-y: auto !important;
 }
 
-.edm-dropdown-close {
-    background: transparent;
-    border: none;
-    color: #94A3B8;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: all 0.15s ease;
+.edm-idm-variants-list::-webkit-scrollbar {
+    width: 5px !important;
 }
 
-.edm-dropdown-close:hover {
-    color: #F8FAFC;
-    background: rgba(255, 255, 255, 0.1);
+.edm-idm-variants-list::-webkit-scrollbar-track {
+    background: #1C2028 !important;
 }
 
-/* Variant List Container */
-.edm-variants-container {
-    overflow-y: auto;
-    max-height: 340px;
-    padding: 6px;
+.edm-idm-variants-list::-webkit-scrollbar-thumb {
+    background: #485466 !important;
 }
 
-.edm-variants-container::-webkit-scrollbar {
-    width: 5px;
+.edm-idm-row {
+    display: flex !important;
+    align-items: center !important;
+    padding: 4px 12px !important;
+    font-size: 11.5px !important;
+    color: #E2E8F0 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 19px !important;
+    gap: 4px !important;
+    transition: background 0.08s ease, color 0.08s ease !important;
 }
 
-.edm-variants-container::-webkit-scrollbar-thumb {
-    background: rgba(56, 189, 248, 0.25);
-    border-radius: 4px;
+.edm-idm-row:hover {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
 }
 
-/* Numbered Variant Row */
-.edm-variant-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 7px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease;
-    margin-bottom: 3px;
-    border: 1px solid transparent;
+.edm-idm-row:active {
+    background: #0369A1 !important;
 }
 
-.edm-variant-item:hover {
-    background: rgba(30, 58, 138, 0.5);
-    border-color: rgba(56, 189, 248, 0.3);
+.edm-idm-row-num {
+    color: inherit !important;
+    min-width: 14px !important;
 }
 
-.edm-variant-left {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    overflow: hidden;
-    margin-right: 8px;
+.edm-idm-row-title {
+    color: inherit !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 320px !important;
 }
 
-.edm-variant-num {
-    font-size: 11px;
-    font-weight: 700;
-    color: #38BDF8;
-    min-width: 14px;
-    padding-top: 1px;
+.edm-idm-row-sep {
+    color: rgba(255, 255, 255, 0.6) !important;
+    padding: 0 4px !important;
 }
 
-.edm-variant-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    overflow: hidden;
+.edm-idm-row:hover .edm-idm-row-sep {
+    color: #FFFFFF !important;
 }
 
-.edm-variant-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #F8FAFC;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.edm-idm-row-desc {
+    color: inherit !important;
+    white-space: nowrap !important;
 }
 
-.edm-variant-meta {
-    font-size: 10px;
-    color: #94A3B8;
+/* Loading & Empty states inside list */
+.edm-idm-state {
+    padding: 12px 16px !important;
+    font-size: 11.5px !important;
+    color: #94A3B8 !important;
+    text-align: center !important;
 }
 
-.edm-variant-size {
-    font-size: 10px;
-    font-weight: 600;
-    color: #38BDF8;
-    background: rgba(56, 189, 248, 0.12);
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
+/* ── 4. IDM "Download File Info" Modal Dialog ── */
+.edm-dialog-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    z-index: 2147483646 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(2px) !important;
 }
 
-.edm-variant-audio .edm-variant-num {
-    color: #F59E0B;
+.edm-file-info-dialog {
+    width: 530px !important;
+    max-width: 95vw !important;
+    background: #23272F !important;
+    border: 1px solid #4B5565 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    color: #E2E8F0 !important;
+    overflow: hidden !important;
+    user-select: none !important;
+    animation: edmModalZoom 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
-.edm-variant-audio .edm-variant-size {
-    color: #F59E0B;
-    background: rgba(245, 158, 11, 0.12);
+@keyframes edmModalZoom {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-/* Loading & Empty State Boxes */
-.edm-loading-box, .edm-empty-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 28px 16px;
-    gap: 10px;
-    color: #94A3B8;
-    font-size: 12px;
-    text-align: center;
+.edm-dialog-titlebar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 28px !important;
+    background: #181B20 !important;
+    border-bottom: 1px solid #383F4C !important;
+    padding: 0 8px !important;
 }
 
-.edm-loading-spinner {
-    width: 22px;
-    height: 22px;
-    border: 2px solid rgba(56, 189, 248, 0.2);
-    border-top-color: #38BDF8;
-    border-radius: 50%;
-    animation: edmSpin 0.8s linear infinite;
+.edm-dialog-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11.5px !important;
+    font-weight: bold !important;
+    color: #FFFFFF !important;
 }
 
-@keyframes edmSpin {
-    to { transform: rotate(360deg); }
+.edm-dialog-title-icon {
+    width: 13px !important;
+    height: 13px !important;
+    fill: #10B981 !important;
+}
+
+.edm-dialog-win-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+}
+
+.edm-dialog-close-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+    color: #94A3B8 !important;
+    cursor: pointer !important;
+    border-radius: 2px !important;
+    transition: background 0.1s ease, color 0.1s ease !important;
+}
+
+.edm-dialog-close-btn:hover {
+    background: #EF4444 !important;
+    color: #FFFFFF !important;
+}
+
+.edm-dialog-body {
+    padding: 14px 16px 10px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+}
+
+.edm-form-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.edm-form-label {
+    width: 72px !important;
+    text-align: right !important;
+    color: #94A3B8 !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-form-control-wrap {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+}
+
+.edm-form-input {
+    flex: 1 !important;
+    height: 22px !important;
+    background: #181B20 !important;
+    border: 1px solid #3E4756 !important;
+    border-radius: 2px !important;
+    color: #F1F5F9 !important;
+    font-size: 11px !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    padding: 0 6px !important;
+    outline: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.edm-form-input:focus {
+    border-color: #0284C7 !important;
+    box-shadow: 0 0 4px rgba(2, 132, 199, 0.4) !important;
+}
+
+.edm-form-input[readonly] {
+    color: #94A3B8 !important;
+    background: #15181D !important;
+}
+
+.edm-form-select {
+    height: 22px !important;
+    background: #181B20 !important;
+    border: 1px solid #3E4756 !important;
+    border-radius: 2px !important;
+    color: #F1F5F9 !important;
+    font-size: 11px !important;
+    padding: 0 6px !important;
+    outline: none !important;
+    cursor: pointer !important;
+    width: 140px !important;
+}
+
+.edm-form-btn-small {
+    height: 22px !important;
+    padding: 0 8px !important;
+    background: #2D333F !important;
+    border: 1px solid #4B5565 !important;
+    border-radius: 2px !important;
+    color: #E2E8F0 !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: background 0.1s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-form-btn-small:hover {
+    background: #3B4454 !important;
+}
+
+.edm-file-badge-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 6px 0 10px !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-file-badge-icon {
+    font-size: 20px !important;
+    line-height: 1 !important;
+}
+
+.edm-file-badge-size {
+    font-size: 10px !important;
+    font-weight: bold !important;
+    color: #38BDF8 !important;
+    margin-top: 3px !important;
+    white-space: nowrap !important;
+}
+
+.edm-form-checkbox-row {
+    margin-left: 80px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.edm-checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    color: #CBD5E1 !important;
+    cursor: pointer !important;
+}
+
+.edm-dialog-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    padding: 10px 16px 12px 16px !important;
+    background: #181B20 !important;
+    border-top: 1px solid #333A46 !important;
+}
+
+.edm-dialog-btn {
+    height: 24px !important;
+    padding: 0 14px !important;
+    border-radius: 2px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: all 0.12s ease !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+}
+
+.edm-btn-secondary {
+    background: #2A303C !important;
+    border: 1px solid #4A5568 !important;
+    color: #E2E8F0 !important;
+}
+
+.edm-btn-secondary:hover {
+    background: #373E4D !important;
+    border-color: #64748B !important;
+}
+
+.edm-btn-primary {
+    background: linear-gradient(180deg, #0284C7 0%, #0369A1 100%) !important;
+    border: 1px solid #38BDF8 !important;
+    color: #FFFFFF !important;
+    font-weight: bold !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+.edm-btn-primary:hover {
+    background: linear-gradient(180deg, #0EA5E9 0%, #0284C7 100%) !important;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+}
+
+/* Toast Notifications */
+.edm-toast-container {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    pointer-events: none !important;
+}
+
+.edm-toast {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 18px !important;
+    border-radius: 12px !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+    color: #F8FAFC !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(2, 132, 199, 0.3) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    pointer-events: auto !important;
+    animation: edmToastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes edmToastIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }

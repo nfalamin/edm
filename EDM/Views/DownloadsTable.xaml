@@ -183,6 +183,7 @@
                                 Tag="{Binding}"
                                 MouseEnter="Row_MouseEnter"
                                 MouseLeave="Row_MouseLeave"
+                                MouseLeftButtonDown="Row_MouseLeftButtonDown"
                                 Background="{DynamicResource BackgroundBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="0,0,0,1"
@@ -199,12 +200,15 @@
 
                             <Border.ContextMenu>
                                 <ContextMenu Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource PrimaryTextBrush}">
+                                    <MenuItem Header="⚡ Show Turbo Progress Window" Click="MenuItem_ShowProgressWindow"/>
+                                    <MenuItem Header="📄 Download Properties" Click="MenuItem_Properties"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
                                     <MenuItem Header="Open File" Click="MenuItem_OpenFile"/>
                                     <MenuItem Header="Open Folder" Click="MenuItem_OpenFolder"/>
-                                    <Separator Background="#1E2D47"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
                                     <MenuItem Header="Redownload" Click="MenuItem_Redownload"/>
                                     <MenuItem Header="Force Start" Click="MenuItem_ForceStart"/>
-                                    <Separator Background="#1E2D47"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
                                     <MenuItem Header="Copy URL" Click="MenuItem_CopyUrl"/>
                                 </ContextMenu>
                             </Border.ContextMenu>

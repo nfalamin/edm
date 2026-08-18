@@ -20,6 +20,7 @@ namespace EDM
     {
         private NativeMessageListener? _nativeListener;
         private NativeIpcServer? _ipcServer;
+        private EdmWebSocketServer? _webSocketServer;
         private System.IServiceProvider? _serviceProvider;
         private System.Windows.Threading.DispatcherUnhandledExceptionEventHandler? _dispatcherUnhandledExceptionHandler;
         private System.UnhandledExceptionEventHandler? _appDomainUnhandledExceptionHandler;
@@ -110,15 +111,18 @@ namespace EDM
                     EDM.Services.LoggingService.LogException("[App.OnStartup] ServiceProvider resource", ex);
                 }
 
-                // Native IPC Server startup for browser extension handoff
+                // Native IPC Server & WebSocket Bridge startup for browser extension handoff
                 try
                 {
                     _ipcServer = new NativeIpcServer(HandleIpcHandoffAsync);
                     _ipcServer.Start();
+
+                    _webSocketServer = new EdmWebSocketServer(HandleIpcHandoffAsync);
+                    _webSocketServer.Start();
                 }
                 catch (Exception ex)
                 {
-                    EDM.Services.LoggingService.LogStartupFailure("NativeIpcServer", ex);
+                    EDM.Services.LoggingService.LogStartupFailure("NativeIpcServer/WebSocketServer", ex);
                 }
 
                 if (isNativeHostMode)
@@ -293,9 +297,14 @@ namespace EDM
                     EDM.Services.LoggingService.LogException("[App.OnExit] Failed to unsubscribe TaskScheduler.UnobservedTaskException", ex);
                 }
 
-                // 1. Dispose of native IPC server and message listener
+                // 1. Dispose of native IPC server, WebSocket server, and message listener
                 try
                 {
+                    if (_webSocketServer != null)
+                    {
+                        EDM.Services.LoggingService.Log("[App.OnExit] Disposing WebSocket server");
+                        _webSocketServer.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                    }
                     if (_ipcServer != null)
                     {
                         EDM.Services.LoggingService.Log("[App.OnExit] Disposing IPC server");
@@ -390,6 +399,8 @@ namespace EDM
             }
         }
 
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DownloadProgressWindow> _activeIpcWindows = new(StringComparer.OrdinalIgnoreCase);
+
         public async Task<bool> HandleIpcHandoffAsync(IpcHandoffPayload payload)
         {
             if (payload == null || string.IsNullOrWhiteSpace(payload.Url)) return false;
@@ -408,6 +419,23 @@ namespace EDM
                         fileName = "EDM_Download_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + (payload.Quality?.Contains("Audio", StringComparison.OrdinalIgnoreCase) == true ? ".mp3" : ".mp4");
                     }
 
+                    // Deterministic DownloadIdentity (not random correlationId)
+                    string downloadIdentity = !string.IsNullOrWhiteSpace(payload.DownloadIdentity)
+                        ? payload.DownloadIdentity
+                        : $"{url}|{payload.Quality}|{payload.VideoUrl}|{fileName}";
+
+                    if (_activeIpcWindows.TryGetValue(downloadIdentity, out var existingWin) && existingWin != null && existingWin.IsLoaded)
+                    {
+                        if (existingWin.WindowState == WindowState.Minimized)
+                        {
+                            existingWin.WindowState = WindowState.Normal;
+                        }
+                        existingWin.Activate();
+                        existingWin.Focus();
+                        LoggingService.Log($"[App.HandleIpcHandoffAsync] Duplicate download request deduplicated. Focused active window for '{fileName}'.");
+                        return;
+                    }
+
                     string userDownloads = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                     string savePath = Path.Combine(userDownloads, fileName);
 
@@ -417,8 +445,22 @@ namespace EDM
                         FileName = fileName,
                         SavePath = savePath,
                         Cookies = payload.Cookies ?? string.Empty,
+                        Quality = payload.Quality ?? string.Empty,
+                        DesiredFormat = payload.Format ?? string.Empty,
+                        VideoUrl = !string.IsNullOrWhiteSpace(payload.VideoUrl) ? payload.VideoUrl : url,
+                        AudioUrl = payload.AudioUrl ?? string.Empty,
+                        RequiresFfmpegMerge = payload.RequiresFfmpegMerge,
+                        FormatArg = payload.FormatArg ?? string.Empty,
+                        DownloadIdentity = downloadIdentity,
+                        Title = payload.Title ?? fileName,
+                        ManifestUrl = payload.ManifestUrl ?? string.Empty,
+                        AudioCodec = payload.AudioCodec ?? string.Empty,
+                        Codec = payload.Codec ?? string.Empty,
+                        Container = payload.Container ?? string.Empty,
+                        EstimatedSizeBytes = payload.EstimatedSizeBytes ?? -1,
+                        IsAudioOnly = payload.IsAudioOnly ?? false,
                         Status = "Downloading",
-                        Size = "Detecting...",
+                        Size = (payload.EstimatedSizeBytes.HasValue && payload.EstimatedSizeBytes.Value > 0) ? $"≈ {payload.EstimatedSizeBytes.Value / (1024.0 * 1024.0):F1} MB" : "Detecting...",
                         TransferRate = "0 B/s",
                         Progress = 0.0,
                         TimeLeft = "Calculating...",
@@ -431,7 +473,14 @@ namespace EDM
                     }
 
                     var progressWin = new DownloadProgressWindow(item);
+                    _activeIpcWindows[downloadIdentity] = progressWin;
+                    progressWin.Closed += (s, e) => _activeIpcWindows.TryRemove(downloadIdentity, out _);
+
+                    progressWin.Topmost = true;
                     progressWin.Show();
+                    progressWin.Activate();
+                    progressWin.Focus();
+                    progressWin.Topmost = false;
 
                     BackgroundTaskManager.FireAndForget("IpcDownloadTask", async () =>
                     {

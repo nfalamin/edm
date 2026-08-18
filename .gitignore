@@ -1,9 +1,13 @@
-# Build outputs
+# Build outputs & Intermediate artifacts
 [Bb]in/
 [Oo]bj/
 [Lg]ogs/
 **/logs/
 *.log
+publish/
+Output/publish/
+*_wpftmp.csproj
+*.wpftmp.*
 
 # IDE & Editor files
 .vs/

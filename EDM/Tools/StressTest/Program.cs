@@ -68,7 +68,7 @@ namespace EDM.Tools.StressTest
     {
         private const string TestServerPrefix = "http://127.0.0.1:8085/";
 
-        public static async Task Main(string[] args)
+        public static async Task RunStressTestAsync(string[]? args = null)
         {
             Console.WriteLine("=================================================");
             Console.WriteLine("    EDM STRESS TEST & PERFORMANCE HARNESS        ");

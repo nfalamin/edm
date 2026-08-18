@@ -1,0 +1,195 @@
+<Window x:Class="EDM.Views.DownloadPropertiesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Download Properties"
+        Height="560" Width="640"
+        MinHeight="500" MinWidth="580"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/ThemeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="PropLabelStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                <Setter Property="Width" Value="130"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+
+            <Style x:Key="PropValueStyle" TargetType="TextBox">
+                <Setter Property="Background" Value="{DynamicResource CardInputBg}"/>
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="10,6"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="IsReadOnly" Value="True"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+
+            <Style x:Key="CloseBtnStyle" TargetType="Button">
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+                <Setter Property="Background" Value="{DynamicResource PrimaryPillGradient}"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Padding" Value="24,0"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Brd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Brd" Property="Opacity" Value="0.9"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Title Header -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="📄" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock Text="File Download Properties" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Property Fields -->
+        <Border Grid.Row="1" Padding="22,18" Background="{DynamicResource BackgroundBrush}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel VerticalAlignment="Top">
+
+                    <!-- Filename -->
+                    <DockPanel Margin="0,0,0,12">
+                        <TextBlock Text="File Name:" Style="{StaticResource PropLabelStyle}"/>
+                        <TextBox x:Name="TxtFileName" Style="{StaticResource PropValueStyle}"/>
+                    </DockPanel>
+
+                    <!-- URL -->
+                    <DockPanel Margin="0,0,0,12">
+                        <TextBlock Text="Download URL:" Style="{StaticResource PropLabelStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TxtUrl" Style="{StaticResource PropValueStyle}"/>
+                            <Button Grid.Column="1" Content="📋 Copy" Click="CopyUrl_Click" Padding="12,0" Margin="8,0,0,0" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}"/>
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- Destination Path -->
+                    <DockPanel Margin="0,0,0,12">
+                        <TextBlock Text="Save Location:" Style="{StaticResource PropLabelStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TxtSavePath" Style="{StaticResource PropValueStyle}"/>
+                            <Button Grid.Column="1" Content="📁 Open Folder" Click="OpenFolder_Click" Padding="12,0" Margin="8,0,0,0" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}"/>
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- Category & Status -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DockPanel Grid.Column="0">
+                            <TextBlock Text="Category:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtCategory" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+
+                        <DockPanel Grid.Column="2">
+                            <TextBlock Text="Status:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtStatus" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+                    </Grid>
+
+                    <!-- File Size & Downloaded -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DockPanel Grid.Column="0">
+                            <TextBlock Text="Total Size:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtSize" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+
+                        <DockPanel Grid.Column="2">
+                            <TextBlock Text="Downloaded:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtDownloaded" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+                    </Grid>
+
+                    <!-- Progress & Transfer Rate -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DockPanel Grid.Column="0">
+                            <TextBlock Text="Progress:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtProgress" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+
+                        <DockPanel Grid.Column="2">
+                            <TextBlock Text="Transfer Rate:" Style="{StaticResource PropLabelStyle}" Width="80"/>
+                            <TextBox x:Name="TxtSpeed" Style="{StaticResource PropValueStyle}"/>
+                        </DockPanel>
+                    </Grid>
+
+                    <!-- Integrity & Security Verification -->
+                    <Border Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Integrity &amp; Security Verification" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
+                            <DockPanel Margin="0,0,0,4">
+                                <TextBlock Text="Verification State:" Style="{StaticResource PropLabelStyle}" Width="120"/>
+                                <TextBlock x:Name="TxtVerification" Text="Not Verified" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <DockPanel>
+                                <TextBlock Text="Computed Hash:" Style="{StaticResource PropLabelStyle}" Width="120"/>
+                                <TextBox x:Name="TxtChecksum" Text="--" Style="{StaticResource PropValueStyle}" FontSize="11"/>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Bottom Close Button -->
+        <Border Grid.Row="2" Background="{DynamicResource HeaderBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Close" Click="Close_Click" Style="{StaticResource CloseBtnStyle}"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>

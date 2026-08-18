@@ -56,11 +56,11 @@ namespace EDM.Views
 
                 DownloadBtn.IsEnabled = !string.IsNullOrWhiteSpace(info.DownloadUrl);
 
-                if (info.IsMandatory)
+                if (info.IsMandatory || string.Equals(info.Severity, "REQUIRED", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Tier 1: Mandatory / Forced Update UI
+                    // Tier 1: REQUIRED / Critical Update UI
                     TierBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38));
-                    TierBadgeText.Text = "🚨 MANDATORY UPDATE";
+                    TierBadgeText.Text = "🚨 REQUIRED UPDATE";
                     SubtitleText.Text = "A critical security and protocol update is required to continue using EDM.";
                     MandatoryWarningBox.Visibility = Visibility.Visible;
                     
@@ -69,11 +69,24 @@ namespace EDM.Views
                     SkipVersionBtn.Visibility = Visibility.Collapsed;
                     ExitAppBtn.Visibility = Visibility.Visible;
                 }
+                else if (string.Equals(info.Severity, "RECOMMENDED", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Tier 2: RECOMMENDED Update UI
+                    TierBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 158, 11));
+                    TierBadgeText.Text = "⭐ RECOMMENDED UPDATE";
+                    SubtitleText.Text = !string.IsNullOrWhiteSpace(info.Title) ? info.Title : "A recommended performance update is available for EDM.";
+                    MandatoryWarningBox.Visibility = Visibility.Collapsed;
+
+                    CloseBtn.Visibility = Visibility.Visible;
+                    RemindLaterBtn.Visibility = Visibility.Visible;
+                    SkipVersionBtn.Visibility = Visibility.Visible;
+                    ExitAppBtn.Visibility = Visibility.Collapsed;
+                }
                 else
                 {
-                    // Tier 2: Optional / Feature Update UI
-                    TierBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(124, 58, 237));
-                    TierBadgeText.Text = "✨ NEW UPDATE";
+                    // Tier 3: OPTIONAL / Feature Update UI
+                    TierBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(99, 102, 241));
+                    TierBadgeText.Text = "✨ OPTIONAL UPDATE";
                     SubtitleText.Text = !string.IsNullOrWhiteSpace(info.Title) ? info.Title : "A new version of Exclusive Download Manager is available for download.";
                     MandatoryWarningBox.Visibility = Visibility.Collapsed;
 

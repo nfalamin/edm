@@ -84,9 +84,12 @@ namespace EDM.ControlPlane.Api.Services
 
             _dbContext.Bans.Add(ban);
 
-            // If banning a user, revoke all their active sessions
+            // If banning a user, revoke all their active sessions and mark user inactive
             if (targetType == BanTargetType.UserId && Guid.TryParse(targetValue, out var uId))
             {
+                var user = await _dbContext.Users.FindAsync(uId);
+                if (user != null) user.IsActive = false;
+
                 var activeSessions = await _dbContext.Sessions
                     .Where(s => s.UserId == uId && !s.IsRevoked)
                     .ToListAsync();
@@ -113,6 +116,12 @@ namespace EDM.ControlPlane.Api.Services
             foreach (var ban in activeBans)
             {
                 ban.IsActive = false;
+            }
+
+            if (targetType == BanTargetType.UserId && Guid.TryParse(targetValue, out var uId))
+            {
+                var user = await _dbContext.Users.FindAsync(uId);
+                if (user != null) user.IsActive = true;
             }
 
             await _dbContext.SaveChangesAsync();

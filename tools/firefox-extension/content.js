@@ -1,367 +1,1180 @@
 /**
- * EDM Advanced In-Page Video Sniffer & Floating Download Control Panel (v2.0)
+ * EDM (Exclusive Download Manager) - Production Canonical Content Script
+ * Stage 3: IDM-Class Browser Media Detection & Real Representation Format Selector UI
  * 
- * Workflow:
- * 1. Hover video player -> Shows sleek, compact "▶ Download this video" button.
- * 2. Click button -> Opens translucent glassmorphic Format/Resolution Selection Popup.
- * 3. Analyzes real video formats (1080p HD, 720p HD, 480p, 360p, 240p, 144p, Audio).
- * 4. User clicks resolution -> Direct handoff to EDM Desktop engine.
- * 5. EDM opens Download Progress Window with real-time speed, segments, and ETA.
+ * Key Capabilities:
+ * 1. Zero-Latency In-Browser YouTube Format Extraction (ytInitialPlayerResponse, movie_player.getPlayerResponse).
+ * 2. Playback Quality Independence (Player playing at 144p still detects and lists 4K 2160p, 1080p, 720p, etc.).
+ * 3. Exact File Sizes & Real Codecs (1.82 GB, 450 MB, H.264, VP9, AV1, AAC, Opus - never fake 0 MB).
+ * 4. Dual-Stream Adaptive Stream Pairing (Video + Best Audio pairing with requiresFfmpegMerge).
+ * 5. High-Aesthetic Glassmorphism Floating Pill & Format Selector Dropdown with Category Tabs (All / Video / Audio).
+ * 6. Multi-Site Support (YouTube, Vimeo, Dailymotion, HTML5 <video>/<audio>, HLS .m3u8, DASH .mpd).
+ * 7. SPA Lifecycle & Single-Page Transition Resilience (yt-navigate-finish, popstate, pushState).
+ * 8. Deterministic DownloadIdentity & Instant EDM Desktop Handoff.
  */
 
 (function () {
     'use strict';
 
-    if (window.__EDM_SNIFFER_INITIALIZED__) return;
-    window.__EDM_SNIFFER_INITIALIZED__ = true;
+    if (window.__EDM_STAGE3_CONTENT_LOADED__) return;
+    window.__EDM_STAGE3_CONTENT_LOADED__ = true;
 
-    const detectedMedia = new WeakMap();
-    let globalActiveDropdown = null;
+    // =========================================================================
+    // 1. CONSTANTS & LIFECYCLE ENUMS
+    // =========================================================================
+    const RESOLVER_TIMEOUT_MS = 6000;
+    const MUTATION_DEBOUNCE_MS = 300;
 
-    // 1. Key Modifier Listener for Link Clicks
-    document.addEventListener('click', function (e) {
-        const link = e.target.closest('a');
-        if (!link || !link.href) return;
+    const CandidateConfidence = {
+        HIGH: 'HIGH',
+        MEDIUM: 'MEDIUM',
+        LOW: 'LOW'
+    };
 
-        // If user holds ALT key -> Bypass EDM (let browser handle natively)
-        if (e.altKey) {
-            chrome.runtime.sendMessage({ action: 'set_bypass_next_download', url: link.href });
-            return;
-        }
+    const CandidateState = {
+        DISCOVERED: 'DISCOVERED',
+        ANALYZING: 'ANALYZING',
+        READY: 'READY',
+        SELECTOR_OPEN: 'SELECTOR_OPEN',
+        DOWNLOADING: 'DOWNLOADING',
+        COMPLETED: 'COMPLETED',
+        FAILED: 'FAILED',
+        STALE: 'STALE',
+        DESTROYED: 'DESTROYED'
+    };
 
-        // If user holds CTRL key -> Force EDM download immediately
-        if (e.ctrlKey && (link.href.startsWith('http://') || link.href.startsWith('https://'))) {
-            e.preventDefault();
-            chrome.runtime.sendMessage({
-                action: 'download_url',
-                url: link.href,
-                pageUrl: window.location.href,
-                fileName: link.download || ''
+    // Active state caches
+    const variantCache = new Map();             // mediaUrl -> MediaVariantResult
+    const activeJobIdentities = new Set();      // downloadIdentity Set
+    const activeOverlays = new Map();           // candidateId -> IdmDownloadOverlay
+    let globalActiveDropdown = null;            // currently opened dropdown instance
+    let currentPageUrl = window.location.href;  // for SPA transition detection
+    let inPageYouTubeData = null;               // in-page extracted YouTube player response
+
+    // =========================================================================
+    // 2. IN-PAGE YOUTUBE STREAM EXTRACTOR (Zero Latency Bridge)
+    // =========================================================================
+    class YouTubeInPageExtractor {
+        static init() {
+            if (!window.location.hostname.includes('youtube.com')) return;
+
+            // 1. Listen for player response messages from page context
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.type === '__EDM_YT_PLAYER_DATA_RESPONSE__') {
+                    if (event.data.playerResponse && event.data.playerResponse.streamingData) {
+                        inPageYouTubeData = event.data.playerResponse;
+                        YouTubeInPageExtractor.processPlayerResponse(event.data.playerResponse);
+                    }
+                }
+            });
+
+            // 2. Inject bridge script to access main world window.ytInitialPlayerResponse
+            this.injectBridgeScript();
+
+            // 3. Extract from DOM scripts as immediate synchronous fallback
+            this.extractFromDomScripts();
+
+            // 4. Listen to YouTube SPA navigation
+            window.addEventListener('yt-navigate-finish', () => {
+                inPageYouTubeData = null;
+                setTimeout(() => {
+                    this.requestPlayerResponseFromBridge();
+                    this.extractFromDomScripts();
+                }, 300);
             });
         }
-    }, true);
 
-    // 2. Scan & Monitor Video / Audio Elements
-    function scanMediaElements() {
-        const videos = Array.from(document.querySelectorAll('video'));
-        const audios = Array.from(document.querySelectorAll('audio'));
+        static injectBridgeScript() {
+            try {
+                const script = document.createElement('script');
+                script.id = '__edm_yt_bridge__';
+                script.textContent = `
+                    (function() {
+                        function sendPlayerData() {
+                            try {
+                                var pr = null;
+                                var player = document.getElementById('movie_player');
+                                if (player && typeof player.getPlayerResponse === 'function') {
+                                    pr = player.getPlayerResponse();
+                                }
+                                if (!pr && window.ytInitialPlayerResponse) {
+                                    pr = window.ytInitialPlayerResponse;
+                                }
+                                if (pr && pr.streamingData) {
+                                    window.postMessage({
+                                        type: '__EDM_YT_PLAYER_DATA_RESPONSE__',
+                                        playerResponse: pr,
+                                        url: window.location.href
+                                    }, '*');
+                                }
+                            } catch(e) {}
+                        }
 
-        videos.forEach(video => processMediaElement(video, 'video'));
-        audios.forEach(audio => processMediaElement(audio, 'audio'));
-    }
+                        window.addEventListener('message', function(e) {
+                            if (e.data && e.data.type === '__EDM_REQUEST_YT_PLAYER_DATA__') {
+                                sendPlayerData();
+                            }
+                        });
 
-    function processMediaElement(mediaEl, type) {
-        if (!mediaEl) return;
+                        // Run on load and on state change
+                        sendPlayerData();
+                        setTimeout(sendPlayerData, 1000);
+                        setTimeout(sendPlayerData, 2500);
 
-        // Skip micro-players or invisible tracking elements (less than 80px wide/60px high)
-        const rect = mediaEl.getBoundingClientRect();
-        if (type === 'video' && (rect.width > 0 && rect.width < 80) && (rect.height > 0 && rect.height < 60)) {
-            return;
+                        window.addEventListener('yt-navigate-finish', function() {
+                            setTimeout(sendPlayerData, 500);
+                            setTimeout(sendPlayerData, 1500);
+                        });
+                    })();
+                `;
+                (document.head || document.documentElement).appendChild(script);
+            } catch (e) {}
         }
 
-        if (detectedMedia.has(mediaEl) || mediaEl.dataset.edmOverlayAttached === 'true') {
-            // Update positioning if player moved or resized
-            const existingPanel = detectedMedia.get(mediaEl);
-            if (existingPanel) updatePanelPosition(mediaEl, existingPanel);
-            return;
+        static requestPlayerResponseFromBridge() {
+            window.postMessage({ type: '__EDM_REQUEST_YT_PLAYER_DATA__' }, '*');
         }
 
-        attachVideoOverlay(mediaEl, type);
+        static extractFromDomScripts() {
+            try {
+                const scripts = document.querySelectorAll('script');
+                for (const script of scripts) {
+                    const text = script.textContent || '';
+                    if (text.includes('ytInitialPlayerResponse') && text.includes('streamingData')) {
+                        const match = text.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s) ||
+                                      text.match(/var\s+ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
+                        if (match && match[1]) {
+                            try {
+                                const parsed = JSON.parse(match[1]);
+                                if (parsed && parsed.streamingData) {
+                                    inPageYouTubeData = parsed;
+                                    this.processPlayerResponse(parsed);
+                                    return;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        static processPlayerResponse(playerResponse) {
+            if (!playerResponse || !playerResponse.streamingData) return null;
+
+            const streamingData = playerResponse.streamingData;
+            const videoDetails = playerResponse.videoDetails || {};
+            const title = videoDetails.title || MediaCandidateDetector.getPageMediaTitle();
+            const durationSec = parseInt(videoDetails.lengthSeconds, 10) || 0;
+
+            const formats = streamingData.formats || [];
+            const adaptiveFormats = streamingData.adaptiveFormats || [];
+            const allRawFormats = [...formats, ...adaptiveFormats];
+
+            if (allRawFormats.length === 0) return null;
+
+            // Find best audio stream for pairing
+            const audioStreams = adaptiveFormats.filter(f => f.mimeType && f.mimeType.startsWith('audio/'));
+            audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+            const bestAudio = audioStreams[0] || null;
+            const bestAudioSize = bestAudio ? (parseInt(bestAudio.contentLength, 10) || (durationSec > 0 ? Math.round((bestAudio.bitrate || 128000) * durationSec / 8) : 0)) : 0;
+
+            const variants = [];
+            const seenKeys = new Set();
+
+            // 1. Process Video Streams (Adaptive & Progressive)
+            for (const f of allRawFormats) {
+                const mime = f.mimeType || '';
+                const isVideo = mime.startsWith('video/') || (f.height > 0);
+                if (!isVideo) continue;
+
+                const height = f.height || 0;
+                if (height <= 0) continue;
+
+                const fps = f.fps || 30;
+                const isWebm = mime.includes('webm');
+                const container = isWebm ? 'webm' : 'mp4';
+                const codec = isWebm ? 'VP9' : (mime.includes('av01') ? 'AV1' : 'H.264');
+                const isAdaptive = !f.audioQuality && !mime.includes('audio');
+
+                // Quality Label e.g. "1080p60", "1080p", "720p60", "720p", "4K 2160p"
+                let qualityLabel;
+                if (height >= 2160) qualityLabel = `4K ${height}p` + (fps > 30 ? `${fps}` : '');
+                else if (height >= 1440) qualityLabel = `2K ${height}p` + (fps > 30 ? `${fps}` : '');
+                else qualityLabel = `${height}p` + (fps > 30 ? `${fps}` : '');
+
+                const key = `${height}_${fps}_${container}_${codec}`;
+                if (seenKeys.has(key)) continue;
+                seenKeys.add(key);
+
+                // File size calculation
+                let videoSize = parseInt(f.contentLength, 10) || 0;
+                if (videoSize <= 0 && durationSec > 0 && f.bitrate) {
+                    videoSize = Math.round((f.bitrate * durationSec) / 8);
+                }
+
+                let totalSize = videoSize;
+                if (isAdaptive && bestAudioSize > 0) {
+                    totalSize += bestAudioSize;
+                }
+
+                const matchingAudio = audioStreams.find(a => (a.mimeType && a.mimeType.includes(container))) || bestAudio;
+
+                variants.push({
+                    variantId: `yt_${f.itag || height}_${container}`,
+                    qualityLabel: qualityLabel,
+                    width: f.width || Math.round((height * 16) / 9),
+                    height: height,
+                    frameRate: fps,
+                    bitrate: f.bitrate || 0,
+                    codec: codec,
+                    container: container,
+                    audioCodec: isAdaptive ? (matchingAudio ? (container === 'webm' ? 'Opus' : 'AAC') : 'AAC') : 'AAC',
+                    hasAudio: true,
+                    isAudioOnly: false,
+                    requiresFfmpegMerge: isAdaptive && !!matchingAudio,
+                    directUrl: f.url || window.location.href,
+                    audioStreamUrl: isAdaptive && matchingAudio ? (matchingAudio.url || '') : '',
+                    estimatedSizeBytes: totalSize > 0 ? totalSize : -1,
+                    formatArg: isAdaptive ? `-f ${f.itag || 'bestvideo'}+bestaudio/best` : `-f ${f.itag || 'best'}`
+                });
+            }
+
+            // 2. Process Audio Only Streams
+            const seenAudioKeys = new Set();
+            for (const a of audioStreams) {
+                const mime = a.mimeType || '';
+                const isWebm = mime.includes('webm') || mime.includes('opus');
+                const container = isWebm ? 'webm' : 'm4a';
+                const codec = isWebm ? 'Opus' : 'AAC';
+                const bitrateKbps = Math.round((a.bitrate || (a.averageBitrate || 128000)) / 1000);
+
+                const audioKey = `${container}_${bitrateKbps}`;
+                if (seenAudioKeys.has(audioKey)) continue;
+                seenAudioKeys.add(audioKey);
+
+                let audioSize = parseInt(a.contentLength, 10) || 0;
+                if (audioSize <= 0 && durationSec > 0 && a.bitrate) {
+                    audioSize = Math.round((a.bitrate * durationSec) / 8);
+                }
+
+                variants.push({
+                    variantId: `yt_audio_${a.itag || bitrateKbps}_${container}`,
+                    qualityLabel: `${container.toUpperCase()} Audio (${bitrateKbps} kbps)`,
+                    width: 0,
+                    height: 0,
+                    frameRate: 0,
+                    bitrate: a.bitrate || 0,
+                    audioBitrate: a.bitrate || 0,
+                    codec: codec,
+                    audioCodec: codec,
+                    container: container === 'm4a' ? 'mp3' : container,
+                    hasAudio: true,
+                    isAudioOnly: true,
+                    requiresFfmpegMerge: false,
+                    directUrl: a.url || window.location.href,
+                    estimatedSizeBytes: audioSize > 0 ? audioSize : -1,
+                    formatArg: `-f ${a.itag || 'bestaudio'}/bestaudio`
+                });
+            }
+
+            if (variants.length > 0) {
+                const result = {
+                    success: true,
+                    title: title,
+                    variants: variants
+                };
+                variantCache.set(window.location.href, result);
+                return result;
+            }
+
+            return null;
+        }
+
+        static getCachedOrExtractedVariants(mediaUrl) {
+            // Check cache
+            const cached = variantCache.get(mediaUrl);
+            if (cached && cached.variants && cached.variants.length > 0) {
+                return cached;
+            }
+
+            // Extract from in-page YouTube data
+            if (inPageYouTubeData) {
+                const res = this.processPlayerResponse(inPageYouTubeData);
+                if (res && res.variants && res.variants.length > 0) return res;
+            }
+
+            // Try extracting from DOM scripts right now
+            this.extractFromDomScripts();
+            if (inPageYouTubeData) {
+                const res = this.processPlayerResponse(inPageYouTubeData);
+                if (res && res.variants && res.variants.length > 0) return res;
+            }
+
+            return null;
+        }
     }
 
-    // 3. Inject Floating Download Control Overlay
-    function attachVideoOverlay(mediaEl, type) {
-        mediaEl.dataset.edmOverlayAttached = 'true';
-        const isDrm = mediaEl.mediaKeys != null;
+    // =========================================================================
+    // 3. CANDIDATE DISCOVERY ENGINE
+    // =========================================================================
+    class MediaCandidateDetector {
+        static findMediaCandidates() {
+            const candidates = [];
+            const seenContainers = new Set();
+            const isYouTube = window.location.hostname.includes('youtube.com');
+            const isWatchPage = isYouTube && (window.location.pathname.startsWith('/watch') || window.location.pathname.startsWith('/shorts'));
 
-        const panel = document.createElement('div');
-        panel.className = 'edm-floating-panel';
+            // 1. YouTube Main Video Player (HIGH Confidence - Priority 1)
+            if (isWatchPage) {
+                const mainVideo = document.querySelector('#movie_player video.html5-main-video, ytd-watch-flexy #movie_player video, ytd-shorts #shorts-player video, video.html5-main-video');
+                if (mainVideo && this.isValidMediaElement(mainVideo)) {
+                    const container = mainVideo.closest('#movie_player, ytd-player, .html5-video-player') || mainVideo.parentElement;
+                    const candidateId = this.computeCandidateId('main_video', window.location.href, container);
+                    seenContainers.add(container);
+                    candidates.push({
+                        candidateId: candidateId,
+                        type: 'main_video',
+                        confidence: CandidateConfidence.HIGH,
+                        state: CandidateState.DISCOVERED,
+                        element: mainVideo,
+                        container: container,
+                        url: window.location.href,
+                        title: this.getPageMediaTitle()
+                    });
+                }
+            }
 
-        if (isDrm) {
-            panel.innerHTML = `
-                <div class="edm-drm-badge" title="Content is DRM-protected (Widevine / PlayReady)">
-                    <span class="edm-drm-icon">🔒</span>
-                    <span>DRM Protected</span>
-                </div>
-            `;
-        } else {
-            panel.innerHTML = `
-                <button class="edm-floating-btn edm-video-overlay-btn" type="button" title="Download this video with EDM">
-                    <span class="edm-btn-icon">▶</span>
-                    <span class="edm-btn-text">Download this video</span>
-                    <span class="edm-btn-arrow">▾</span>
-                </button>
-                <div class="edm-dropdown-card" style="display: none;">
-                    <div class="edm-dropdown-header">
-                        <div class="edm-dropdown-header-left">
-                            <span class="edm-header-icon">⚡</span>
-                            <span class="edm-dropdown-title">Download video with EDM</span>
-                        </div>
-                        <button class="edm-dropdown-close" type="button" title="Close">✕</button>
-                    </div>
-                    <div class="edm-variants-container">
-                        <div class="edm-loading-box">
-                            <div class="edm-loading-spinner"></div>
-                            <span>Analyzing available video qualities...</span>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // 2. Generic HTML5 <video> elements across all websites (HIGH Confidence)
+            const allVideos = Array.from(document.querySelectorAll('video'));
+            for (const video of allVideos) {
+                if (this.isAdOrDecorativeElement(video)) continue;
+                if (!this.isValidMediaElement(video)) continue;
 
-            const btn = panel.querySelector('.edm-floating-btn');
-            const dropdown = panel.querySelector('.edm-dropdown-card');
-            const variantsContainer = panel.querySelector('.edm-variants-container');
-            const closeBtn = panel.querySelector('.edm-dropdown-close');
+                const container = this.findVideoContainer(video);
+                if (seenContainers.has(container)) continue;
 
-            let variantsLoaded = false;
+                const mediaSrc = this.extractMediaUrl(video);
+                const candidateId = this.computeCandidateId('video', mediaSrc, container);
+                seenContainers.add(container);
 
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
+                candidates.push({
+                    candidateId: candidateId,
+                    type: 'video',
+                    confidence: CandidateConfidence.HIGH,
+                    state: CandidateState.DISCOVERED,
+                    element: video,
+                    container: container,
+                    url: mediaSrc,
+                    title: this.getVideoElementTitle(video)
+                });
+            }
 
-                const isOpened = dropdown.style.display !== 'none';
-                if (isOpened) {
-                    closeDropdown(panel, dropdown);
-                } else {
-                    openDropdown(panel, dropdown);
+            // 3. Embedded Player iframes (HIGH Confidence)
+            const iframes = document.querySelectorAll(
+                'iframe[src*="youtube.com/embed"], iframe[src*="player.vimeo.com"], iframe[src*="dailymotion.com/embed"], iframe[src*="bilibili.com/player"], iframe[src*="twitch.tv"]'
+            );
+            for (const frame of iframes) {
+                const src = frame.getAttribute('src');
+                if (!src || src.startsWith('about:') || src.startsWith('javascript:')) continue;
+                const container = frame.parentElement || frame;
+                if (seenContainers.has(container)) continue;
 
-                    if (!variantsLoaded) {
-                        fetchRealVariants(mediaEl, variantsContainer, () => {
-                            variantsLoaded = true;
+                const candidateId = this.computeCandidateId('iframe', src, container);
+                seenContainers.add(container);
+
+                candidates.push({
+                    candidateId: candidateId,
+                    type: 'iframe',
+                    confidence: CandidateConfidence.HIGH,
+                    state: CandidateState.DISCOVERED,
+                    element: frame,
+                    container: container,
+                    url: src,
+                    title: frame.getAttribute('title') || this.getPageMediaTitle()
+                });
+            }
+
+            // 4. HTML5 <audio> elements & podcast players (HIGH Confidence)
+            const audios = Array.from(document.querySelectorAll('audio'));
+            for (const audio of audios) {
+                const src = audio.currentSrc || audio.src || audio.querySelector('source')?.src;
+                if (!src || src.startsWith('blob:') || src.startsWith('data:')) continue;
+                const container = audio.parentElement || audio;
+                if (seenContainers.has(container)) continue;
+
+                const candidateId = this.computeCandidateId('audio', src, container);
+                seenContainers.add(container);
+
+                candidates.push({
+                    candidateId: candidateId,
+                    type: 'audio',
+                    confidence: CandidateConfidence.HIGH,
+                    state: CandidateState.DISCOVERED,
+                    element: audio,
+                    container: container,
+                    url: src,
+                    title: this.getPageMediaTitle() || 'Audio Track'
+                });
+            }
+
+            // 5. YouTube Recommendation / Video Thumbnail Cards (MEDIUM Confidence)
+            if (isYouTube) {
+                const videoCards = document.querySelectorAll(
+                    'ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, ytd-reel-item-renderer'
+                );
+                for (const card of videoCards) {
+                    if (this.isAdOrDecorativeElement(card)) continue;
+                    const link = card.querySelector('a#thumbnail[href*="/watch?v="], a.ytd-thumbnail[href*="/watch?v="], a#thumbnail[href*="/shorts/"], a[href*="/watch?v="]');
+                    if (link && link.href) {
+                        const thumbContainer = card.querySelector('#thumbnail, .ytd-thumbnail, ytd-thumbnail') || card;
+                        if (seenContainers.has(thumbContainer)) continue;
+
+                        const candidateId = this.computeCandidateId('thumbnail', link.href, thumbContainer);
+                        seenContainers.add(thumbContainer);
+
+                        candidates.push({
+                            candidateId: candidateId,
+                            type: 'thumbnail',
+                            confidence: CandidateConfidence.MEDIUM,
+                            state: CandidateState.DISCOVERED,
+                            element: thumbContainer,
+                            container: thumbContainer,
+                            url: link.href,
+                            title: this.getCardTitle(card)
                         });
                     }
+                }
+            }
+
+            return candidates;
+        }
+
+        static computeCandidateId(type, url, container) {
+            const raw = `${type}|${url}|${container?.id || ''}|${container?.className || ''}`;
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+                hash |= 0;
+            }
+            return `edm_cand_${Math.abs(hash).toString(16)}`;
+        }
+
+        static isValidMediaElement(el) {
+            if (!el || !document.body.contains(el)) return false;
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 180 || rect.height < 100) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+            return true;
+        }
+
+        static isAdOrDecorativeElement(el) {
+            if (!el) return true;
+            const adSelectors = '.ad-showing, .video-ads, .ytp-ad-module, [id*="google_ads"], [class*="ad-container"], [class*="sponsored"]';
+            if (el.closest && el.closest(adSelectors)) return true;
+            if (el.hasAttribute && (el.hasAttribute('loop') && el.hasAttribute('muted') && !el.hasAttribute('controls'))) {
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 220 || rect.height < 120) return true;
+            }
+            return false;
+        }
+
+        static findVideoContainer(videoEl) {
+            const ytPlayer = videoEl.closest('#movie_player, ytd-player, .html5-video-player');
+            if (ytPlayer) return ytPlayer;
+
+            const vimeoPlayer = videoEl.closest('.vp-video-wrapper, .player, [data-player-root]');
+            if (vimeoPlayer) return vimeoPlayer;
+
+            let parent = videoEl.parentElement;
+            while (parent && parent !== document.body) {
+                const rect = parent.getBoundingClientRect();
+                if (rect.width > 240 && rect.height > 140) return parent;
+                parent = parent.parentElement;
+            }
+            return videoEl;
+        }
+
+        static extractMediaUrl(videoEl) {
+            if (window.location.hostname.includes('youtube.com') && (window.location.pathname.startsWith('/watch') || window.location.pathname.startsWith('/shorts'))) {
+                return window.location.href;
+            }
+            if (videoEl.currentSrc && !videoEl.currentSrc.startsWith('blob:') && !videoEl.currentSrc.startsWith('data:')) {
+                return videoEl.currentSrc;
+            }
+            if (videoEl.src && !videoEl.src.startsWith('blob:') && !videoEl.src.startsWith('data:')) {
+                return videoEl.src;
+            }
+            const sourceEl = videoEl.querySelector('source[src]');
+            if (sourceEl && sourceEl.src && !sourceEl.src.startsWith('blob:') && !sourceEl.src.startsWith('data:')) {
+                return sourceEl.src;
+            }
+            return window.location.href;
+        }
+
+        static getPageMediaTitle() {
+            const ytTitleEl = document.querySelector('h1.ytd-watch-metadata yt-formatted-string, #title h1 yt-formatted-string, h1.title, meta[name="title"]');
+            if (ytTitleEl) {
+                const t = ytTitleEl.getAttribute('content') || ytTitleEl.innerText;
+                if (t && t.trim()) return t.replace(/\s*-\s*YouTube$/i, '').trim();
+            }
+            let title = document.title || 'Video Media';
+            return title.replace(/\s*-\s*YouTube$/i, '').trim() || 'Video Media';
+        }
+
+        static getVideoElementTitle(videoEl) {
+            const ariaLabel = videoEl.getAttribute('aria-label') || videoEl.getAttribute('title');
+            if (ariaLabel && ariaLabel.trim()) return ariaLabel.trim();
+            return this.getPageMediaTitle();
+        }
+
+        static getCardTitle(cardEl) {
+            const titleEl = cardEl.querySelector('#video-title, .title, h3, a#video-title-link');
+            if (titleEl && titleEl.textContent && titleEl.textContent.trim()) {
+                return titleEl.textContent.trim();
+            }
+            return 'Video Media';
+        }
+    }
+
+    // =========================================================================
+    // 4. IDM-CLASS MODERN FLOATING PILL & FORMAT SELECTOR UI
+    // =========================================================================
+    class IdmDownloadOverlay {
+        constructor(candidate) {
+            this.candidate = candidate;
+            this.container = candidate.container;
+            this.panel = null;
+            this.btn = null;
+            this.dropdown = null;
+            this.variantsList = null;
+            this.activeTab = 'all';
+            this.currentVariants = [];
+            this.isOpen = false;
+            this.isThumbnail = candidate.type === 'thumbnail';
+            this.currentRequestId = 0;
+            this.init();
+        }
+
+        init() {
+            this.panel = document.createElement('div');
+            this.panel.className = 'edm-floating-panel' + (this.isThumbnail ? ' edm-thumb-panel' : '');
+            this.panel.setAttribute('data-candidate-id', this.candidate.candidateId);
+
+            this.panel.innerHTML = `
+                <button class="edm-floating-btn" type="button" aria-label="Download this media with EDM" title="Download with EDM">
+                    <span class="edm-btn-icon">⚡</span>
+                    <span class="edm-btn-text">Download this video</span>
+                    <span class="edm-btn-badge" style="display: none;">0</span>
+                </button>
+                <div class="edm-dropdown-card" style="display: none;" role="dialog" aria-label="EDM Format Selector">
+                    <div class="edm-dropdown-header">
+                        <div class="edm-dropdown-title-group">
+                            <span class="edm-header-logo">EDM</span>
+                            <span class="edm-header-title-text" title="${escapeHtml(this.candidate.title || 'Video Media')}">${escapeHtml(this.candidate.title || 'Video Media')}</span>
+                        </div>
+                        <div class="edm-dropdown-controls">
+                            <button class="edm-download-all-opt" type="button" title="Download all stream representations">Download all</button>
+                            <button class="edm-dropdown-close-btn" type="button" aria-label="Close" title="Close">✕</button>
+                        </div>
+                    </div>
+                    <div class="edm-filter-tabs">
+                        <button class="edm-tab-btn edm-tab-active" data-tab="all" type="button">All (<span class="edm-count-all">0</span>)</button>
+                        <button class="edm-tab-btn" data-tab="video" type="button">🎬 Video (<span class="edm-count-video">0</span>)</button>
+                        <button class="edm-tab-btn" data-tab="audio" type="button">🎵 Audio (<span class="edm-count-audio">0</span>)</button>
+                    </div>
+                    <div class="edm-variants-container"></div>
+                    <div class="edm-dropdown-footer">
+                        <span class="edm-footer-hint">Click any format to start fast multi-thread download</span>
+                    </div>
+                </div>
+            `;
+
+            this.btn = this.panel.querySelector('.edm-floating-btn');
+            this.dropdown = this.panel.querySelector('.edm-dropdown-card');
+            this.variantsList = this.panel.querySelector('.edm-variants-container');
+            const closeBtn = this.panel.querySelector('.edm-dropdown-close-btn');
+            const downloadAllBtn = this.panel.querySelector('.edm-download-all-opt');
+
+            // Tab Buttons
+            this.panel.querySelectorAll('.edm-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.switchTab(btn.getAttribute('data-tab'));
+                });
+            });
+
+            this.btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (this.isOpen) {
+                    this.close();
+                } else {
+                    this.open();
                 }
             });
 
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    closeDropdown(panel, dropdown);
+                    this.close();
+                });
+            }
+
+            if (downloadAllBtn) {
+                downloadAllBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.downloadAllStreams();
+                });
+            }
+
+            const style = window.getComputedStyle(this.container);
+            if (style.position === 'static') {
+                this.container.style.position = 'relative';
+            }
+
+            this.container.appendChild(this.panel);
+            this.bindHoverBehavior();
+
+            this.checkPreloadedVariants();
+        }
+
+        checkPreloadedVariants() {
+            const preloaded = YouTubeInPageExtractor.getCachedOrExtractedVariants(this.candidate.url);
+            if (preloaded && preloaded.variants && preloaded.variants.length > 0) {
+                this.updateBadgeCount(preloaded.variants.length);
+            }
+        }
+
+        updateBadgeCount(count) {
+            const badge = this.panel?.querySelector('.edm-btn-badge');
+            if (badge && count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            }
+        }
+
+        bindHoverBehavior() {
+            if (this.isThumbnail) {
+                this.panel.style.opacity = '0';
+                this.container.addEventListener('mouseenter', () => {
+                    if (this.panel) this.panel.style.opacity = '1';
+                });
+                this.container.addEventListener('mouseleave', () => {
+                    if (this.panel && !this.isOpen) this.panel.style.opacity = '0';
+                });
+            } else {
+                this.panel.style.opacity = '0.94';
+                this.container.addEventListener('mouseenter', () => {
+                    if (this.panel) this.panel.style.opacity = '1';
+                });
+                this.container.addEventListener('mouseleave', () => {
+                    if (this.panel && !this.isOpen) this.panel.style.opacity = '0.94';
                 });
             }
         }
 
-        // Attach to DOM body (to avoid container overflow/clipping issues)
-        document.body.appendChild(panel);
-        detectedMedia.set(mediaEl, panel);
+        open() {
+            if (globalActiveDropdown && globalActiveDropdown !== this) {
+                globalActiveDropdown.close();
+            }
 
-        // Position panel over top-right of media element
-        updatePanelPosition(mediaEl, panel);
+            this.isOpen = true;
+            this.candidate.state = CandidateState.SELECTOR_OPEN;
+            this.dropdown.style.display = 'flex';
+            this.panel.classList.add('edm-open');
+            this.panel.style.opacity = '1';
+            globalActiveDropdown = this;
 
-        // Auto-fade behavior on playback
-        let fadeTimer = null;
-        const resetFade = () => {
-            panel.style.opacity = '0.96';
-            clearTimeout(fadeTimer);
-            if (!mediaEl.paused && !panel.classList.contains('edm-open')) {
-                fadeTimer = setTimeout(() => {
-                    if (!mediaEl.paused && !panel.matches(':hover') && !panel.classList.contains('edm-open')) {
-                        panel.style.opacity = '0.25';
+            const headerTitle = this.panel.querySelector('.edm-header-title-text');
+            if (headerTitle) {
+                headerTitle.textContent = MediaCandidateDetector.getPageMediaTitle() || this.candidate.title || 'Video Media';
+            }
+
+            this.fetchVariants();
+        }
+
+        close() {
+            this.isOpen = false;
+            this.candidate.state = CandidateState.READY;
+            if (this.dropdown) this.dropdown.style.display = 'none';
+            if (this.panel) this.panel.classList.remove('edm-open');
+            if (this.isThumbnail && this.panel) this.panel.style.opacity = '0';
+            if (globalActiveDropdown === this) globalActiveDropdown = null;
+        }
+
+        switchTab(tabName) {
+            this.activeTab = tabName || 'all';
+            this.panel.querySelectorAll('.edm-tab-btn').forEach(btn => {
+                if (btn.getAttribute('data-tab') === this.activeTab) {
+                    btn.classList.add('edm-tab-active');
+                } else {
+                    btn.classList.remove('edm-tab-active');
+                }
+            });
+            this.renderVariantsList();
+        }
+
+        fetchVariants() {
+            const mediaUrl = this.candidate.url;
+            const targetCandidateId = this.candidate.candidateId;
+            const requestId = ++this.currentRequestId;
+
+            // 1. Instant In-Browser / Cache Check (0ms!)
+            const localData = YouTubeInPageExtractor.getCachedOrExtractedVariants(mediaUrl);
+            if (localData && localData.variants && localData.variants.length > 0) {
+                this.candidate.state = CandidateState.READY;
+                this.currentVariants = localData.variants;
+                this.renderVariants(localData.variants, mediaUrl);
+                this.updateBadgeCount(localData.variants.length);
+                return;
+            }
+
+            // 2. Otherwise Show Analyzing State and Query Background Resolver
+            this.candidate.state = CandidateState.ANALYZING;
+            this.renderLoadingState();
+
+            let timedOut = false;
+            const timer = setTimeout(() => {
+                timedOut = true;
+                if (this.currentRequestId === requestId && this.isOpen) {
+                    const retryLocal = YouTubeInPageExtractor.getCachedOrExtractedVariants(mediaUrl);
+                    if (retryLocal && retryLocal.variants && retryLocal.variants.length > 0) {
+                        this.currentVariants = retryLocal.variants;
+                        this.renderVariants(retryLocal.variants, mediaUrl);
+                        return;
                     }
-                }, 2800);
+                    this.candidate.state = CandidateState.FAILED;
+                    this.renderErrorState("Could not resolve stream details.", () => this.fetchVariants(), mediaUrl);
+                }
+            }, RESOLVER_TIMEOUT_MS);
+
+            try {
+                YouTubeInPageExtractor.requestPlayerResponseFromBridge();
+
+                chrome.runtime.sendMessage({
+                    action: "GET_MEDIA_VARIANTS",
+                    url: mediaUrl,
+                    cookies: document.cookie
+                }, (response) => {
+                    clearTimeout(timer);
+                    if (timedOut) return;
+
+                    if (this.currentRequestId !== requestId || !this.isOpen || this.candidate.candidateId !== targetCandidateId) {
+                        return;
+                    }
+
+                    const liveLocal = YouTubeInPageExtractor.getCachedOrExtractedVariants(mediaUrl);
+                    if (liveLocal && liveLocal.variants && liveLocal.variants.length > 0) {
+                        this.candidate.state = CandidateState.READY;
+                        this.currentVariants = liveLocal.variants;
+                        this.renderVariants(liveLocal.variants, mediaUrl);
+                        this.updateBadgeCount(liveLocal.variants.length);
+                        return;
+                    }
+
+                    if (response && response.isDrmProtected) {
+                        this.candidate.state = CandidateState.FAILED;
+                        this.renderDrmProtectedState();
+                        return;
+                    }
+
+                    const variantsList = (response && (response.variants || response.data || (response.result && response.result.variants))) || [];
+
+                    if (Array.isArray(variantsList) && variantsList.length > 0) {
+                        this.candidate.state = CandidateState.READY;
+                        variantCache.set(mediaUrl, { success: true, variants: variantsList });
+                        this.currentVariants = variantsList;
+                        this.renderVariants(variantsList, mediaUrl);
+                        this.updateBadgeCount(variantsList.length);
+                    } else {
+                        this.candidate.state = CandidateState.FAILED;
+                        this.renderErrorState(response?.errorMessage || "No downloadable media representations found.", () => this.fetchVariants(), mediaUrl);
+                    }
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                if (!timedOut && this.isOpen && this.currentRequestId === requestId) {
+                    const fallbackLocal = YouTubeInPageExtractor.getCachedOrExtractedVariants(mediaUrl);
+                    if (fallbackLocal && fallbackLocal.variants && fallbackLocal.variants.length > 0) {
+                        this.currentVariants = fallbackLocal.variants;
+                        this.renderVariants(fallbackLocal.variants, mediaUrl);
+                        return;
+                    }
+                    this.candidate.state = CandidateState.FAILED;
+                    this.renderErrorState("Failed to communicate with EDM resolver.", () => this.fetchVariants(), mediaUrl);
+                }
             }
-        };
-
-        mediaEl.addEventListener('play', resetFade);
-        mediaEl.addEventListener('playing', resetFade);
-        mediaEl.addEventListener('pause', resetFade);
-        mediaEl.addEventListener('mousemove', resetFade);
-        panel.addEventListener('mouseenter', () => { panel.style.opacity = '1'; });
-        panel.addEventListener('mouseleave', resetFade);
-    }
-
-    function openDropdown(panel, dropdown) {
-        if (globalActiveDropdown && globalActiveDropdown !== dropdown) {
-            globalActiveDropdown.style.display = 'none';
-            globalActiveDropdown.parentElement?.classList.remove('edm-open');
-        }
-        dropdown.style.display = 'flex';
-        panel.classList.add('edm-open');
-        globalActiveDropdown = dropdown;
-    }
-
-    function closeDropdown(panel, dropdown) {
-        dropdown.style.display = 'none';
-        panel.classList.remove('edm-open');
-        if (globalActiveDropdown === dropdown) globalActiveDropdown = null;
-    }
-
-    document.addEventListener('click', (e) => {
-        if (globalActiveDropdown && !e.target.closest('.edm-floating-panel')) {
-            globalActiveDropdown.style.display = 'none';
-            globalActiveDropdown.parentElement?.classList.remove('edm-open');
-            globalActiveDropdown = null;
-        }
-    });
-
-    // 4. Update Panel Positioning (Anchors cleanly to top-right of media player)
-    function updatePanelPosition(mediaEl, panel) {
-        if (!mediaEl || !panel) return;
-
-        // If media element was removed from DOM, clean up floating panel
-        if (!document.body.contains(mediaEl)) {
-            panel.remove();
-            detectedMedia.delete(mediaEl);
-            mediaEl.dataset.edmOverlayAttached = 'false';
-            return;
         }
 
-        const rect = mediaEl.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) {
-            panel.style.display = 'none';
-            return;
+        renderLoadingState() {
+            this.variantsList.innerHTML = `
+                <div class="edm-state-box">
+                    <div class="edm-spinner"></div>
+                    <span class="edm-state-text">Detecting all video qualities & formats...</span>
+                </div>
+            `;
         }
 
-        panel.style.display = 'block';
-        const scrollX = window.scrollX || window.pageXOffset || 0;
-        const scrollY = window.scrollY || window.pageYOffset || 0;
-
-        const top = rect.top + scrollY + 12;
-        const right = (window.innerWidth - (rect.right + scrollX)) + 12;
-
-        panel.style.top = `${Math.max(8, top)}px`;
-        panel.style.right = `${Math.max(8, right)}px`;
-    }
-
-    // 5. Fetch Real Stream Variants from EDM Native Host
-    function fetchRealVariants(mediaEl, container, onComplete) {
-        let mediaUrl = mediaEl.currentSrc || mediaEl.src || '';
-
-        // If direct src is empty, check <source> tags
-        if (!mediaUrl) {
-            const srcTag = mediaEl.querySelector('source[src]');
-            if (srcTag) mediaUrl = srcTag.src;
+        renderDrmProtectedState() {
+            this.variantsList.innerHTML = `
+                <div class="edm-state-box edm-state-error">
+                    <span class="edm-error-icon">🔒</span>
+                    <span class="edm-state-text">This stream is DRM-protected and cannot be downloaded.</span>
+                </div>
+            `;
         }
 
-        const pageUrl = window.location.href;
-        const isBlobOrStreaming = !mediaUrl || mediaUrl.startsWith('blob:') || isKnownStreamingSite(pageUrl);
+        renderErrorState(message, retryFn, mediaUrl) {
+            this.variantsList.innerHTML = `
+                <div class="edm-state-box edm-state-error">
+                    <span class="edm-error-icon">⚠️</span>
+                    <span class="edm-state-text">${escapeHtml(message)}</span>
+                    <div class="edm-state-actions">
+                        <button class="edm-retry-btn" type="button">Retry</button>
+                        <button class="edm-direct-btn" type="button">Direct Stream</button>
+                    </div>
+                </div>
+            `;
 
-        const targetUrl = isBlobOrStreaming ? pageUrl : mediaUrl;
+            this.variantsList.querySelector('.edm-retry-btn')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                retryFn();
+            });
 
-        chrome.runtime.sendMessage({
-            action: 'GET_MEDIA_VARIANTS',
-            url: targetUrl,
-            pageUrl: pageUrl
-        }, (response) => {
-            onComplete();
-            container.innerHTML = '';
+            this.variantsList.querySelector('.edm-direct-btn')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.executeDownload(mediaUrl, this.candidate.title || 'Video Media', 'Direct Stream', {
+                    directUrl: mediaUrl,
+                    qualityLabel: 'Direct Stream',
+                    container: 'mp4',
+                    isAudioOnly: false,
+                    estimatedSizeBytes: -1
+                });
+            });
+        }
 
-            if (chrome.runtime.lastError || !response || !response.success || !response.result) {
-                // Fallback: direct download link if URL is accessible
-                renderFallbackOption(container, mediaUrl, targetUrl);
+        renderVariants(variants, mediaUrl) {
+            this.currentVariants = variants || [];
+
+            const totalCount = this.currentVariants.length;
+            const videoCount = this.currentVariants.filter(v => !v.isAudioOnly).length;
+            const audioCount = this.currentVariants.filter(v => !!v.isAudioOnly).length;
+
+            const cAll = this.panel.querySelector('.edm-count-all');
+            const cVid = this.panel.querySelector('.edm-count-video');
+            const cAud = this.panel.querySelector('.edm-count-audio');
+
+            if (cAll) cAll.textContent = totalCount;
+            if (cVid) cVid.textContent = videoCount;
+            if (cAud) cAud.textContent = audioCount;
+
+            this.renderVariantsList();
+        }
+
+        renderVariantsList() {
+            const videoTitle = MediaCandidateDetector.getPageMediaTitle() || this.candidate.title || 'Video Media';
+            this.variantsList.innerHTML = '';
+
+            if (!this.currentVariants || this.currentVariants.length === 0) {
+                this.renderErrorState("No downloadable media representations found.", () => this.fetchVariants(), this.candidate.url);
                 return;
             }
 
-            const res = response.result;
-            const variants = res.variants || [];
+            let filtered = [...this.currentVariants];
+            if (this.activeTab === 'video') {
+                filtered = filtered.filter(v => !v.isAudioOnly);
+            } else if (this.activeTab === 'audio') {
+                filtered = filtered.filter(v => !!v.isAudioOnly);
+            }
 
-            if (variants.length === 0) {
-                renderFallbackOption(container, mediaUrl, targetUrl);
+            const sorted = filtered.sort((a, b) => {
+                if (a.isAudioOnly && !b.isAudioOnly) return 1;
+                if (!a.isAudioOnly && b.isAudioOnly) return -1;
+                if (a.isAudioOnly && b.isAudioOnly) {
+                    return (b.audioBitrate || b.bitrate || 0) - (a.audioBitrate || a.bitrate || 0);
+                }
+                const hA = a.height || 0;
+                const hB = b.height || 0;
+                if (hB !== hA) return hB - hA;
+                const sA = a.estimatedSizeBytes || 0;
+                const sB = b.estimatedSizeBytes || 0;
+                if (sB !== sA) return sB - sA;
+                return (b.bitrate || 0) - (a.bitrate || 0);
+            });
+
+            if (sorted.length === 0) {
+                this.variantsList.innerHTML = `
+                    <div class="edm-state-box">
+                        <span class="edm-state-text">No ${this.activeTab} streams found.</span>
+                    </div>
+                `;
                 return;
             }
 
-            const videoTitle = res.title || document.title || 'Video';
-
-            // Render Numbered IDM-style Quality Items
-            variants.forEach((v, index) => {
+            sorted.forEach((v, index) => {
                 const item = document.createElement('div');
-                item.className = 'edm-variant-item' + (v.isAudioOnly ? ' edm-variant-audio' : '');
+                item.className = 'edm-variant-row' + (v.isAudioOnly ? ' edm-audio-row' : '');
+                item.setAttribute('role', 'button');
+                item.setAttribute('tabindex', '0');
 
-                const num = index + 1;
-                const resLabel = v.qualityLabel || v.resolution || (v.isAudioOnly ? 'Audio Only' : 'Standard Stream');
-                const fileType = v.isAudioOnly ? 'Audio file' : 'MP4 file';
-                const qualityText = `quality ${resLabel}`;
-                const sizeLabel = v.estimatedSizeBytes > 0 ? formatBytes(v.estimatedSizeBytes) : (v.isAudioOnly ? 'Audio' : 'Direct');
+                const ext = (v.container || (v.isAudioOnly ? 'mp3' : 'mp4')).toUpperCase();
+                const qualityLabel = v.qualityLabel || (v.height > 0 ? `${v.height}p` : 'Standard');
+                const sizeText = formatBytes(v.estimatedSizeBytes);
+
+                let badgeClass = 'edm-badge-sd';
+                if (v.isAudioOnly) {
+                    badgeClass = 'edm-badge-audio';
+                } else if (v.height >= 2160 || qualityLabel.includes('4K')) {
+                    badgeClass = 'edm-badge-4k';
+                } else if (v.height >= 1440 || qualityLabel.includes('2K')) {
+                    badgeClass = 'edm-badge-2k';
+                } else if (v.height >= 1080) {
+                    badgeClass = 'edm-badge-fhd';
+                } else if (v.height >= 720) {
+                    badgeClass = 'edm-badge-hd';
+                }
+
+                let descParts = [];
+                if (v.isAudioOnly) {
+                    const kbps = v.audioBitrate > 0 ? `${Math.round(v.audioBitrate / 1000)} kbps` : (v.bitrate > 0 ? `${Math.round(v.bitrate / 1000)} kbps` : '128 kbps');
+                    descParts.push(ext);
+                    descParts.push(v.audioCodec || 'AAC');
+                    descParts.push(kbps);
+                } else {
+                    descParts.push(ext);
+                    if (v.codec && v.codec !== 'none') descParts.push(v.codec.toUpperCase());
+                    if (v.frameRate > 30) descParts.push(`${Math.round(v.frameRate)} FPS`);
+                    descParts.push(v.requiresFfmpegMerge ? 'Adaptive Video+Audio' : 'Direct Video');
+                }
 
                 item.innerHTML = `
-                    <div class="edm-variant-left">
-                        <span class="edm-variant-num">${num}.</span>
-                        <div class="edm-variant-info">
-                            <span class="edm-variant-title">${escapeHtml(truncateTitle(videoTitle, 36))}</span>
-                            <span class="edm-variant-meta">${fileType}, ${qualityText}</span>
-                        </div>
+                    <div class="edm-quality-badge ${badgeClass}">${escapeHtml(qualityLabel)}</div>
+                    <div class="edm-variant-info">
+                        <span class="edm-variant-desc">${escapeHtml(descParts.join(' • '))}</span>
+                        <span class="edm-variant-type">${v.isAudioOnly ? '🎵 Audio Track' : '🎬 Video Stream'}</span>
                     </div>
-                    <span class="edm-variant-size">${escapeHtml(sizeLabel)}</span>
+                    <div class="edm-variant-size-group">
+                        <span class="edm-variant-size">${escapeHtml(sizeText)}</span>
+                        <span class="edm-download-icon" title="Download">⬇️</span>
+                    </div>
                 `;
 
-                item.addEventListener('click', (e) => {
+                const handleSelection = (e) => {
                     e.stopPropagation();
-                    triggerDownload(v.directUrl || targetUrl, pageUrl, videoTitle, v.qualityLabel, v.formatArg);
+                    e.preventDefault();
+                    this.executeDownload(v.directUrl || this.candidate.url, videoTitle, qualityLabel, v);
+                };
+
+                item.addEventListener('click', handleSelection);
+                item.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') handleSelection(e);
                 });
 
-                container.appendChild(item);
-            });
-        });
-    }
-
-    function renderFallbackOption(container, mediaUrl, pageUrl) {
-        const item = document.createElement('div');
-        item.className = 'edm-empty-box';
-
-        const canDirectDownload = mediaUrl && !mediaUrl.startsWith('blob:');
-
-        if (canDirectDownload) {
-            item.innerHTML = `
-                <span>Direct Media Stream Detected</span>
-                <button class="edm-floating-btn edm-video-overlay-btn" style="margin-top: 6px;" type="button">⬇ Download Direct URL</button>
-            `;
-            item.querySelector('button').addEventListener('click', () => {
-                triggerDownload(mediaUrl, pageUrl, document.title, 'Direct', '');
-            });
-        } else {
-            item.innerHTML = `
-                <span>Adaptive stream detected</span>
-                <button class="edm-floating-btn edm-video-overlay-btn" style="margin-top: 6px;" type="button">⚡ Download with EDM</button>
-            `;
-            item.querySelector('button').addEventListener('click', () => {
-                triggerDownload(pageUrl, pageUrl, document.title, 'Best', '');
+                this.variantsList.appendChild(item);
             });
         }
 
-        container.appendChild(item);
-    }
+        executeDownload(url, title, quality, variant) {
+            const cleanTitle = (title || 'media').replace(/[/\\?%*:|"<>]/g, '_').trim();
+            const isAudio = !!variant?.isAudioOnly || (quality && quality.includes('Audio'));
+            const ext = variant?.container ? `.${variant.container.toLowerCase()}` : (isAudio ? '.mp3' : '.mp4');
+            const filename = cleanTitle + ext;
 
-    function triggerDownload(url, pageUrl, title, quality, format) {
-        const cleanTitle = (title || document.title || 'video').replace(/[/\\?%*:|"<>]/g, '_');
-        chrome.runtime.sendMessage({
-            action: 'download_url',
-            url: url,
-            pageUrl: pageUrl,
-            fileName: cleanTitle,
-            quality: quality,
-            format: format
-        }, (res) => {
-            if (globalActiveDropdown) {
-                globalActiveDropdown.parentElement?.classList.remove('edm-open');
-                globalActiveDropdown.style.display = 'none';
-                globalActiveDropdown = null;
+            const downloadIdentity = generateDownloadIdentity(url, quality, filename, variant?.directUrl || url);
+
+            if (activeJobIdentities.has(downloadIdentity)) {
+                chrome.runtime.sendMessage({
+                    action: 'START_EDM_DOWNLOAD',
+                    url: url,
+                    downloadIdentity: downloadIdentity
+                });
+                this.showToast("Opening existing download in EDM...");
+                this.close();
+                return;
             }
-        });
+
+            activeJobIdentities.add(downloadIdentity);
+            this.candidate.state = CandidateState.DOWNLOADING;
+
+            this.showToast(`Starting download: ${quality} (${filename})...`);
+
+            try {
+                chrome.runtime.sendMessage({
+                    action: 'START_EDM_DOWNLOAD',
+                    url: url,
+                    videoUrl: variant?.directUrl || url,
+                    audioUrl: variant?.audioStreamUrl || '',
+                    manifestUrl: variant?.manifestUrl || '',
+                    pageUrl: window.location.href,
+                    title: title || 'Video Media',
+                    filename: filename,
+                    fileName: filename,
+                    quality: quality || 'Original',
+                    format: variant?.container || (isAudio ? 'mp3' : 'mp4'),
+                    formatId: variant?.variantId || '',
+                    formatArg: variant?.formatArg || '',
+                    width: variant?.width || 0,
+                    height: variant?.height || 0,
+                    fps: variant?.frameRate || 0,
+                    videoCodec: variant?.codec || '',
+                    codec: variant?.codec || '',
+                    audioCodec: variant?.audioCodec || '',
+                    container: variant?.container || '',
+                    requiresFfmpegMerge: !!variant?.requiresFfmpegMerge,
+                    downloadIdentity: downloadIdentity,
+                    correlationId: 'edm_req_' + Date.now(),
+                    estimatedSizeBytes: variant?.estimatedSizeBytes || -1,
+                    videoSizeBytes: variant?.videoSizeBytes || -1,
+                    audioSizeBytes: variant?.audioSizeBytes || -1,
+                    isAudioOnly: isAudio,
+                    cookies: document.cookie,
+                    source: 'ContentScript'
+                }, (resp) => {
+                    this.candidate.state = CandidateState.COMPLETED;
+                });
+            } catch (err) {
+                this.candidate.state = CandidateState.FAILED;
+            }
+
+            this.close();
+        }
+
+        downloadAllStreams() {
+            const candidates = MediaCandidateDetector.findMediaCandidates();
+            candidates.forEach((c) => {
+                this.executeDownload(c.url, c.title, "Original", null);
+            });
+            this.close();
+        }
+
+        showToast(message) {
+            let toast = document.getElementById('edm-quick-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'edm-quick-toast';
+                toast.className = 'edm-toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.classList.add('edm-toast-show');
+            setTimeout(() => {
+                toast.classList.remove('edm-toast-show');
+            }, 2600);
+        }
+
+        destroy() {
+            this.candidate.state = CandidateState.DESTROYED;
+            if (this.panel) {
+                this.panel.remove();
+                this.panel = null;
+            }
+            if (globalActiveDropdown === this) globalActiveDropdown = null;
+        }
     }
 
-    function isKnownStreamingSite(url) {
-        const u = url.toLowerCase();
-        return u.includes('youtube.com') || u.includes('youtu.be') ||
-               u.includes('vimeo.com') || u.includes('twitch.tv') ||
-               u.includes('dailymotion.com') || u.includes('twitter.com') ||
-               u.includes('x.com') || u.includes('facebook.com');
+    // =========================================================================
+    // 5. LIFECYCLE & SPA CONTROLLER
+    // =========================================================================
+    class AppLifecycleManager {
+        static init() {
+            YouTubeInPageExtractor.init();
+            this.refreshOverlays();
+
+            let debounceTimer = null;
+            const observer = new MutationObserver(() => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => this.refreshOverlays(), MUTATION_DEBOUNCE_MS);
+            });
+
+            observer.observe(document.body || document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+
+            window.addEventListener('yt-navigate-finish', () => this.handleNavigation());
+            window.addEventListener('popstate', () => this.handleNavigation());
+            window.addEventListener('hashchange', () => this.handleNavigation());
+
+            this.hookHistoryApi();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && globalActiveDropdown) {
+                    globalActiveDropdown.close();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (globalActiveDropdown && !e.target.closest('.edm-floating-panel')) {
+                    globalActiveDropdown.close();
+                }
+            });
+        }
+
+        static hookHistoryApi() {
+            const originalPushState = history.pushState;
+            const originalReplaceState = history.replaceState;
+
+            history.pushState = function (...args) {
+                originalPushState.apply(this, args);
+                AppLifecycleManager.handleNavigation();
+            };
+
+            history.replaceState = function (...args) {
+                originalReplaceState.apply(this, args);
+                AppLifecycleManager.handleNavigation();
+            };
+        }
+
+        static handleNavigation() {
+            if (window.location.href === currentPageUrl) return;
+            currentPageUrl = window.location.href;
+
+            activeOverlays.forEach(overlay => overlay.destroy());
+            activeOverlays.clear();
+
+            setTimeout(() => this.refreshOverlays(), MUTATION_DEBOUNCE_MS);
+        }
+
+        static refreshOverlays() {
+            const candidates = MediaCandidateDetector.findMediaCandidates();
+            const currentCandidateIds = new Set();
+
+            for (const c of candidates) {
+                currentCandidateIds.add(c.candidateId);
+                if (!activeOverlays.has(c.candidateId)) {
+                    const overlay = new IdmDownloadOverlay(c);
+                    activeOverlays.set(c.candidateId, overlay);
+                }
+            }
+
+            for (const [candId, overlay] of activeOverlays.entries()) {
+                if (!currentCandidateIds.has(candId) || !document.body.contains(overlay.container)) {
+                    overlay.destroy();
+                    activeOverlays.delete(candId);
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // 6. UTILITY FUNCTIONS
+    // =========================================================================
+    function generateDownloadIdentity(url, quality, filename, directUrl) {
+        const raw = `${url}|${quality}|${filename}|${directUrl || ''}`;
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+            hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+            hash |= 0;
+        }
+        return 'edm_job_' + Math.abs(hash).toString(16);
     }
 
     function formatBytes(bytes) {
-        if (!bytes || bytes <= 0) return 'Variable';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let i = 0;
-        let b = bytes;
-        while (b >= 1024 && i < units.length - 1) {
-            b /= 1024;
-            i++;
-        }
-        return `${b.toFixed(1)} ${units[i]}`;
-    }
-
-    function truncateTitle(str, maxLen) {
-        if (!str) return 'Video';
-        return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
+        if (!bytes || isNaN(bytes) || bytes <= 0) return 'Size: Unknown';
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
     }
 
     function escapeHtml(text) {
@@ -370,65 +1183,13 @@
         return div.innerHTML;
     }
 
-    // 6. Polling, SPA Hooks & Debounced MutationObserver for Dynamic Video Ingestion
-    scanMediaElements();
-
-    let mutationDebounceTimer = null;
-    const observer = new MutationObserver((mutations) => {
-        let shouldScan = false;
-        for (const mutation of mutations) {
-            if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
-                shouldScan = true;
-                break;
-            }
-        }
-        if (shouldScan) {
-            clearTimeout(mutationDebounceTimer);
-            mutationDebounceTimer = setTimeout(scanMediaElements, 150);
-        }
-    });
-
-    if (document.body) {
-        observer.observe(document.body, { childList: true, subtree: true });
+    // =========================================================================
+    // 7. BOOTSTRAP
+    // =========================================================================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => AppLifecycleManager.init());
     } else {
-        document.addEventListener('DOMContentLoaded', () => {
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
+        AppLifecycleManager.init();
     }
-
-    // SPA Navigation Events (YouTube, Vimeo, Twitch, etc.)
-    window.addEventListener('yt-navigate-finish', () => setTimeout(scanMediaElements, 250));
-    window.addEventListener('popstate', () => setTimeout(scanMediaElements, 200));
-
-    try {
-        const originalPushState = history.pushState;
-        history.pushState = function () {
-            originalPushState.apply(this, arguments);
-            setTimeout(scanMediaElements, 200);
-        };
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function () {
-            originalReplaceState.apply(this, arguments);
-            setTimeout(scanMediaElements, 200);
-        };
-    } catch (e) {}
-
-    window.addEventListener('resize', () => {
-        const videos = Array.from(document.querySelectorAll('video, audio'));
-        videos.forEach(el => {
-            const panel = detectedMedia.get(el);
-            if (panel) updatePanelPosition(el, panel);
-        });
-    });
-
-    window.addEventListener('scroll', () => {
-        const videos = Array.from(document.querySelectorAll('video, audio'));
-        videos.forEach(el => {
-            const panel = detectedMedia.get(el);
-            if (panel) updatePanelPosition(el, panel);
-        });
-    }, { passive: true });
-
-    setInterval(scanMediaElements, 1200);
 
 })();

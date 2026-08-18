@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using EDM.Services;
 
-class Program
+class ThrottleTestRunner
 {
-    static async Task<int> Main(string[] args)
+    public static async Task<int> RunThrottleTestAsync(string[]? args = null)
     {
         int consumers = 8;
         int limitKbps = 200; // default

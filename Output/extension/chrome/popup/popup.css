@@ -1,0 +1,231 @@
+/**
+ * EDM Extension - Popup Interface Styling
+ * Version: 1.0.0
+ */
+
+.edm-popup-container {
+    width: 380px;
+    min-height: 480px;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--edm-bg-app);
+    color: var(--edm-text-primary);
+    overflow: hidden;
+}
+
+/* Header */
+.edm-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--edm-bg-surface);
+    border-bottom: 1px solid var(--edm-border);
+}
+
+.edm-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.edm-popup-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--edm-radius-sm);
+}
+
+.edm-brand-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--edm-text-primary);
+}
+
+.edm-connection-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--edm-text-secondary);
+    background: var(--edm-bg-surface-elevated);
+    padding: 4px 8px;
+    border-radius: var(--edm-radius-full);
+    border: 1px solid var(--edm-border);
+}
+
+/* Sections */
+.edm-section {
+    padding: 14px 16px;
+}
+
+.edm-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.edm-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--edm-text-secondary);
+}
+
+/* Media Card */
+.edm-media-card {
+    padding: 12px 14px;
+}
+
+.edm-media-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 8px;
+    text-align: center;
+    gap: 6px;
+}
+
+.edm-empty-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--edm-text-muted);
+    stroke-width: 1.5;
+}
+
+.edm-media-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--edm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.edm-media-sub {
+    font-size: 11px;
+    color: var(--edm-text-secondary);
+    margin-bottom: 10px;
+}
+
+.edm-format-selector-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.edm-select {
+    flex: 1;
+    background: var(--edm-bg-surface-elevated);
+    color: var(--edm-text-primary);
+    border: 1px solid var(--edm-border);
+    border-radius: var(--edm-radius-md);
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+}
+
+.edm-select:focus {
+    border-color: var(--edm-border-focus);
+}
+
+/* Downloads List */
+.edm-downloads-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.edm-download-item {
+    background: var(--edm-bg-surface-elevated);
+    border: 1px solid var(--edm-border);
+    border-radius: var(--edm-radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.edm-download-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.edm-download-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--edm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.edm-download-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--edm-text-secondary);
+}
+
+.edm-download-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.edm-ctrl-btn {
+    background: transparent;
+    border: none;
+    color: var(--edm-text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.edm-ctrl-btn:hover {
+    color: var(--edm-text-primary);
+    background: var(--edm-border);
+}
+
+.edm-empty-downloads {
+    text-align: center;
+    padding: 16px 0;
+}
+
+/* Footer */
+.edm-popup-footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--edm-bg-surface);
+    border-top: 1px solid var(--edm-border);
+}
+
+.edm-switch-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.edm-footer-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}

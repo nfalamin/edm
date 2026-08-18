@@ -1,0 +1,34 @@
+================================================================================
+  EXCLUSIVE DOWNLOAD MANAGER (EDM) v1.0 — SECURITY & ANTI-TAMPER NOTICE
+================================================================================
+
+1. ANTI-TAMPER & INTEGRITY PROTECTION:
+   - Every executable binary and setup file produced for EDM v1.0 is cryptographically
+     hashed with SHA-256 and SHA-512 algorithms.
+   - To ensure your setup file is genuine and has not been modified by malicious
+     third parties, run `Verify_Integrity.bat`.
+   - If the SHA-256 checksum does not match, DO NOT execute the installer.
+
+2. LOCAL-FIRST ZERO TRACKING GUARANTEE:
+   - EDM adheres to a strict "Local-First" privacy policy.
+   - No telemetry, search terms, download URLs, or file contents are ever uploaded to cloud servers.
+   - All speed calculations and graph visualizations occur 100% locally in your system memory.
+
+3. MEMORY & PROCESS SECURITY:
+   - High-Entropy Virtual Addressing (64-bit ASLR enabled).
+   - Data Execution Prevention (DEP / NX enabled).
+   - Temporary chunk files are securely isolated on local disk and verified with MD5/SHA-256.
+
+4. OFFICIAL CHECKSUMS (SHA-256):
+   - EDM_Setup_v1.0.exe:
+     1865BE4F63E42E6FA9485B6883E46F44951DE895335795ABE7EDB9614BDCE467
+   - edm-chrome-extension-v1.0.0.zip:
+     1A38520801610D071DEB41C62A35A45E187FF8ADEF815761321B4A136E7DD48D
+   - edm-edge-extension-v1.0.0.zip:
+     C95BF4C408D1CCBF4735971B038855B2F0AB896B293BFF027B2995EA4840E231
+   - edm-firefox-extension-v1.0.0.zip:
+     59F12AACB01627B90C7571074A2BE4BAA43A62672BFBA6137FAA5F2A59F0FE35
+
+================================================================================
+Report security issues: security@exclusive-download-manager.com
+================================================================================

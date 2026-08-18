@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Exclusive Download Manager (EDM) Edge Capturer",
+  "name": "Exclusive Download Manager (EDM) Capturer",
   "version": "1.0.0",
-  "description": "Capture video, audio, and media streams from web pages in Microsoft Edge and download them at maximum speed with EDM Desktop App.",
+  "description": "Capture video, audio, and media streams from web pages and download them at maximum speed with EDM Desktop App.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -10,6 +10,7 @@
   },
   "permissions": [
     "downloads",
+    "contextMenus",
     "nativeMessaging",
     "storage",
     "activeTab",

@@ -96,8 +96,8 @@ namespace EDM.Services
                         if (dp.ChunkStats != null)
                         {
                             var ordered = dp.ChunkStats.OrderBy(k => k.Key).ToArray();
-                            info.SegmentCount = ordered.Length;
-                            info.ActiveConnections = dp.ChunkStats.Values.Count(c => c.IsActive);
+                            info.SegmentCount = dp.Telemetry?.ConfiguredMaximumConnections ?? ordered.Length;
+                            info.ActiveConnections = dp.Telemetry != null ? dp.Telemetry.ActiveConnections : dp.ChunkStats.Values.Count(c => c.IsActive);
                             info.ChunkStats = dp.ChunkStats;
                             var arr = new long[ordered.Length];
                             for (int i = 0; i < ordered.Length; i++) arr[i] = ordered[i].Value.Downloaded;

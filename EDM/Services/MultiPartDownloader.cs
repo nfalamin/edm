@@ -14,9 +14,13 @@ using EDM.Services.Helpers;
 
 namespace EDM.Services
 {
-    public record ChunkProgressInfo(int Index, long Downloaded, long TotalBytes, bool IsActive);
+    public record ChunkProgressInfo(int Index, long Downloaded, long TotalBytes, bool IsActive, double SpeedBytesPerSec = 0);
 
-    public record DownloadProgress(long TotalBytes, long BytesDownloaded, ConcurrentDictionary<int, ChunkProgressInfo>? ChunkStats = null)
+    public record DownloadProgress(
+        long TotalBytes, 
+        long BytesDownloaded, 
+        ConcurrentDictionary<int, ChunkProgressInfo>? ChunkStats = null,
+        ConnectionTelemetrySnapshot? Telemetry = null)
     {
         public double Percentage => TotalBytes > 0 ? (BytesDownloaded / (double)TotalBytes) * 100.0 : 0.0;
     }
@@ -51,9 +55,6 @@ namespace EDM.Services
         private TaskCompletionSource<bool>? _resumeTcs;
 
         public int ThrottleKbps { get; set; } = 0;
-
-        private static readonly object _sharedHeaderLock = new();
-        private static HttpClient? _sharedHeadersConfiguredFor;
 
         public DownloadCredentials? Credentials { get; set; }
         public string? Cookies { get; set; }
@@ -200,7 +201,10 @@ namespace EDM.Services
 
             long totalBytes = contentLength.Value;
             var scheduler = new SegmentScheduler(totalBytes);
-            var controller = new AdaptiveConnectionController(chunkCount, 2, maxConcurrency);
+            int recommendedStart = ServerCapabilityCache.Instance.GetRecommendedInitialConnections(fileUrl, totalBytes, maxConcurrency);
+            int initialConns = Math.Min(chunkCount, Math.Max(2, recommendedStart));
+            var controller = new AdaptiveConnectionController(initialConns, 2, maxConcurrency);
+            var speedTracker = new MonotonicSpeedTracker();
 
             // Durable Metadata Recovery
             var metaState = await _metaManager.ReadStateAsync(metaPath, cancellationToken).ConfigureAwait(false);
@@ -237,6 +241,9 @@ namespace EDM.Services
                 await _metaManager.WriteStateAtomicAsync(metaPath, metaState, cancellationToken).ConfigureAwait(false);
             }
 
+            // Preflight Disk Space Verification
+            DiskSpaceGovernor.EnsureAvailableSpaceOrThrow(destinationFilePath, totalBytes);
+
             // High-Speed Disk Space Pre-Allocation: Reserve file clusters beforehand to avoid disk fragmentation
             try
             {
@@ -260,7 +267,8 @@ namespace EDM.Services
             }
 
             var chunkStatsMap = new ConcurrentDictionary<int, ChunkProgressInfo>();
-
+            var accountant = new ConnectionAccountant(maxConcurrency);
+            accountant.SetRequestedConnections(chunkCount);
 
             // Active runtime adaptive connection scaling pool
             int targetConnections = controller.CurrentConnections;
@@ -293,12 +301,14 @@ namespace EDM.Services
                             break; // Controlled worker removal
                         }
 
+                        accountant.OnWorkerIdle();
                         var segment = scheduler.GetNextWorkItem(workerId);
                         if (segment == null)
                         {
                             await Task.Delay(100, fallbackCts.Token).ConfigureAwait(false);
                             continue;
                         }
+                        accountant.OnWorkerBusy();
 
                         if (string.IsNullOrEmpty(segment.TempPath))
                         {
@@ -309,8 +319,6 @@ namespace EDM.Services
                         // Atomically persist snapshot so metadata file on disk reflects dynamic split ranges
                         metaState.Segments = scheduler.GetSegmentsSnapshot();
                         await _metaManager.WriteStateAtomicAsync(metaPath, metaState, fallbackCts.Token).ConfigureAwait(false);
-
-
 
                         try
                         {
@@ -327,12 +335,17 @@ namespace EDM.Services
                                 () => ThrottleKbps > 0 ? ThrottleKbps * 1024.0 : 0,
                                 Credentials,
                                 Cookies,
-                                fallbackCts.Token).ConfigureAwait(false);
+                                fallbackCts.Token,
+                                accountant).ConfigureAwait(false);
 
                             chunkStatsMap[segment.Id] = new ChunkProgressInfo(segment.Id, segment.TotalBytes, segment.TotalBytes, false);
 
                             long downloadedAll = scheduler.GetTotalBytesDownloaded();
-                            progress?.Report(new DownloadProgress(totalBytes, downloadedAll, chunkStatsMap));
+                            var segSnap = scheduler.GetSegmentsSnapshot();
+                            int qSegs = segSnap.Count(s => s.State == SegmentState.Pending);
+                            int rSegs = segSnap.Count(s => s.State == SegmentState.Downloading);
+                            int cSegs = segSnap.Count(s => s.State == SegmentState.Completed);
+                            progress?.Report(new DownloadProgress(totalBytes, downloadedAll, chunkStatsMap, accountant.GetSnapshot(qSegs, rSegs, cSegs)));
                         }
                         catch (RangeFallbackRequiredException rfx)
                         {
@@ -380,6 +393,7 @@ namespace EDM.Services
                 finally
                 {
                     Interlocked.Decrement(ref activeWorkerCounter);
+                    accountant.OnWorkerBusy();
                 }
             }, fallbackCts.Token);
 
@@ -392,39 +406,74 @@ namespace EDM.Services
                 }
             }
 
-            // Runtime Telemetry & Adaptive Controller Feedback Loop
+            // High-frequency live segment telemetry reporting heartbeat loop (100ms interval)
+            var lastSegSamples = new Dictionary<int, (long Bytes, DateTime Time)>();
+            var telemetryReportingLoop = Task.Run(async () =>
+            {
+                while (!scheduler.IsFullyCompleted() && !fallbackCts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.Delay(100, fallbackCts.Token).ConfigureAwait(false);
+
+                        var now = DateTime.UtcNow;
+                        var segments = scheduler.GetSegmentsSnapshot();
+                        foreach (var seg in segments)
+                        {
+                            bool isActive = seg.State == SegmentState.Downloading;
+                            double segSpeed = 0;
+                            if (lastSegSamples.TryGetValue(seg.Id, out var lastSample))
+                            {
+                                double dt = (now - lastSample.Time).TotalSeconds;
+                                if (dt > 0.04)
+                                {
+                                    segSpeed = Math.Max(0, (seg.BytesDownloaded - lastSample.Bytes) / dt);
+                                }
+                            }
+                            lastSegSamples[seg.Id] = (seg.BytesDownloaded, now);
+
+                            chunkStatsMap[seg.Id] = new ChunkProgressInfo(seg.Id, seg.BytesDownloaded, seg.TotalBytes, isActive, segSpeed);
+                        }
+
+                        long downloadedAll = scheduler.GetTotalBytesDownloaded();
+                        int qSegs = segments.Count(s => s.State == SegmentState.Pending);
+                        int rSegs = segments.Count(s => s.State == SegmentState.Downloading);
+                        int cSegs = segments.Count(s => s.State == SegmentState.Completed);
+                        progress?.Report(new DownloadProgress(totalBytes, downloadedAll, chunkStatsMap, accountant.GetSnapshot(qSegs, rSegs, cSegs)));
+                    }
+                    catch (OperationCanceledException) { break; }
+                    catch { }
+                }
+            }, fallbackCts.Token);
+
+            // Runtime Telemetry & Adaptive Controller Feedback Loop with REAL measured RTT & Monotonic Speed
             var adaptiveLoop = Task.Run(async () =>
             {
-                long lastDownloadedBytes = scheduler.GetTotalBytesDownloaded();
-                DateTime lastTime = DateTime.UtcNow;
-
-                while (!scheduler.IsFullyCompleted() && !cancellationToken.IsCancellationRequested)
+                while (!scheduler.IsFullyCompleted() && !cancellationToken.IsCancellationRequested && !fallbackCts.IsCancellationRequested)
                 {
                     await Task.Delay(500, cancellationToken).ConfigureAwait(false);
 
                     long currentDownloadedBytes = scheduler.GetTotalBytesDownloaded();
-                    DateTime currentTime = DateTime.UtcNow;
-                    double elapsedSec = (currentTime - lastTime).TotalSeconds;
+                    speedTracker.RecordProgress(currentDownloadedBytes);
 
-                    if (elapsedSec > 0)
+                    double currentBps = speedTracker.RollingSpeedBps;
+                    int recentErrors = Interlocked.Exchange(ref errorCounter, 0);
+
+                    // Use REAL authoritative measured RTT from actual HTTP connections (never fake 50ms)
+                    double measuredRtt = accountant.MeasuredRttMs > 0 ? accountant.MeasuredRttMs : 0;
+                    double ttfb = accountant.TimeToFirstByteMs > 0 ? accountant.TimeToFirstByteMs : 0;
+                    controller.RecordTelemetry(currentBps, measuredRtt, recentErrors, ttfbMs: ttfb);
+                    int evaluatedCount = controller.EvaluateConnectionCount(totalBytes, false);
+
+                    accountant.SetRequestedConnections(evaluatedCount);
+
+                    lock (workerTasks)
                     {
-                        double currentBps = (currentDownloadedBytes - lastDownloadedBytes) / elapsedSec;
-                        int recentErrors = Interlocked.Exchange(ref errorCounter, 0);
-
-                        controller.RecordTelemetry(currentBps, 50.0, recentErrors);
-                        int evaluatedCount = controller.EvaluateConnectionCount(totalBytes, false);
-
-                        lock (workerTasks)
+                        while (workerTasks.Count < evaluatedCount && !scheduler.IsFullyCompleted())
                         {
-                            while (workerTasks.Count < evaluatedCount && !scheduler.IsFullyCompleted())
-                            {
-                                int newId = workerTasks.Count;
-                                workerTasks.Add(createWorkerTask($"Worker_{newId}"));
-                            }
+                            int newId = workerTasks.Count;
+                            workerTasks.Add(createWorkerTask($"Worker_{newId}"));
                         }
-
-                        lastDownloadedBytes = currentDownloadedBytes;
-                        lastTime = currentTime;
                     }
                 }
             }, cancellationToken);
@@ -433,6 +482,29 @@ namespace EDM.Services
             try { await Task.WhenAll(workerTasks).ConfigureAwait(false); }
             catch (OperationCanceledException) when (rangeFallbackTriggered) { /* expected — fallback triggered */ }
             try { await adaptiveLoop.ConfigureAwait(false); } catch { }
+            try { await telemetryReportingLoop.ConfigureAwait(false); } catch { }
+
+            // Final 100% authoritative progress report & server capability learning
+            if (scheduler.IsFullyCompleted())
+            {
+                long finalDownloaded = scheduler.GetTotalBytesDownloaded();
+                speedTracker.RecordProgress(finalDownloaded);
+                var finalSegments = scheduler.GetSegmentsSnapshot();
+                foreach (var seg in finalSegments)
+                {
+                    chunkStatsMap[seg.Id] = new ChunkProgressInfo(seg.Id, seg.TotalBytes, seg.TotalBytes, false);
+                }
+                progress?.Report(new DownloadProgress(totalBytes, finalDownloaded, chunkStatsMap, accountant.GetSnapshot(0, 0, finalSegments.Count)));
+
+                // Learn optimal host performance in ServerCapabilityCache
+                ServerCapabilityCache.Instance.RecordResponse(
+                    fileUrl,
+                    HttpStatusCode.OK,
+                    accountant.MeasuredRttMs,
+                    speedTracker.AverageSpeedBps,
+                    supportsRange: true,
+                    activeConnections: controller.OptimalObservedConnections);
+            }
 
             // BUG-FIX 3: Safe 200 fallback — all workers have now stopped cleanly.
             // Run single-stream download only after the multi-worker pool has fully exited.
@@ -486,7 +558,7 @@ namespace EDM.Services
             }
             try { Directory.Delete(tempDir, true); } catch { }
 
-            progress?.Report(new DownloadProgress(totalBytes, totalBytes, chunkStatsMap));
+            progress?.Report(new DownloadProgress(totalBytes, totalBytes, chunkStatsMap, accountant.GetSnapshot(0, 0, sortedSegments.Count())));
         }
 
         internal static IEnumerable<(long Start, long End)> CalculateRanges(long totalBytes, int chunkCount)
@@ -510,16 +582,17 @@ namespace EDM.Services
 
         internal async Task<EDM.Models.VerificationResult> MergeFilesAsync(IEnumerable<string> chunkFiles, string destinationFilePath, CancellationToken cancellationToken, DurableDownloadState? metaState = null, string? expectedHash = null)
         {
-            byte[] mergeBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+            string tempMergePath = destinationFilePath + ".merging";
+            byte[] mergeBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(256 * 1024);
             try
             {
-                using (var destStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                using (var destStream = new FileStream(tempMergePath, FileMode.Create, FileAccess.Write, FileShare.None, 256 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
                 {
                     foreach (var chunk in chunkFiles)
                     {
                         if (File.Exists(chunk))
                         {
-                            using var partStream = new FileStream(chunk, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                            using var partStream = new FileStream(chunk, FileMode.Open, FileAccess.Read, FileShare.Read, 256 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
                             int bytesRead;
                             while ((bytesRead = await partStream.ReadAsync(mergeBuffer.AsMemory(0, mergeBuffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
                             {
@@ -529,30 +602,37 @@ namespace EDM.Services
                     }
                     await destStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
+
+                // Run verification on assembled temporary file before atomic rename
+                var verifier = new IntegrityVerificationService();
+                var mergeVerification = await verifier.VerifyAsync(tempMergePath, metaState, expectedHash, metaState?.TotalBytes, cancellationToken).ConfigureAwait(false);
+
+                if (mergeVerification.State == Models.VerificationState.VerificationFailed)
+                {
+                    try { File.Delete(tempMergePath); } catch { }
+                    if (!string.IsNullOrEmpty(expectedHash))
+                    {
+                        throw new InvalidDataException($"Merged file verification failed: {mergeVerification.Message}");
+                    }
+                }
+
+                // Atomic Finalization: Atomically replace the destination file
+                File.Move(tempMergePath, destinationFilePath, overwrite: true);
+                return mergeVerification;
             }
             finally
             {
                 System.Buffers.ArrayPool<byte>.Shared.Return(mergeBuffer);
-            }
-
-            // Run verification using IntegrityVerificationService
-            var verifier = new IntegrityVerificationService();
-            var mergeVerification = await verifier.VerifyAsync(destinationFilePath, metaState, expectedHash, metaState?.TotalBytes, cancellationToken).ConfigureAwait(false);
-
-            if (mergeVerification.State == Models.VerificationState.VerificationFailed)
-            {
-                // Preserve old behavior for expectedHash mismatch by throwing
-                if (!string.IsNullOrEmpty(expectedHash))
+                if (File.Exists(tempMergePath))
                 {
-                    throw new InvalidDataException($"Merged file verification failed: {mergeVerification.Message}");
+                    try { File.Delete(tempMergePath); } catch { }
                 }
             }
-
-            return mergeVerification;
         }
 
         private async Task<EDM.Models.VerificationResult> DownloadSingleAsync(Uri uri, string destinationPath, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken, long? expectedSize = null)
         {
+            string tempSinglePath = destinationPath + ".tmpdl";
             var result = await _pipeline.ExecuteWithRetryAsync(
                 requestFactory: () => _pipeline.CreateFreshRequest(HttpMethod.Get, uri, credentials: Credentials, cookies: Cookies),
                 completionOption: HttpCompletionOption.ResponseHeadersRead,
@@ -564,44 +644,48 @@ namespace EDM.Services
             long downloaded = 0;
 
             using var contentStream = await resp.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var fs = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-            var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(81920);
-            try
+            using (var fs = new FileStream(tempSinglePath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                int read;
-                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+                var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+                try
                 {
-                    await WaitIfPausedAsync(cancellationToken).ConfigureAwait(false);
-                    await fs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    downloaded += read;
-
-                    if (ThrottleKbps > 0)
+                    int read;
+                    while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
                     {
-                        double delayMs = (read / 1024.0) / ThrottleKbps * 1000;
-                        if (delayMs > 0)
+                        await WaitIfPausedAsync(cancellationToken).ConfigureAwait(false);
+                        await fs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                        downloaded += read;
+
+                        if (ThrottleKbps > 0)
                         {
-                            await Task.Delay((int)Math.Max(1, delayMs), cancellationToken).ConfigureAwait(false);
+                            double delayMs = (read / 1024.0) / ThrottleKbps * 1000;
+                            if (delayMs > 0)
+                            {
+                                await Task.Delay((int)Math.Max(1, delayMs), cancellationToken).ConfigureAwait(false);
+                            }
                         }
+
+                        progress?.Report(new DownloadProgress(total ?? -1, downloaded));
                     }
-
-                    progress?.Report(new DownloadProgress(total ?? -1, downloaded));
                 }
-            }
-            finally
-            {
-                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                finally
+                {
+                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                }
+
+                await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
-
-            // Run final verification for single-file downloads
+            // Run final verification for single-file downloads before atomic rename
             var verifier = new IntegrityVerificationService();
-            var verification = await verifier.VerifyAsync(destinationPath, null, null, expectedSize ?? total, cancellationToken).ConfigureAwait(false);
+            var verification = await verifier.VerifyAsync(tempSinglePath, null, null, expectedSize ?? total, cancellationToken).ConfigureAwait(false);
             if (verification.State == Models.VerificationState.VerificationFailed)
             {
+                try { File.Delete(tempSinglePath); } catch { }
                 throw new InvalidDataException($"Final file verification failed: {verification.Message}");
             }
+
+            File.Move(tempSinglePath, destinationPath, overwrite: true);
             return verification;
         }
     }

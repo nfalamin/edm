@@ -21,6 +21,7 @@ namespace EDM.Services
         public long? ContentRangeEnd { get; set; }
         public long? ContentRangeTotal { get; set; }
         public long ElapsedMilliseconds { get; set; }
+        public double TimeToFirstByteMs { get; set; }
         public bool IsPartialContent => Response.StatusCode == HttpStatusCode.PartialContent;
     }
 
@@ -276,12 +277,18 @@ namespace EDM.Services
                             ContentRangeStart = cr.Start,
                             ContentRangeEnd = cr.End,
                             ContentRangeTotal = cr.Total,
-                            ElapsedMilliseconds = sw.ElapsedMilliseconds
+                            ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                            TimeToFirstByteMs = sw.Elapsed.TotalMilliseconds
                         };
                     }
 
                     response.EnsureSuccessStatusCode();
-                    return new HttpRequestPipelineResult { Response = response, ElapsedMilliseconds = sw.ElapsedMilliseconds };
+                    return new HttpRequestPipelineResult
+                    {
+                        Response = response,
+                        ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                        TimeToFirstByteMs = sw.Elapsed.TotalMilliseconds
+                    };
 
                 }
                 catch (OperationCanceledException)

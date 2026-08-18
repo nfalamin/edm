@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EDM.ControlPlane.Api.Data;
+using EDM.ControlPlane.Api.Middleware;
 using EDM.ControlPlane.Api.Models;
 using EDM.ControlPlane.Api.Services;
 
@@ -15,18 +16,45 @@ namespace EDM.ControlPlane.Api.Controllers
     public record BanRequestDto(BanTargetType TargetType, string TargetValue, string Reason, int? DurationDays);
     public record UnbanRequestDto(BanTargetType TargetType, string TargetValue);
     
-    public record CreateReleaseArtifactDto(string ArtifactName, string DownloadUrl, string Sha256Hash, long FileSizeBytes, string? SignatureBase64);
+    public record CreateReleaseArtifactDto(
+        string ArtifactName,
+        string? Architecture = "x64",
+        string DownloadUrl = "",
+        string Sha256Hash = "",
+        long FileSizeBytes = 0,
+        string? SignatureBase64 = null);
+
     public record CreateReleaseDto(
         ClientType Platform,
         string Version,
-        string MinimumSupportedVersion,
+        string? Channel = "stable",
+        string? MinimumSupportedVersion = "1.0.0",
+        string? Title = null,
+        string? ReleaseNotes = null,
+        bool IsMandatory = false,
+        ReleaseSeverity Severity = ReleaseSeverity.Standard,
+        List<CreateReleaseArtifactDto>? Artifacts = null);
+
+    public record RollbackReleaseDto(string TargetVersion, string Reason);
+    public record UpdateReleaseDto(
+        string? Version = null,
+        string? Channel = null,
+        string? MinimumSupportedVersion = null,
+        string? Title = null,
+        string? ReleaseNotes = null,
+        bool? IsMandatory = null,
+        ReleaseSeverity? Severity = null);
+    public record PermissionChangeDto(string PermissionCode);
+    public record CreateAnnouncementDto(
         string Title,
-        string ReleaseNotes,
-        bool IsMandatory,
-        ReleaseSeverity Severity,
-        List<CreateReleaseArtifactDto> Artifacts);
+        string Message,
+        AnnouncementSeverity Severity = AnnouncementSeverity.Info,
+        TargetAudience Audience = TargetAudience.All,
+        DateTime? StartsAtUtc = null,
+        DateTime? ExpiresAtUtc = null);
 
     [ApiController]
+    [Authorize]
     [Route("api/v1/admin")]
     public class AdminController : ControllerBase
     {
@@ -34,23 +62,30 @@ namespace EDM.ControlPlane.Api.Controllers
         private readonly IBanEnforcementService _banService;
         private readonly IAuthService _authService;
         private readonly IAuditLoggingService _auditLogger;
+        private readonly IPermissionService _permissionService;
+        private readonly IReleaseService _releaseService;
 
         public AdminController(
             ControlPlaneDbContext dbContext,
             IBanEnforcementService banService,
             IAuthService authService,
-            IAuditLoggingService auditLogger)
+            IAuditLoggingService auditLogger,
+            IPermissionService permissionService,
+            IReleaseService releaseService)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _banService = banService ?? throw new ArgumentNullException(nameof(banService));
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
+            _permissionService = permissionService ?? throw new ArgumentNullException(nameof(permissionService));
+            _releaseService = releaseService ?? throw new ArgumentNullException(nameof(releaseService));
         }
 
         // ==========================================
         // 1. DASHBOARD SUMMARY
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST,SUPPORT,RELEASE_MANAGER")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("dashboard/summary")]
         public async Task<IActionResult> GetDashboardSummaryAsync()
         {
@@ -62,8 +97,8 @@ namespace EDM.ControlPlane.Api.Controllers
             var registeredDevices = await _dbContext.Devices.CountAsync();
             var activeSessions = await _dbContext.Sessions.CountAsync(s => !s.IsRevoked && s.ExpiresAtUtc > now);
             
-            var totalDownloads = await _dbContext.TelemetryEvents.CountAsync(t => t.EventName == "download_completed");
-            var downloadsToday = await _dbContext.TelemetryEvents.CountAsync(t => t.EventName == "download_completed" && t.TimestampUtc >= todayStart);
+            var totalDownloads = await _dbContext.DownloadRecords.CountAsync() + await _dbContext.TelemetryEvents.CountAsync(t => t.EventName == "download_completed");
+            var downloadsToday = await _dbContext.DownloadRecords.CountAsync(d => d.DownloadedAtUtc >= todayStart) + await _dbContext.TelemetryEvents.CountAsync(t => t.EventName == "download_completed" && t.TimestampUtc >= todayStart);
             
             var latestRelease = await _dbContext.Releases
                 .Where(r => !r.IsWithdrawn)
@@ -74,6 +109,8 @@ namespace EDM.ControlPlane.Api.Controllers
             var pendingUpdates = await _dbContext.Releases.CountAsync(r => r.IsWithdrawn);
             var securityEvents = await _dbContext.AuditLogs.CountAsync(a => a.ResultStatus == "DENIED" || a.Action.Contains("BAN") || a.Action.Contains("REUSE"));
             var bannedAccounts = await _dbContext.Bans.CountAsync(b => b.IsActive && (b.ExpiresAtUtc == null || b.ExpiresAtUtc > now));
+            var activeLicenses = await _dbContext.Licenses.CountAsync(l => l.Status == LicenseStatus.Active);
+            var openSupportTickets = await _dbContext.SupportTickets.CountAsync(t => t.Status == TicketStatus.Open || t.Status == TicketStatus.InProgress);
 
             return Ok(new
             {
@@ -87,6 +124,8 @@ namespace EDM.ControlPlane.Api.Controllers
                 pendingUpdates,
                 securityEvents,
                 bannedAccounts,
+                activeLicenses,
+                openSupportTickets,
                 serverTimeUtc = DateTime.UtcNow
             });
         }
@@ -94,7 +133,8 @@ namespace EDM.ControlPlane.Api.Controllers
         // ==========================================
         // 2. ANALYTICS METRICS & RANGES
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/downloads")]
         public async Task<IActionResult> GetDownloadAnalyticsAsync([FromQuery] string range = "7d")
         {
@@ -118,7 +158,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { range, data = groups });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/users")]
         public async Task<IActionResult> GetUserGrowthAnalyticsAsync([FromQuery] string range = "30d")
         {
@@ -137,7 +178,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { range, data = groups });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/versions")]
         public async Task<IActionResult> GetVersionDistributionAsync()
         {
@@ -150,7 +192,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(devices);
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/platforms")]
         public async Task<IActionResult> GetPlatformDistributionAsync()
         {
@@ -163,7 +206,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(platforms);
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/activity")]
         public async Task<IActionResult> GetHourlyActivityAsync()
         {
@@ -182,7 +226,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(hourly);
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.AnalyticsRead)]
         [HttpGet("analytics/security")]
         public async Task<IActionResult> GetSecurityAnalyticsAsync()
         {
@@ -198,9 +243,10 @@ namespace EDM.ControlPlane.Api.Controllers
         }
 
         // ==========================================
-        // 3. USER MANAGEMENT & BAN WORKFLOW
+        // 3. USER MANAGEMENT & RBAC PERMISSIONS
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersRead)]
         [HttpGet("users")]
         public async Task<IActionResult> GetUsersAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? search = null)
         {
@@ -228,19 +274,22 @@ namespace EDM.ControlPlane.Api.Controllers
                     u.IsActive,
                     u.CreatedAtUtc,
                     deviceCount = _dbContext.Sessions.Where(s => s.UserId == u.Id).Select(s => s.DeviceId).Distinct().Count(),
-                    sessionCount = _dbContext.Sessions.Count(s => s.UserId == u.Id && !s.IsRevoked)
+                    sessionCount = _dbContext.Sessions.Count(s => s.UserId == u.Id && !s.IsRevoked),
+                    licenseCount = _dbContext.Licenses.Count(l => l.UserId == u.Id)
                 })
                 .ToListAsync();
 
             return Ok(new { totalCount, page, pageSize, users });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersRead)]
         [HttpGet("users/{id}")]
         public async Task<IActionResult> GetUserByIdAsync(Guid id)
         {
             var user = await _dbContext.Users
                 .Include(u => u.FeatureEntitlements)
+                .Include(u => u.PermissionOverrides)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null) return NotFound(new { error = "USER_NOT_FOUND", message = "User not found." });
@@ -255,6 +304,8 @@ namespace EDM.ControlPlane.Api.Controllers
                 .Where(b => b.TargetType == BanTargetType.UserId && b.TargetValue == id.ToString() && b.IsActive)
                 .FirstOrDefaultAsync();
 
+            var permissions = await _permissionService.GetEffectivePermissionsAsync(id);
+
             return Ok(new
             {
                 user.Id,
@@ -266,6 +317,8 @@ namespace EDM.ControlPlane.Api.Controllers
                 isBanned = ban != null,
                 banReason = ban?.Reason,
                 entitlements = user.FeatureEntitlements.Select(f => f.FeatureCode),
+                effectivePermissions = permissions,
+                permissionOverrides = user.PermissionOverrides.Select(o => new { o.PermissionCode, o.IsGranted }),
                 recentSessions = sessions.Select(s => new
                 {
                     s.Id,
@@ -278,7 +331,46 @@ namespace EDM.ControlPlane.Api.Controllers
             });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
+        [HttpPost("users/{id}/permissions/grant")]
+        public async Task<IActionResult> GrantPermissionAsync(Guid id, [FromBody] PermissionChangeDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.PermissionCode))
+            {
+                return BadRequest(new { error = "INVALID_REQUEST", message = "Permission code is required." });
+            }
+
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _permissionService.GrantUserPermissionAsync(id, request.PermissionCode.Trim(), adminId);
+            if (!success) return NotFound(new { error = "USER_NOT_FOUND", message = "User not found." });
+
+            return Ok(new { success = true, message = $"Permission '{request.PermissionCode}' granted to user {id}." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
+        [HttpPost("users/{id}/permissions/revoke")]
+        public async Task<IActionResult> RevokePermissionAsync(Guid id, [FromBody] PermissionChangeDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.PermissionCode))
+            {
+                return BadRequest(new { error = "INVALID_REQUEST", message = "Permission code is required." });
+            }
+
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _permissionService.RevokeUserPermissionAsync(id, request.PermissionCode.Trim(), adminId);
+            if (!success) return NotFound(new { error = "USER_NOT_FOUND", message = "User not found." });
+
+            return Ok(new { success = true, message = $"Permission '{request.PermissionCode}' revoked from user {id}." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
         [HttpPost("ban")]
         public async Task<IActionResult> BanTargetAsync([FromBody] BanRequestDto request)
         {
@@ -308,7 +400,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { success = true, message = $"Ban applied successfully to {request.TargetType}: {request.TargetValue}" });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
         [HttpPost("unban")]
         public async Task<IActionResult> UnbanTargetAsync([FromBody] UnbanRequestDto request)
         {
@@ -336,7 +429,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { success = true, message = $"Ban lifted for {request.TargetType}: {request.TargetValue}" });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
         [HttpPost("revoke-user-sessions/{userId}")]
         public async Task<IActionResult> RevokeAllUserSessionsAsync(Guid userId)
         {
@@ -362,7 +456,8 @@ namespace EDM.ControlPlane.Api.Controllers
         // ==========================================
         // 4. DEVICE & SESSION INSPECTION
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersRead)]
         [HttpGet("devices")]
         public async Task<IActionResult> GetDevicesAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? search = null)
         {
@@ -399,7 +494,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { totalCount, page, pageSize, devices });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersRead)]
         [HttpGet("sessions")]
         public async Task<IActionResult> GetSessionsAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
         {
@@ -437,7 +533,8 @@ namespace EDM.ControlPlane.Api.Controllers
             return Ok(new { totalCount, page, pageSize, sessions });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,SUPPORT")]
+        [Authorize]
+        [RequirePermission(Permissions.UsersManage)]
         [HttpPost("revoke-session/{sessionId}")]
         public async Task<IActionResult> RevokeSingleSessionAsync(Guid sessionId)
         {
@@ -463,47 +560,45 @@ namespace EDM.ControlPlane.Api.Controllers
         // ==========================================
         // 5. RELEASE & ARTIFACT MANAGEMENT
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,RELEASE_MANAGER")]
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesRead)]
         [HttpGet("releases")]
-        public async Task<IActionResult> GetReleasesAsync([FromQuery] ClientType? platform = null)
+        public async Task<IActionResult> GetReleasesAsync([FromQuery] ClientType? platform = null, [FromQuery] string? channel = null, [FromQuery] bool includeWithdrawn = true)
         {
-            var query = _dbContext.Releases.Include(r => r.Artifacts).AsQueryable();
-            if (platform.HasValue)
+            var releases = await _releaseService.GetReleasesAsync(platform, channel, includeWithdrawn);
+            return Ok(releases.Select(r => new
             {
-                query = query.Where(r => r.Platform == platform.Value);
-            }
-
-            var releases = await query
-                .OrderByDescending(r => r.PublishedAtUtc)
-                .Select(r => new
+                r.Id,
+                Platform = r.Platform.ToString(),
+                r.Version,
+                r.Channel,
+                r.MinimumSupportedVersion,
+                r.Title,
+                r.ReleaseNotes,
+                r.IsMandatory,
+                r.IsPublished,
+                r.IsWithdrawn,
+                r.RollbackTargetVersion,
+                r.RollbackReason,
+                Severity = r.Severity.ToString(),
+                r.PublishedAtUtc,
+                r.CreatedAtUtc,
+                artifacts = r.Artifacts.Select(a => new
                 {
-                    r.Id,
-                    Platform = r.Platform.ToString(),
-                    r.Version,
-                    r.MinimumSupportedVersion,
-                    r.Title,
-                    r.ReleaseNotes,
-                    r.IsMandatory,
-                    r.IsWithdrawn,
-                    Severity = r.Severity.ToString(),
-                    r.PublishedAtUtc,
-                    r.CreatedAtUtc,
-                    artifacts = r.Artifacts.Select(a => new
-                    {
-                        a.Id,
-                        a.ArtifactName,
-                        a.DownloadUrl,
-                        a.Sha256Hash,
-                        a.FileSizeBytes,
-                        a.SignatureBase64
-                    })
+                    a.Id,
+                    a.ArtifactName,
+                    a.Architecture,
+                    a.DownloadUrl,
+                    a.Sha256Hash,
+                    a.FileSizeBytes,
+                    a.SignatureBase64,
+                    a.DownloadCount
                 })
-                .ToListAsync();
-
-            return Ok(releases);
+            }));
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,RELEASE_MANAGER")]
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesCreate)]
         [HttpPost("releases")]
         public async Task<IActionResult> CreateReleaseAsync([FromBody] CreateReleaseDto request)
         {
@@ -512,96 +607,185 @@ namespace EDM.ControlPlane.Api.Controllers
                 return BadRequest(new { error = "INVALID_PAYLOAD", message = "Version and platform are required." });
             }
 
-            bool exists = await _dbContext.Releases.AnyAsync(r => r.Platform == request.Platform && r.Version == request.Version);
-            if (exists)
-            {
-                return Conflict(new { error = "VERSION_EXISTS", message = $"Release version {request.Version} already exists for {request.Platform}." });
-            }
-
-            var release = new Release
-            {
-                Id = Guid.NewGuid(),
-                Platform = request.Platform,
-                Version = request.Version.Trim(),
-                MinimumSupportedVersion = request.MinimumSupportedVersion?.Trim() ?? "1.0.0",
-                Title = request.Title?.Trim() ?? $"Release {request.Version}",
-                ReleaseNotes = request.ReleaseNotes ?? string.Empty,
-                IsMandatory = request.IsMandatory,
-                IsWithdrawn = false,
-                Severity = request.Severity,
-                PublishedAtUtc = DateTime.UtcNow,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            if (request.Artifacts != null)
-            {
-                foreach (var art in request.Artifacts)
-                {
-                    release.Artifacts.Add(new ReleaseArtifact
-                    {
-                        Id = Guid.NewGuid(),
-                        ReleaseId = release.Id,
-                        ArtifactName = art.ArtifactName,
-                        DownloadUrl = art.DownloadUrl,
-                        Sha256Hash = art.Sha256Hash,
-                        FileSizeBytes = art.FileSizeBytes,
-                        SignatureBase64 = art.SignatureBase64,
-                        CreatedAtUtc = DateTime.UtcNow
-                    });
-                }
-            }
-
-            _dbContext.Releases.Add(release);
-            await _dbContext.SaveChangesAsync();
-
-            var adminName = User.Identity?.Name ?? "RELEASE_MANAGER";
             var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
 
-            await _auditLogger.LogActionAsync(
-                actorId: adminId,
-                actorUsername: adminName,
-                action: "RELEASE_CREATED",
-                targetEntity: "Release",
-                targetId: release.Id.ToString(),
-                detailsJson: $"{{\"version\":\"{release.Version}\",\"platform\":\"{release.Platform}\"}}",
-                correlationId: HttpContext.TraceIdentifier,
-                rawIpAddress: HttpContext.Connection.RemoteIpAddress?.ToString());
+            var model = new CreateReleaseModel(
+                Platform: request.Platform,
+                Version: request.Version,
+                Channel: request.Channel ?? "stable",
+                MinimumSupportedVersion: request.MinimumSupportedVersion ?? "1.0.0",
+                Title: request.Title ?? string.Empty,
+                ReleaseNotes: request.ReleaseNotes ?? string.Empty,
+                IsMandatory: request.IsMandatory,
+                Severity: request.Severity,
+                Artifacts: request.Artifacts?.ConvertAll(a => new CreateArtifactModel(
+                    ArtifactName: a.ArtifactName,
+                    Architecture: a.Architecture ?? "x64",
+                    DownloadUrl: a.DownloadUrl,
+                    Sha256Hash: a.Sha256Hash,
+                    FileSizeBytes: a.FileSizeBytes,
+                    SignatureBase64: a.SignatureBase64)) ?? new List<CreateArtifactModel>());
 
+            var release = await _releaseService.CreateReleaseAsync(model, adminId);
             return Ok(new { success = true, releaseId = release.Id, version = release.Version });
         }
 
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,RELEASE_MANAGER")]
-        [HttpPut("releases/{id}/archive")]
-        public async Task<IActionResult> ArchiveReleaseAsync(Guid id)
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesPublish)]
+        [HttpPut("releases/{id}")]
+        public async Task<IActionResult> UpdateReleaseAsync(Guid id, [FromBody] UpdateReleaseDto request)
         {
-            var release = await _dbContext.Releases.FindAsync(id);
-            if (release == null) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+            if (request == null) return BadRequest(new { error = "INVALID_PAYLOAD", message = "Update model is required." });
 
-            release.IsWithdrawn = true;
-            await _dbContext.SaveChangesAsync();
-
-            var adminName = User.Identity?.Name ?? "RELEASE_MANAGER";
             var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
 
-            await _auditLogger.LogActionAsync(
-                actorId: adminId,
-                actorUsername: adminName,
-                action: "RELEASE_ARCHIVED",
-                targetEntity: "Release",
-                targetId: release.Id.ToString(),
-                detailsJson: "{}",
-                correlationId: HttpContext.TraceIdentifier,
-                rawIpAddress: HttpContext.Connection.RemoteIpAddress?.ToString());
+            var model = new UpdateReleaseModel(
+                Version: request.Version,
+                Channel: request.Channel,
+                MinimumSupportedVersion: request.MinimumSupportedVersion,
+                Title: request.Title,
+                ReleaseNotes: request.ReleaseNotes,
+                IsMandatory: request.IsMandatory,
+                Severity: request.Severity);
 
-            return Ok(new { success = true, message = $"Release {release.Version} has been archived/withdrawn." });
+            var updated = await _releaseService.UpdateReleaseAsync(id, model, adminId);
+            if (updated == null) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+
+            return Ok(new { success = true, release = updated });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesCreate)]
+        [HttpPost("releases/{id}/artifacts/upload")]
+        [RequestSizeLimit(524_288_000)]
+        public async Task<IActionResult> UploadArtifactAsync(
+            Guid id,
+            [FromForm] Microsoft.AspNetCore.Http.IFormFile file,
+            [FromForm] string? architecture = "x64",
+            [FromForm] string? expectedSha256 = null)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "EMPTY_FILE", message = "A valid installer binary file must be uploaded." });
+            }
+
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var artifact = await _releaseService.UploadArtifactAsync(
+                    releaseId: id,
+                    fileStream: stream,
+                    originalFileName: file.FileName,
+                    architecture: architecture ?? "x64",
+                    expectedSha256: expectedSha256,
+                    adminActorId: adminId);
+
+                return Ok(new
+                {
+                    success = true,
+                    artifactId = artifact.Id,
+                    artifactName = artifact.ArtifactName,
+                    architecture = artifact.Architecture,
+                    sha256Hash = artifact.Sha256Hash,
+                    fileSizeBytes = artifact.FileSizeBytes,
+                    downloadUrl = artifact.DownloadUrl
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = "VALIDATION_FAILED", message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "UPLOAD_FAILED", message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesPublish)]
+        [HttpPost("releases/{id}/publish")]
+        public async Task<IActionResult> PublishReleaseAsync(Guid id)
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _releaseService.PublishReleaseAsync(id, adminId);
+            if (!success) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+
+            return Ok(new { success = true, message = "Release published successfully to production." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesPublish)]
+        [HttpPost("releases/{id}/unpublish")]
+        public async Task<IActionResult> UnpublishReleaseAsync(Guid id)
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _releaseService.UnpublishReleaseAsync(id, adminId);
+            if (!success) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+
+            return Ok(new { success = true, message = "Release unpublished (moved to draft)." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesCreate)]
+        [HttpDelete("releases/{id}/artifacts/{artifactId}")]
+        public async Task<IActionResult> DeleteArtifactAsync(Guid id, Guid artifactId)
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _releaseService.DeleteArtifactAsync(id, artifactId, adminId);
+            if (!success) return NotFound(new { error = "ARTIFACT_NOT_FOUND", message = "Artifact not found." });
+
+            return Ok(new { success = true, message = "Artifact deleted successfully." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesRollback)]
+        [HttpPost("releases/{id}/rollback")]
+        public async Task<IActionResult> RollbackReleaseAsync(Guid id, [FromBody] RollbackReleaseDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.TargetVersion))
+            {
+                return BadRequest(new { error = "INVALID_PAYLOAD", message = "TargetVersion is required for rollback." });
+            }
+
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _releaseService.RollbackReleaseAsync(id, request.TargetVersion.Trim(), request.Reason ?? "Administrative rollback", adminId);
+            if (!success) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+
+            return Ok(new { success = true, message = $"Release has been rolled back to version {request.TargetVersion}." });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.ReleasesPublish)]
+        [HttpPut("releases/{id}/archive")]
+        public async Task<IActionResult> ArchiveReleaseAsync(Guid id)
+        {
+            var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            Guid? adminId = adminIdClaim != null && Guid.TryParse(adminIdClaim.Value, out var aId) ? aId : null;
+
+            bool success = await _releaseService.WithdrawReleaseAsync(id, "Archived by administrator", adminId);
+            if (!success) return NotFound(new { error = "RELEASE_NOT_FOUND", message = "Release not found." });
+
+            return Ok(new { success = true, message = "Release has been archived/withdrawn." });
         }
 
         // ==========================================
         // 6. AUDIT LOGS
         // ==========================================
-        [Authorize(Roles = "SUPER_ADMIN,ADMIN,ANALYST")]
+        [Authorize]
+        [RequirePermission(Permissions.SecurityManage)]
         [HttpGet("audit-logs")]
         public async Task<IActionResult> GetAuditLogsAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? action = null)
         {
@@ -623,6 +807,101 @@ namespace EDM.ControlPlane.Api.Controllers
                 .ToListAsync();
 
             return Ok(new { totalCount, page, pageSize, logs });
+        }
+
+        // ==========================================
+        // 7. NOTIFICATIONS & ANNOUNCEMENTS
+        // ==========================================
+        [Authorize]
+        [RequirePermission(Permissions.SettingsManage)]
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotificationsAsync([FromQuery] bool unreadOnly = false)
+        {
+            var query = _dbContext.AdminNotifications.AsQueryable();
+            if (unreadOnly) query = query.Where(n => !n.IsRead);
+
+            var list = await query
+                .OrderByDescending(n => n.CreatedAtUtc)
+                .Take(50)
+                .ToListAsync();
+
+            return Ok(list.ConvertAll(n => new
+            {
+                n.Id,
+                n.Title,
+                n.Message,
+                Type = n.Type.ToString(),
+                n.IsRead,
+                ActionUrl = n.LinkUrl,
+                n.CreatedAtUtc
+            }));
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.SettingsManage)]
+        [HttpPost("notifications/mark-read")]
+        public async Task<IActionResult> MarkAllNotificationsReadAsync()
+        {
+            var unread = await _dbContext.AdminNotifications.Where(n => !n.IsRead).ToListAsync();
+            foreach (var n in unread)
+            {
+                n.IsRead = true;
+            }
+            await _dbContext.SaveChangesAsync();
+            return Ok(new { success = true, markedCount = unread.Count });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpGet("announcements")]
+        public async Task<IActionResult> GetAnnouncementsAsync()
+        {
+            var list = await _dbContext.Announcements
+                .OrderByDescending(a => a.CreatedAtUtc)
+                .Take(50)
+                .ToListAsync();
+
+            return Ok(list.ConvertAll(a => new
+            {
+                a.Id,
+                a.Title,
+                a.Message,
+                Severity = a.Severity.ToString(),
+                Audience = a.Audience.ToString(),
+                a.StartsAtUtc,
+                ExpiresAtUtc = a.EndsAtUtc,
+                a.IsActive,
+                a.CreatedAtUtc
+            }));
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("announcements")]
+        public async Task<IActionResult> CreateAnnouncementAsync([FromBody] CreateAnnouncementDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Message))
+            {
+                return BadRequest(new { error = "INVALID_REQUEST", message = "Title and message are required." });
+            }
+
+            var announcement = new Announcement
+            {
+                Id = Guid.NewGuid(),
+                Title = request.Title.Trim(),
+                Message = request.Message.Trim(),
+                Severity = request.Severity,
+                Audience = request.Audience,
+                StartsAtUtc = request.StartsAtUtc ?? DateTime.UtcNow,
+                EndsAtUtc = request.ExpiresAtUtc,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            _dbContext.Announcements.Add(announcement);
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { success = true, announcementId = announcement.Id });
         }
 
         private static (DateTime startDate, int bucketDays) ParseRange(string range)

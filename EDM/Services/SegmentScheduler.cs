@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-
 namespace EDM.Services
 {
     public class SegmentScheduler
@@ -13,16 +12,21 @@ namespace EDM.Services
         private readonly List<SegmentRange> _segments = new();
         private readonly long _totalBytes;
         private readonly long _minSplitThresholdBytes;
+        private readonly long _splitAlignmentBytes;
         private int _nextSegmentId = 0;
 
         public long TotalBytes => _totalBytes;
         public IReadOnlyList<SegmentRange> Segments => GetSegmentsSnapshot();
 
-        public SegmentScheduler(long totalBytes, long minSplitThresholdBytes = 2 * 1024 * 1024)
+        public SegmentScheduler(
+            long totalBytes,
+            long minSplitThresholdBytes = 2 * 1024 * 1024,
+            long splitAlignmentBytes = 64 * 1024)
         {
             if (totalBytes <= 0) throw new ArgumentOutOfRangeException(nameof(totalBytes));
             _totalBytes = totalBytes;
-            _minSplitThresholdBytes = Math.Max(1, minSplitThresholdBytes);
+            _minSplitThresholdBytes = Math.Max(64 * 1024, minSplitThresholdBytes);
+            _splitAlignmentBytes = Math.Max(1, splitAlignmentBytes);
         }
 
         public void InitializeFromState(IEnumerable<SegmentRange> initialSegments)
@@ -35,17 +39,20 @@ namespace EDM.Services
             }
         }
 
-        public void InitializeDefault(int initialSegmentCount)
+        /// <summary>
+        /// Initializes default segment layout using smart initial segment sizing based on total file size.
+        /// </summary>
+        public void InitializeDefault(int requestedSegmentCount)
         {
-            if (initialSegmentCount <= 0) initialSegmentCount = 1;
+            int smartCount = CalculateSmartSegmentCount(_totalBytes, requestedSegmentCount);
             lock (_lock)
             {
                 _segments.Clear();
-                long baseSize = _totalBytes / initialSegmentCount;
-                long remainder = _totalBytes % initialSegmentCount;
+                long baseSize = _totalBytes / smartCount;
+                long remainder = _totalBytes % smartCount;
                 long offset = 0;
 
-                for (int i = 0; i < initialSegmentCount; i++)
+                for (int i = 0; i < smartCount; i++)
                 {
                     long size = baseSize + (i < remainder ? 1 : 0);
                     if (size <= 0) continue;
@@ -66,6 +73,30 @@ namespace EDM.Services
             }
         }
 
+        /// <summary>
+        /// Computes smart segment count based on file size to prevent excessive fragmentation.
+        /// </summary>
+        public static int CalculateSmartSegmentCount(long totalBytes, int maxRequested)
+        {
+            if (totalBytes <= 0) return 1;
+            int maxAllowed = Math.Max(1, maxRequested);
+
+            // Small files (< 1 MB): 1 segment
+            if (totalBytes < 1 * 1024 * 1024) return 1;
+
+            // Small-medium files (1 MB - 5 MB): at most 2 segments
+            if (totalBytes < 5 * 1024 * 1024) return Math.Min(2, maxAllowed);
+
+            // Medium files (5 MB - 50 MB): at most 4 segments
+            if (totalBytes < 50 * 1024 * 1024) return Math.Min(4, maxAllowed);
+
+            // Large files (50 MB - 500 MB): at most 8 segments
+            if (totalBytes < 500 * 1024 * 1024) return Math.Min(8, maxAllowed);
+
+            // Very large files (> 500 MB): up to requested max
+            return Math.Min(32, maxAllowed);
+        }
+
         private readonly ConcurrentDictionary<string, WorkerPerformanceInfo> _workerTelemetry = new();
 
         public class WorkerPerformanceInfo
@@ -75,7 +106,7 @@ namespace EDM.Services
             public long BytesDownloaded { get; set; }
             public double SpeedBps { get; set; }
             public DateTime LastActivity { get; set; } = DateTime.UtcNow;
-            public bool IsStalled => (DateTime.UtcNow - LastActivity).TotalSeconds > 3.0;
+            public bool IsStalled => (DateTime.UtcNow - LastActivity).TotalSeconds > 4.0;
         }
 
         public void RegisterWorkerProgress(string workerId, int segmentId, long bytesDownloaded, double speedBps)
@@ -88,6 +119,9 @@ namespace EDM.Services
             info.LastActivity = DateTime.UtcNow;
         }
 
+        /// <summary>
+        /// Assigns the next work item: first unassigned Pending segment, or dynamic split / work steal from the largest Downloading segment.
+        /// </summary>
         public SegmentRange? GetNextWorkItem(string workerId)
         {
             lock (_lock)
@@ -101,8 +135,7 @@ namespace EDM.Services
                     return pending.Clone();
                 }
 
-                // 2. Dynamic Work Stealing: Prioritize slowest or stalled workers with large remaining ranges,
-                // or largest active Downloading segment with remaining bytes >= 2 * minSplitThreshold
+                // 2. Dynamic Work Stealing: Split the largest downloading segment with sufficient remaining bytes
                 var candidate = _segments
                     .Where(s => s.State == SegmentState.Downloading && s.RemainingBytes >= _minSplitThresholdBytes * 2)
                     .OrderByDescending(s => s.RemainingBytes)
@@ -115,12 +148,14 @@ namespace EDM.Services
                     if (remainingFromCurrent >= _minSplitThresholdBytes * 2)
                     {
                         long half = remainingFromCurrent / 2;
-                        long alignment = Math.Min(64 * 1024, _minSplitThresholdBytes);
-                        if (alignment > 0) half = (half / alignment) * alignment;
+                        if (_splitAlignmentBytes > 0)
+                        {
+                            half = (half / _splitAlignmentBytes) * _splitAlignmentBytes;
+                        }
                         if (half < _minSplitThresholdBytes) half = _minSplitThresholdBytes;
 
                         long splitPoint = candidate.End - half;
-                        if (splitPoint > currentPos + alignment)
+                        if (splitPoint > currentPos + _splitAlignmentBytes)
                         {
                             long oldEnd = candidate.End;
                             candidate.End = splitPoint;
@@ -186,7 +221,6 @@ namespace EDM.Services
         }
 
         public bool MarkCompleted(int segmentId)
-
         {
             lock (_lock)
             {
@@ -211,7 +245,6 @@ namespace EDM.Services
                 {
                     if (seg.State == SegmentState.Completed)
                     {
-                        // Terminal state: Completed segments cannot be set to Pending or Failed
                         return false;
                     }
 
@@ -227,6 +260,52 @@ namespace EDM.Services
                     return true;
                 }
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Detects stalled workers that have made no progress for longer than the stall threshold and reclaims their ranges.
+        /// </summary>
+        public List<int> ReclaimStalledSegments(TimeSpan stallThreshold)
+        {
+            var reclaimedIds = new List<int>();
+            var now = DateTime.UtcNow;
+
+            lock (_lock)
+            {
+                foreach (var seg in _segments.Where(s => s.State == SegmentState.Downloading))
+                {
+                    if (!string.IsNullOrEmpty(seg.AssignedWorkerId) &&
+                        _workerTelemetry.TryGetValue(seg.AssignedWorkerId, out var info))
+                    {
+                        if (now - info.LastActivity > stallThreshold)
+                        {
+                            LoggingService.LogWarning($"[SegmentScheduler] Reclaiming stalled segment {seg.Id} from worker {seg.AssignedWorkerId} (inactive for {(now - info.LastActivity).TotalSeconds:F1}s).");
+                            seg.State = SegmentState.Pending;
+                            seg.AssignedWorkerId = null;
+                            reclaimedIds.Add(seg.Id);
+                        }
+                    }
+                }
+            }
+
+            return reclaimedIds;
+        }
+
+        /// <summary>
+        /// Reclaims any downloading segment currently assigned to the given worker.
+        /// </summary>
+        public void ReclaimWorkerSegment(string workerId)
+        {
+            if (string.IsNullOrEmpty(workerId)) return;
+            lock (_lock)
+            {
+                var seg = _segments.FirstOrDefault(s => s.AssignedWorkerId == workerId && s.State == SegmentState.Downloading);
+                if (seg != null)
+                {
+                    seg.State = SegmentState.Pending;
+                    seg.AssignedWorkerId = null;
+                }
             }
         }
 
@@ -254,6 +333,9 @@ namespace EDM.Services
             }
         }
 
+        /// <summary>
+        /// Validates that all segments form a complete, continuous, non-overlapping partition of [0, TotalBytes - 1].
+        /// </summary>
         public bool ValidateCoverage()
         {
             lock (_lock)

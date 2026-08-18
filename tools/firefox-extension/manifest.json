@@ -1,21 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Exclusive Download Manager (EDM) Firefox Capturer",
+  "name": "Exclusive Download Manager (EDM) Capturer",
   "version": "1.0.0",
-  "description": "Capture video, audio, and media streams from web pages in Mozilla Firefox and download them with EDM Desktop App.",
+  "description": "Capture video, audio, and media streams from web pages and download them at maximum speed with EDM Desktop App.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "edm@exclusive-download-manager.com",
-      "strict_min_version": "109.0"
-    }
-  },
   "permissions": [
     "downloads",
+    "contextMenus",
     "nativeMessaging",
     "storage",
     "activeTab",
@@ -27,7 +22,7 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -43,6 +38,12 @@
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "edm@exclusive-download-manager.com",
+      "strict_min_version": "109.0"
     }
   }
 }

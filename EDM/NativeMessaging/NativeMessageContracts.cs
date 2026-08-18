@@ -3,6 +3,20 @@ using System.Text.Json.Serialization;
 
 namespace EDM.NativeMessaging
 {
+    public static class NativeActionNames
+    {
+        public const string StartDownload = "download_url";
+        public const string StartDownloadAlt = "START_DOWNLOAD";
+        public const string StartEdmDownload = "START_EDM_DOWNLOAD";
+        public const string DownloadRequest = "DOWNLOAD_REQUEST";
+        public const string Intercept = "intercept";
+        public const string GetMediaStreams = "get_media_streams";
+        public const string GetMediaStreamsAlt = "GET_MEDIA_STREAMS";
+        public const string UpdateSettings = "UPDATE_SETTINGS";
+        public const string Ping = "PING";
+        public const string Handshake = "HANDSHAKE";
+    }
+
     public class NativeMessageRequest
     {
         [JsonPropertyName("action")]
@@ -47,11 +61,74 @@ namespace EDM.NativeMessaging
         [JsonPropertyName("browserDownloadId")]
         public string? BrowserDownloadId { get; set; }
 
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("manifestUrl")]
+        public string? ManifestUrl { get; set; }
+
+        [JsonPropertyName("audioCodec")]
+        public string? AudioCodec { get; set; }
+
+        [JsonPropertyName("audioUrl")]
+        public string? AudioUrl { get; set; }
+
+        [JsonPropertyName("videoUrl")]
+        public string? VideoUrl { get; set; }
+
+        [JsonPropertyName("formatArg")]
+        public string? FormatArg { get; set; }
+
+        [JsonPropertyName("requiresFfmpegMerge")]
+        public bool? RequiresFfmpegMerge { get; set; }
+
+        [JsonPropertyName("headers")]
+        public string? Headers { get; set; }
+
+        [JsonPropertyName("downloadIdentity")]
+        public string? DownloadIdentity { get; set; }
+
+        [JsonPropertyName("estimatedSizeBytes")]
+        public long? EstimatedSizeBytes { get; set; }
+
+        [JsonPropertyName("codec")]
+        public string? Codec { get; set; }
+
+        [JsonPropertyName("container")]
+        public string? Container { get; set; }
+
+        [JsonPropertyName("isAudioOnly")]
+        public bool? IsAudioOnly { get; set; }
+
+        [JsonPropertyName("selectedVariant")]
+        public object? SelectedVariant { get; set; }
+
         public string GetEffectiveAction()
         {
-            if (!string.IsNullOrWhiteSpace(Action)) return Action.Trim();
-            if (!string.IsNullOrWhiteSpace(Type)) return Type.Trim();
-            if (!string.IsNullOrWhiteSpace(Url)) return "download_url";
+            string act = !string.IsNullOrWhiteSpace(Action) ? Action.Trim() : (!string.IsNullOrWhiteSpace(Type) ? Type.Trim() : string.Empty);
+            if (string.Equals(act, NativeActionNames.StartDownload, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, NativeActionNames.StartDownloadAlt, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, NativeActionNames.StartEdmDownload, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, NativeActionNames.DownloadRequest, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, NativeActionNames.Intercept, StringComparison.OrdinalIgnoreCase))
+            {
+                return NativeActionNames.StartDownload;
+            }
+
+            if (string.Equals(act, NativeActionNames.GetMediaStreams, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, NativeActionNames.GetMediaStreamsAlt, StringComparison.OrdinalIgnoreCase))
+            {
+                return NativeActionNames.GetMediaStreams;
+            }
+
+            if (string.Equals(act, "GET_MEDIA_VARIANTS", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(act, "resolve_media_variants", StringComparison.OrdinalIgnoreCase))
+            {
+                return "GET_MEDIA_VARIANTS";
+            }
+
+            if (!string.IsNullOrWhiteSpace(act)) return act;
+            if (!string.IsNullOrWhiteSpace(Url)) return NativeActionNames.StartDownload;
             return "unknown";
         }
 
@@ -85,6 +162,9 @@ namespace EDM.NativeMessaging
         [JsonPropertyName("data")]
         public object? Data { get; set; }
 
+        [JsonPropertyName("variants")]
+        public object? Variants { get; set; }
+
         [JsonPropertyName("error")]
         public string? Error { get; set; }
 
@@ -117,5 +197,47 @@ namespace EDM.NativeMessaging
 
         [JsonPropertyName("correlationId")]
         public string? CorrelationId { get; set; }
+
+        [JsonPropertyName("downloadIdentity")]
+        public string? DownloadIdentity { get; set; }
+
+        [JsonPropertyName("source")]
+        public string? Source { get; set; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("manifestUrl")]
+        public string? ManifestUrl { get; set; }
+
+        [JsonPropertyName("audioCodec")]
+        public string? AudioCodec { get; set; }
+
+        [JsonPropertyName("audioUrl")]
+        public string? AudioUrl { get; set; }
+
+        [JsonPropertyName("videoUrl")]
+        public string? VideoUrl { get; set; }
+
+        [JsonPropertyName("formatArg")]
+        public string? FormatArg { get; set; }
+
+        [JsonPropertyName("requiresFfmpegMerge")]
+        public bool RequiresFfmpegMerge { get; set; }
+
+        [JsonPropertyName("headers")]
+        public string? Headers { get; set; }
+
+        [JsonPropertyName("codec")]
+        public string? Codec { get; set; }
+
+        [JsonPropertyName("container")]
+        public string? Container { get; set; }
+
+        [JsonPropertyName("estimatedSizeBytes")]
+        public long? EstimatedSizeBytes { get; set; }
+
+        [JsonPropertyName("isAudioOnly")]
+        public bool? IsAudioOnly { get; set; }
     }
 }
