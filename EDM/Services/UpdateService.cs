@@ -16,9 +16,11 @@ namespace EDM.Services
         public string Version { get; set; } = string.Empty;
         public string MinSupportedVersion { get; set; } = string.Empty;
         public bool ForceUpdate { get; set; } = false;
+        public string Severity { get; set; } = "OPTIONAL"; // OPTIONAL, RECOMMENDED, REQUIRED
         public string Title { get; set; } = string.Empty;
         public string DownloadUrl { get; set; } = string.Empty;
         public string Sha256 { get; set; } = string.Empty;
+        public long FileSizeBytes { get; set; } = 0;
         public string Changelog { get; set; } = string.Empty;
         public string ReleaseDate { get; set; } = string.Empty;
         public bool IsUpdateAvailable { get; set; } = false;
@@ -62,10 +64,12 @@ namespace EDM.Services
                 Version = res.LatestVersion,
                 MinSupportedVersion = res.MinimumSupportedVersion,
                 IsMandatory = res.IsMandatory,
+                Severity = res.Severity,
                 Title = res.Title,
                 Changelog = res.ReleaseNotes,
                 DownloadUrl = res.DownloadUrl ?? string.Empty,
-                Sha256 = res.Sha256Hash ?? string.Empty
+                Sha256 = res.Sha256Hash ?? string.Empty,
+                FileSizeBytes = res.FileSizeBytes
             };
         }
 
@@ -271,14 +275,52 @@ namespace EDM.Services
 
             LoggingService.Log($"[UpdateService] Downloading update installer from: {updateInfo.DownloadUrl} -> {tempInstallerPath}");
 
-            // Use DownloadService for robust downloading (resume, retry, speed limiting)
-            await _downloadService.StartDownloadAsync(
-                url: updateInfo.DownloadUrl,
-                savePath: tempInstallerPath,
-                progressReporter: progressReporter,
-                pauseToken: pauseToken,
-                speedLimitProvider: () => 0,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Stream download installer with progress reporting
+            try
+            {
+                using var response = await _httpClient.GetAsync(updateInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                using (var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+                using (var fileStream = new FileStream(tempInstallerPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
+                {
+                    var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(81920);
+                    long totalRead = 0;
+                    long lastReportTicks = 0;
+                    try
+                    {
+                        int bytesRead;
+                        while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+                        {
+                            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                            totalRead += bytesRead;
+
+                            long nowTicks = Environment.TickCount64;
+                            if (progressReporter != null && totalBytes > 0 && (nowTicks - lastReportTicks >= 100 || totalRead >= totalBytes))
+                            {
+                                progressReporter.Report(new DownloadProgressInfo
+                                {
+                                    BytesReceived = totalRead,
+                                    TotalBytes = totalBytes,
+                                    ProgressPercentage = (int)((totalRead * 100) / totalBytes)
+                                });
+                                lastReportTicks = nowTicks;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try { if (File.Exists(tempInstallerPath)) File.Delete(tempInstallerPath); } catch { }
+                LoggingService.Log($"[UpdateService] Error downloading update binary: {ex.Message}");
+                throw;
+            }
 
             if (!File.Exists(tempInstallerPath))
             {

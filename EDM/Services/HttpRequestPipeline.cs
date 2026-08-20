@@ -21,6 +21,7 @@ namespace EDM.Services
         public long? ContentRangeEnd { get; set; }
         public long? ContentRangeTotal { get; set; }
         public long ElapsedMilliseconds { get; set; }
+        public double TimeToFirstByteMs { get; set; }
         public bool IsPartialContent => Response.StatusCode == HttpStatusCode.PartialContent;
     }
 
@@ -50,24 +51,56 @@ namespace EDM.Services
             long? rangeStart = null,
             long? rangeEnd = null,
             DownloadCredentials? credentials = null,
-            string? cookies = null)
+            string? cookies = null,
+            string? userAgent = null,
+            string? referer = null,
+            string? authHeader = null)
         {
             var request = new HttpRequestMessage(method, url);
 
-            // User-Agent and Accept headers per request
-            request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            // User-Agent with CRLF sanitization
+            string effectiveUserAgent = !string.IsNullOrWhiteSpace(userAgent) 
+                ? HttpHeaderSecuritySanitizer.SanitizeHeaderValue(userAgent) 
+                : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+            request.Headers.TryAddWithoutValidation("User-Agent", effectiveUserAgent);
             request.Headers.Accept.ParseAdd("*/*");
-            request.Headers.Referrer = new Uri(url.GetLeftPart(UriPartial.Authority));
 
-            // Credentials & Cookies
+            // Referer with CRLF sanitization
+            string cleanReferer = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(referer);
+            if (!string.IsNullOrWhiteSpace(cleanReferer) && Uri.TryCreate(cleanReferer, UriKind.Absolute, out var parsedRef))
+            {
+                request.Headers.Referrer = parsedRef;
+            }
+            else
+            {
+                request.Headers.Referrer = new Uri(url.GetLeftPart(UriPartial.Authority));
+            }
+
+            // Credentials & Authorization Headers
             if (credentials != null && !credentials.IsEmpty)
             {
                 request.Headers.Authorization = credentials.ToBasicAuthHeader();
             }
+            else if (!string.IsNullOrWhiteSpace(authHeader))
+            {
+                string cleanAuth = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(authHeader);
+                var parts = cleanAuth.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2)
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue(parts[0], parts[1]);
+                }
+                else
+                {
+                    request.Headers.TryAddWithoutValidation("Authorization", cleanAuth);
+                }
+            }
 
+            // Cookies with length validation (max 16KB to avoid 431 Request Header Fields Too Large) & CRLF sanitization
             if (!string.IsNullOrWhiteSpace(cookies))
             {
-                request.Headers.TryAddWithoutValidation("Cookie", cookies);
+                string cleanCookies = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(cookies);
+                if (cleanCookies.Length > 16384) cleanCookies = cleanCookies.Substring(0, 16384);
+                request.Headers.TryAddWithoutValidation("Cookie", cleanCookies);
             }
 
             // Range Header
@@ -146,10 +179,10 @@ namespace EDM.Services
                         var redirectReq = requestFactory();
                         redirectReq.RequestUri = targetUrl;
 
-                        // Strip Authorization header if cross-domain redirect
-                        if (currentUri != null && !string.Equals(currentUri.Host, targetUrl.Host, StringComparison.OrdinalIgnoreCase))
+                        // RFC 9110 / Chromium-grade Cross-Origin Redirect Token & Cookie Stripping
+                        if (currentUri != null)
                         {
-                            redirectReq.Headers.Authorization = null;
+                            CrossOriginRedirectSecurityHandler.SanitizeRequestForRedirect(redirectReq, currentUri, targetUrl);
                         }
 
                         currentUri = targetUrl;
@@ -167,8 +200,31 @@ namespace EDM.Services
                         }
                     }
 
-                    // Fast-fail non-retryable 4xx client errors immediately without wasting retries
-                    if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound or HttpStatusCode.Gone)
+                    // Structured fast-fail on 401 Unauthorized / 403 Forbidden without wasting retries
+                    if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        response.Dispose();
+                        throw new DownloadAuthenticationException(
+                            AuthenticationErrorType.AuthenticationRequired,
+                            $"Authentication required (401 Unauthorized) for '{request.RequestUri?.Host}'. Credentials or session cookies missing or invalid.",
+                            HttpStatusCode.Unauthorized,
+                            request.RequestUri);
+                    }
+
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        response.Dispose();
+                        throw new DownloadAuthenticationException(
+                            AuthenticationErrorType.Forbidden,
+                            $"Access denied (403 Forbidden) for '{request.RequestUri?.Host}'. Access token, signed URL, or session cookie may have expired.",
+                            HttpStatusCode.Forbidden,
+                            request.RequestUri);
+                    }
+
+                    // Fast-fail all non-retryable 4xx client errors immediately
+                    if ((int)response.StatusCode >= 400 && (int)response.StatusCode < 500 &&
+                        response.StatusCode != (HttpStatusCode)408 &&
+                        response.StatusCode != (HttpStatusCode)429)
                     {
                         response.EnsureSuccessStatusCode(); // Throws HttpRequestException immediately
                     }
@@ -180,15 +236,17 @@ namespace EDM.Services
                         response.StatusCode == HttpStatusCode.ServiceUnavailable ||
                         response.StatusCode == HttpStatusCode.GatewayTimeout)
                     {
-                        TimeSpan delay = GetRetryAfterDelay(response) ?? CalculateBackoffDelay(attempt, baseDelayMs, maxDelayMs);
-                        response.Dispose();
                         if (attempt <= maxRetries)
                         {
+                            TimeSpan delay = GetRetryAfterDelay(response) ?? CalculateBackoffDelay(attempt, baseDelayMs, maxDelayMs);
+                            response.Dispose();
                             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                             continue;
                         }
-                        // Exhausted retries — surface as HttpRequestException
-                        response.EnsureSuccessStatusCode();
+                        // Exhausted retries — throw informative HttpRequestException
+                        var status = response.StatusCode;
+                        response.Dispose();
+                        throw new HttpRequestException($"Server returned transient error {status} and retries were exhausted.", null, status);
                     }
 
 
@@ -276,12 +334,18 @@ namespace EDM.Services
                             ContentRangeStart = cr.Start,
                             ContentRangeEnd = cr.End,
                             ContentRangeTotal = cr.Total,
-                            ElapsedMilliseconds = sw.ElapsedMilliseconds
+                            ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                            TimeToFirstByteMs = sw.Elapsed.TotalMilliseconds
                         };
                     }
 
                     response.EnsureSuccessStatusCode();
-                    return new HttpRequestPipelineResult { Response = response, ElapsedMilliseconds = sw.ElapsedMilliseconds };
+                    return new HttpRequestPipelineResult
+                    {
+                        Response = response,
+                        ElapsedMilliseconds = sw.ElapsedMilliseconds,
+                        TimeToFirstByteMs = sw.Elapsed.TotalMilliseconds
+                    };
 
                 }
                 catch (OperationCanceledException)
@@ -328,7 +392,7 @@ namespace EDM.Services
                 if (httpEx.StatusCode.HasValue)
                 {
                     int code = (int)httpEx.StatusCode.Value;
-                    if (code == 400 || code == 401 || code == 403 || code == 404 || code == 405 || code == 416) return false;
+                    if (code >= 400 && code < 500 && code != 408 && code != 429) return false;
                     if (code == 429 || code >= 500) return true;
                 }
                 // HttpRequestException wrapping IOException / SocketException is transient

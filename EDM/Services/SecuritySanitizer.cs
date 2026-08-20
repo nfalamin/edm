@@ -15,7 +15,7 @@ namespace EDM.Services
             "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
         };
 
-        private static readonly string[] AllowedUrlSchemes = new[] { "http", "https", "ftp", "ftps" };
+        private static readonly string[] AllowedUrlSchemes = new[] { "http", "https", "ftp", "ftps", "sftp", "magnet" };
 
         public static bool IsAllowedUrlScheme(string url)
         {
@@ -36,15 +36,15 @@ namespace EDM.Services
             if (string.IsNullOrWhiteSpace(rawName)) return "downloaded_file.bin";
 
             // Strip path separators and invalid chars
-            string nameOnly = Path.GetFileName(rawName);
+            string nameOnly = Path.GetFileName(rawName.Trim());
             var invalidChars = Path.GetInvalidFileNameChars();
-            string cleaned = new string(nameOnly.Where(c => !invalidChars.Contains(c)).ToArray());
+            string cleaned = new string(nameOnly.Where(c => !invalidChars.Contains(c) && c >= 32).ToArray()).Trim().TrimEnd('.');
 
-            if (string.IsNullOrWhiteSpace(cleaned)) return "downloaded_file.bin";
+            if (string.IsNullOrWhiteSpace(cleaned) || cleaned.All(c => c == '.')) return "downloaded_file.bin";
 
-            // Reserved Windows names check
-            string nameWithoutExt = Path.GetFileNameWithoutExtension(cleaned);
-            if (ReservedDeviceNames.Contains(nameWithoutExt.ToUpperInvariant()))
+            // Reserved Windows names check (e.g. CON, PRN, AUX, NUL, COM1..9, LPT1..9, even with multi-extensions)
+            string rootName = cleaned.Split('.')[0];
+            if (ReservedDeviceNames.Contains(rootName.ToUpperInvariant()))
             {
                 cleaned = "_" + cleaned;
             }
@@ -52,17 +52,48 @@ namespace EDM.Services
             return cleaned;
         }
 
+        public static string GetUniqueDestinationPath(string targetPath)
+        {
+            if (string.IsNullOrWhiteSpace(targetPath) || !File.Exists(targetPath))
+                return targetPath;
+
+            string dir = Path.GetDirectoryName(targetPath) ?? string.Empty;
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(targetPath);
+            string ext = Path.GetExtension(targetPath);
+
+            int counter = 1;
+            string candidate;
+            do
+            {
+                candidate = Path.Combine(dir, $"{fileNameWithoutExt} ({counter}){ext}");
+                counter++;
+            } while (File.Exists(candidate) && counter < 10000);
+
+            return candidate;
+        }
+
         public static bool TrySanitizeDestinationPath(string baseDirectory, string requestedPath, out string safeFullPath)
         {
             safeFullPath = string.Empty;
             try
             {
-                string canonicalBase = Path.GetFullPath(baseDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (string.IsNullOrWhiteSpace(baseDirectory) || string.IsNullOrWhiteSpace(requestedPath))
+                    return false;
+
+                string canonicalBase = Path.GetFullPath(baseDirectory);
+                if (!canonicalBase.EndsWith(Path.DirectorySeparatorChar.ToString()) && !canonicalBase.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+                {
+                    canonicalBase += Path.DirectorySeparatorChar;
+                }
+
                 string unescaped = System.Uri.UnescapeDataString(requestedPath);
-                string combined = Path.Combine(canonicalBase, unescaped);
+                string combined = Path.IsPathRooted(unescaped) ? unescaped : Path.Combine(canonicalBase, unescaped);
                 string canonicalTarget = Path.GetFullPath(combined);
 
-                if (canonicalTarget.StartsWith(canonicalBase, StringComparison.OrdinalIgnoreCase))
+                if (canonicalTarget.StartsWith(canonicalBase, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(canonicalTarget.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                                  canonicalBase.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                                  StringComparison.OrdinalIgnoreCase))
                 {
                     safeFullPath = canonicalTarget;
                     return true;

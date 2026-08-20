@@ -287,20 +287,18 @@ namespace EDM.NativeMessaging
             }
         }
 
-        public async Task WriteResponseAsync(object responseObj, CancellationToken ct)
+        public async Task WriteResponseAsync(object responseObj, CancellationToken ct = default)
         {
-            if (ct.IsCancellationRequested) return;
-
-            byte[] utf8Json = JsonSerializer.SerializeToUtf8Bytes(responseObj, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            byte[] lenBuf = new byte[4];
-            BinaryPrimitives.WriteInt32LittleEndian(lenBuf, utf8Json.Length);
-
             try
             {
+                byte[] utf8Json = JsonSerializer.SerializeToUtf8Bytes(responseObj, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                byte[] lenBuf = new byte[4];
+                BinaryPrimitives.WriteInt32LittleEndian(lenBuf, utf8Json.Length);
+
                 lock (_stdout)
                 {
                     _stdout.Write(lenBuf, 0, 4);
@@ -312,6 +310,10 @@ namespace EDM.NativeMessaging
             catch (IOException ioEx)
             {
                 LoggingService.Log($"[NativeMessageListener] Failed to write response (IOException): {ioEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[NativeMessageListener] WriteResponseAsync error", ex);
             }
 
             await Task.CompletedTask;

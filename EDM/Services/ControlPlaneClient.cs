@@ -60,7 +60,7 @@ namespace EDM.Services
         {
             if (_installationId != Guid.Empty) return _installationId;
 
-            string savedId = _settingsService.GetSetting("InstallationIdString");
+            string? savedId = _settingsService.GetSetting("InstallationIdString");
             if (!string.IsNullOrWhiteSpace(savedId) && Guid.TryParse(savedId, out var parsed))
             {
                 _installationId = parsed;
@@ -83,7 +83,7 @@ namespace EDM.Services
                 return _httpClient.BaseAddress.ToString().TrimEnd('/');
             }
 
-            string url = _settingsService.GetSetting("ControlPlaneApiUrl");
+            string? url = _settingsService.GetSetting("ControlPlaneApiUrl");
             return string.IsNullOrWhiteSpace(url) ? "http://localhost:5000" : url.TrimEnd('/');
         }
 
@@ -91,8 +91,8 @@ namespace EDM.Services
         {
             try
             {
-                string encryptedAccess = _settingsService.GetSetting("EncryptedAccessToken");
-                string encryptedRefresh = _settingsService.GetSetting("EncryptedRefreshToken");
+                string? encryptedAccess = _settingsService.GetSetting("EncryptedAccessToken");
+                string? encryptedRefresh = _settingsService.GetSetting("EncryptedRefreshToken");
 
                 if (!string.IsNullOrWhiteSpace(encryptedAccess))
                 {
@@ -289,16 +289,23 @@ namespace EDM.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var doc = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct).ConfigureAwait(false);
+                    string? rawDl = doc.TryGetProperty("downloadUrl", out var du) ? du.GetString() : null;
+                    string? resolvedDl = rawDl;
+                    if (!string.IsNullOrWhiteSpace(rawDl) && rawDl.StartsWith("/"))
+                    {
+                        resolvedDl = $"{GetApiBaseUrl()}{rawDl}";
+                    }
+
                     return new UpdateCheckResult(
                         UpdateAvailable: doc.GetProperty("updateAvailable").GetBoolean(),
                         CurrentVersion: doc.GetProperty("currentVersion").GetString() ?? currentVersion,
                         LatestVersion: doc.GetProperty("latestVersion").GetString() ?? currentVersion,
                         MinimumSupportedVersion: doc.GetProperty("minimumSupportedVersion").GetString() ?? "1.0.0",
                         IsMandatory: doc.GetProperty("isMandatory").GetBoolean(),
-                        Severity: doc.GetProperty("severity").GetString() ?? "Standard",
+                        Severity: doc.GetProperty("severity").GetString() ?? "OPTIONAL",
                         Title: doc.GetProperty("title").GetString() ?? string.Empty,
                         ReleaseNotes: doc.GetProperty("releaseNotes").GetString() ?? string.Empty,
-                        DownloadUrl: doc.TryGetProperty("downloadUrl", out var du) ? du.GetString() : null,
+                        DownloadUrl: resolvedDl,
                         Sha256Hash: doc.TryGetProperty("sha256Hash", out var sh) ? sh.GetString() : null,
                         FileSizeBytes: doc.TryGetProperty("fileSizeBytes", out var fs) ? fs.GetInt64() : 0,
                         SignatureBase64: doc.TryGetProperty("signatureBase64", out var sb) ? sb.GetString() : null);

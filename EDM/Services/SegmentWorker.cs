@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -37,13 +38,13 @@ namespace EDM.Services
             Func<double>? speedLimitProvider,
             DownloadCredentials? credentials,
             string? cookies,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            ConnectionAccountant? accountant = null)
         {
             long startByte = segment.Start + segment.BytesDownloaded;
             long currentAssigned = scheduler.GetAssignedEnd(segment.Id);
             if (currentAssigned < segment.End) segment.End = currentAssigned;
             long endByte = segment.End;
-
 
             if (startByte > endByte)
             {
@@ -51,178 +52,206 @@ namespace EDM.Services
                 return;
             }
 
-
             long expectedSegmentBytes = endByte - startByte + 1;
 
-            // Execute HTTP Request with full 206 validation.
-            // Pass expectedRangeEnd and knownTotalBytes so Content-Range is fully validated.
-            var result = await _pipeline.ExecuteWithRetryAsync(
-                requestFactory: () => _pipeline.CreateFreshRequest(HttpMethod.Get, uri, startByte, endByte, credentials, cookies),
-                completionOption: HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken: cancellationToken,
-                maxRetries: 5,
-                requirePartialContent: true,
-                expectedRangeStart: startByte,
-                expectedRangeEnd: endByte,
-                knownTotalBytes: scheduler.TotalBytes
-            ).ConfigureAwait(false);
-
-            using var response = result.Response;
-
-            // BUG-FIX 4 (belt-and-suspenders): Validate Content-Length against expected segment size.
-            // The pipeline already validates this, but double-check here in case pipeline is used
-            // without requirePartialContent = true in future call sites.
-            long? responseContentLength = response.Content.Headers.ContentLength;
-            if (responseContentLength.HasValue && responseContentLength.Value != expectedSegmentBytes)
+            accountant?.OnConnectionRequested();
+            accountant?.RegisterWorker(_workerId, segment.Id);
+            try
             {
-                throw new InvalidDataException(
-                    $"[SegmentWorker:{_workerId}] Content-Length={responseContentLength.Value} does not match " +
-                    $"expected segment size={expectedSegmentBytes} for range bytes={startByte}-{endByte}.");
-            }
+                // Execute HTTP Request with full 206 validation.
+                var result = await _pipeline.ExecuteWithRetryAsync(
+                    requestFactory: () => _pipeline.CreateFreshRequest(HttpMethod.Get, uri, startByte, endByte, credentials, cookies),
+                    completionOption: HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken: cancellationToken,
+                    maxRetries: 5,
+                    requirePartialContent: true,
+                    expectedRangeStart: startByte,
+                    expectedRangeEnd: endByte,
+                    knownTotalBytes: scheduler.TotalBytes
+                ).ConfigureAwait(false);
 
-            using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                accountant?.OnConnectionStarted();
+                accountant?.RecordNetworkMetrics(result.ElapsedMilliseconds, result.TimeToFirstByteMs);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(segment.TempPath) ?? ".");
+                using var response = result.Response;
 
-            // Segment write FileStream must be closed before we re-open for SHA-256 computation.
-            // Wrap in an explicit block so disposal happens before hashing.
-            long totalBytesWritten;
-            {
-                using var fs = new FileStream(
-                    segment.TempPath,
-                    FileMode.OpenOrCreate,
-                    FileAccess.Write,
-                    FileShare.ReadWrite,
-                    256 * 1024,
-                    FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-                fs.Seek(segment.BytesDownloaded, SeekOrigin.Begin);
-
-                byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(256 * 1024);
-                long bytesSinceLastMetaWrite = 0;
-                totalBytesWritten = 0; // Track actual bytes written to detect short/long reads
-                using var incHasher = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
-
-                try
+                long? responseContentLength = response.Content.Headers.ContentLength;
+                if (responseContentLength.HasValue && responseContentLength.Value != expectedSegmentBytes)
                 {
-                    int read;
-                    while (true)
+                    throw new InvalidDataException(
+                        $"[SegmentWorker:{_workerId}] Content-Length={responseContentLength.Value} does not match " +
+                        $"expected segment size={expectedSegmentBytes} for range bytes={startByte}-{endByte}.");
+                }
+
+                using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(segment.TempPath) ?? ".");
+
+                long totalBytesWritten;
+                {
+                    using var fs = new FileStream(
+                        segment.TempPath,
+                        FileMode.OpenOrCreate,
+                        FileAccess.Write,
+                        FileShare.ReadWrite,
+                        256 * 1024,
+                        FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+                    fs.Seek(segment.BytesDownloaded, SeekOrigin.Begin);
+
+                    byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(256 * 1024);
+                    long bytesSinceLastMetaWrite = 0;
+                    long lastMetaWriteTicks = Environment.TickCount64;
+                    totalBytesWritten = 0;
+                    using var incHasher = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+                    using var readTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                    long lastSpeedTimestamp = Stopwatch.GetTimestamp();
+                    long lastSpeedBytes = segment.BytesDownloaded;
+                    double rollingWorkerSpeed = 0;
+
+                    try
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        // BUG-FIX 8: Per-read timeout — if server stops sending without closing,
-                        // we detect it and throw, allowing the retry loop in the pipeline to recover.
-                        using var readTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                        readTimeoutCts.CancelAfter(ReadTimeout);
-
-                        try
+                        int read;
+                        while (true)
                         {
-                            read = await contentStream.ReadAsync(buffer, 0, buffer.Length, readTimeoutCts.Token).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            readTimeoutCts.CancelAfter(ReadTimeout);
+
+                            try
+                            {
+                                read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), readTimeoutCts.Token).ConfigureAwait(false);
+                            }
+                            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                            {
+                                throw new IOException(
+                                    $"[SegmentWorker:{_workerId}] Read timed out after {ReadTimeout.TotalSeconds}s " +
+                                    $"at byte offset {startByte + totalBytesWritten}. Server may have stalled.");
+                            }
+                            finally
+                            {
+                                if (!readTimeoutCts.IsCancellationRequested)
+                                {
+                                    readTimeoutCts.CancelAfter(Timeout.InfiniteTimeSpan);
+                                }
+                            }
+
+                            if (read == 0) break; // Stream ended
+
+                            // Active ownership check: Query authoritative end boundary from scheduler.
+                            long currentAssignedEnd = scheduler.GetAssignedEnd(segment.Id);
+                            long currentPosition = segment.Start + segment.BytesDownloaded;
+                            long bytesAllowed = currentAssignedEnd + 1 - currentPosition;
+
+                            if (bytesAllowed <= 0)
+                            {
+                                // Dynamic work stealing reduced our boundary
+                                scheduler.MarkCompleted(segment.Id);
+                                break;
+                            }
+
+                            int writeCount = (int)Math.Min(read, bytesAllowed);
+                            await fs.WriteAsync(buffer.AsMemory(0, writeCount), cancellationToken).ConfigureAwait(false);
+                            incHasher.AppendData(buffer, 0, writeCount);
+
+                            segment.BytesDownloaded += writeCount;
+                            totalBytesWritten += writeCount;
+                            bytesSinceLastMetaWrite += writeCount;
+
+                            scheduler.ReportProgress(segment.Id, segment.BytesDownloaded);
+
+                            // Calculate per-worker throughput and telemetry
+                            long nowTs = Stopwatch.GetTimestamp();
+                            double dtSec = (nowTs - lastSpeedTimestamp) / (double)Stopwatch.Frequency;
+                            if (dtSec >= 0.1)
+                            {
+                                double instSpeed = (segment.BytesDownloaded - lastSpeedBytes) / dtSec;
+                                rollingWorkerSpeed = rollingWorkerSpeed <= 0 ? instSpeed : (0.3 * instSpeed + 0.7 * rollingWorkerSpeed);
+                                accountant?.RecordWorkerProgress(_workerId, segment.Id, segment.BytesDownloaded, rollingWorkerSpeed, result.ElapsedMilliseconds, result.TimeToFirstByteMs);
+                                scheduler.RegisterWorkerProgress(_workerId, segment.Id, segment.BytesDownloaded, rollingWorkerSpeed);
+                                lastSpeedTimestamp = nowTs;
+                                lastSpeedBytes = segment.BytesDownloaded;
+                            }
+
+                            if (writeCount < read || currentPosition + writeCount > currentAssignedEnd)
+                            {
+                                long targetLength = currentAssignedEnd - segment.Start + 1;
+                                if (fs.Length > targetLength)
+                                {
+                                    fs.SetLength(targetLength);
+                                }
+
+                                if (writeCount < read)
+                                {
+                                    LoggingService.LogWarning(
+                                        $"[SegmentWorker:{_workerId}] Server sent {read - writeCount} extra bytes " +
+                                        $"beyond assigned range end={currentAssignedEnd}. Excess discarded.");
+                                }
+                                scheduler.MarkCompleted(segment.Id);
+                                break;
+                            }
+
+                            // Global throttle
+                            try
+                            {
+                                await BandwidthThrottler.Instance.ThrottleAsync(writeCount, cancellationToken).ConfigureAwait(false);
+                            }
+                            catch (OperationCanceledException) { throw; }
+                            catch { }
+
+                            // Periodically persist metadata (throttled to at least 1MB and 1.5s interval to minimize disk I/O and lock contention)
+                            long nowTicks = Environment.TickCount64;
+                            if (bytesSinceLastMetaWrite >= 1024 * 1024 && (nowTicks - lastMetaWriteTicks) >= 1500)
+                            {
+                                metaState.Segments = scheduler.GetSegmentsSnapshot();
+                                await metaManager.WriteStateAtomicAsync(metaPath, metaState, cancellationToken).ConfigureAwait(false);
+                                bytesSinceLastMetaWrite = 0;
+                                lastMetaWriteTicks = nowTicks;
+                            }
                         }
-                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+
+                        await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+                        // Finalize live SHA-256 hash
+                        var hashBytes = incHasher.GetHashAndReset();
+                        segment.Sha256Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+                        long currentAssignedEndFinal = scheduler.GetAssignedEnd(segment.Id);
+                        long currentExpectedBytes = currentAssignedEndFinal - startByte + 1;
+                        long remainingExpected = currentExpectedBytes - totalBytesWritten;
+                        if (remainingExpected > 0)
                         {
-                            // Read timed out (not user cancellation) — treat as connection reset
                             throw new IOException(
-                                $"[SegmentWorker:{_workerId}] Read timed out after {ReadTimeout.TotalSeconds}s " +
-                                $"at byte offset {startByte + totalBytesWritten}. Server may have stalled.");
+                                $"[SegmentWorker:{_workerId}] Short read detected: expected {currentExpectedBytes} bytes " +
+                                $"for range bytes={startByte}-{currentAssignedEndFinal}, but only received {totalBytesWritten} bytes. " +
+                                $"Missing {remainingExpected} bytes.");
                         }
 
-                        if (read == 0) break; // Stream ended
-
-                        // Active ownership check: Query authoritative end boundary from scheduler.
-                        long currentAssignedEnd = scheduler.GetAssignedEnd(segment.Id);
-                        long currentPosition = segment.Start + segment.BytesDownloaded;
-                        long bytesAllowed = currentAssignedEnd + 1 - currentPosition;
-
-                        if (bytesAllowed <= 0)
-                        {
-                            // Dynamic work stealing reduced our boundary — we're done.
-                            scheduler.MarkCompleted(segment.Id);
-                            break;
-                        }
-
-                        // BUG-FIX 5/6: Cap write to allowed bytes.
-                        // This prevents writing beyond our segment boundary (long read protection).
-                        // If the server sends more bytes than our range, we discard the excess.
-                        int writeCount = (int)Math.Min(read, bytesAllowed);
-                        await fs.WriteAsync(buffer.AsMemory(0, writeCount), cancellationToken).ConfigureAwait(false);
-                        incHasher.AppendData(buffer, 0, writeCount);
-
-                        segment.BytesDownloaded += writeCount;
-                        totalBytesWritten += writeCount;
-                        bytesSinceLastMetaWrite += writeCount;
-
-                        scheduler.ReportProgress(segment.Id, segment.BytesDownloaded);
-
-                        if (writeCount < read || currentPosition + writeCount > currentAssignedEnd)
-                        {
-                            // Ensure FileStream length does not exceed current assigned boundary after dynamic split
-                            long targetLength = currentAssignedEnd - segment.Start + 1;
-                            if (fs.Length > targetLength)
-                            {
-                                fs.SetLength(targetLength);
-                            }
-
-                            if (writeCount < read)
-                            {
-                                LoggingService.LogWarning(
-                                    $"[SegmentWorker:{_workerId}] Server sent {read - writeCount} extra bytes " +
-                                    $"beyond assigned range end={currentAssignedEnd}. Excess discarded.");
-                            }
-                            scheduler.MarkCompleted(segment.Id);
-                            break;
-                        }
-
-
-                        // Throttle globally
-                        try
-                        {
-                            await BandwidthThrottler.Instance.ThrottleAsync(writeCount, cancellationToken).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException) { throw; }
-                        catch { }
-
-                        // Periodically persist metadata (every 256 KB)
-                        if (bytesSinceLastMetaWrite >= 256 * 1024)
-                        {
-                            metaState.Segments = scheduler.GetSegmentsSnapshot();
-                            await metaManager.WriteStateAtomicAsync(metaPath, metaState, cancellationToken).ConfigureAwait(false);
-                            bytesSinceLastMetaWrite = 0;
-                        }
+                        scheduler.MarkCompleted(segment.Id);
                     }
-
-                    await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
-
-                    // Finalize live SHA-256 hash
-                    var hashBytes = incHasher.GetHashAndReset();
-                    segment.Sha256Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-
-                    // Short read detection evaluated against current dynamic assigned end boundary.
-                    long currentAssignedEndFinal = scheduler.GetAssignedEnd(segment.Id);
-                    long currentExpectedBytes = currentAssignedEndFinal - startByte + 1;
-                    long remainingExpected = currentExpectedBytes - totalBytesWritten;
-                    if (remainingExpected > 0)
+                    finally
                     {
-                        // Stream ended prematurely — this is a short read / connection reset
-                        throw new IOException(
-                            $"[SegmentWorker:{_workerId}] Short read detected: expected {currentExpectedBytes} bytes " +
-                            $"for range bytes={startByte}-{currentAssignedEndFinal}, but only received {totalBytesWritten} bytes. " +
-                            $"Missing {remainingExpected} bytes.");
+                        System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                     }
-
-                    scheduler.MarkCompleted(segment.Id);
-
                 }
-                finally
-                {
-                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                }
-            } // <-- fs (write FileStream) is closed here
 
-
-            // Final atomic metadata update on segment completion including Sha256Hash
-            metaState.Segments = scheduler.GetSegmentsSnapshot();
-            await metaManager.WriteStateAtomicAsync(metaPath, metaState, cancellationToken).ConfigureAwait(false);
+                metaState.Segments = scheduler.GetSegmentsSnapshot();
+                await metaManager.WriteStateAtomicAsync(metaPath, metaState, cancellationToken).ConfigureAwait(false);
+                accountant?.CompleteWorker(_workerId);
+                accountant?.OnConnectionCompleted();
+            }
+            catch (OperationCanceledException)
+            {
+                accountant?.OnConnectionCancelled();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                accountant?.RecordWorkerError(_workerId, segment.Id, ex);
+                accountant?.OnConnectionFailed(ex);
+                throw;
+            }
         }
     }
 }

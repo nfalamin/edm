@@ -21,54 +21,71 @@ namespace EDM.Tests.E2E
             IpcHandoffPayload? received = null;
             var handoffEvent = new TaskCompletionSource<bool>();
 
-            string testPipeName = "EDM_TestPipe_" + Guid.NewGuid().ToString("N");
             var server = new NativeIpcServer(payload =>
             {
                 received = payload;
                 handoffEvent.TrySetResult(true);
                 return Task.FromResult(true);
-            }, testPipeName);
+            });
 
-            try
+            var sendPayload = new IpcHandoffPayload
             {
-                server.Start();
-                await Task.Delay(200);
+                Url = "https://example.com/test_video.mp4",
+                Filename = "test_video.mp4",
+                Quality = "1080p",
+                Browser = "Chrome",
+                CorrelationId = "test-corr-123"
+            };
 
-                var sendPayload = new IpcHandoffPayload
-                {
-                    Url = "https://example.com/test_video.mp4",
-                    Filename = "test_video.mp4",
-                    Quality = "1080p",
-                    Browser = "Chrome",
-                    CorrelationId = "test-corr-123"
-                };
+            byte[] inputBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(sendPayload) + "\n");
+            using var inStream = new MemoryStream(inputBytes);
+            using var outStream = new MemoryStream();
+            using var duplex = new TestDuplexStream(inStream, outStream);
 
-                using var client = new NamedPipeClientStream(".", testPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                await client.ConnectAsync(3000);
+            await server.ProcessConnectionAsync(duplex, CancellationToken.None);
 
-                using var writer = new StreamWriter(client, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
-                using var reader = new StreamReader(client, Encoding.UTF8, leaveOpen: true);
+            outStream.Position = 0;
+            using var reader = new StreamReader(outStream, Encoding.UTF8);
+            string? responseJson = await reader.ReadLineAsync();
 
-                await writer.WriteLineAsync(JsonSerializer.Serialize(sendPayload));
-                string? responseJson = await reader.ReadLineAsync();
+            responseJson.Should().NotBeNullOrWhiteSpace();
+            using var respDoc = JsonDocument.Parse(responseJson!);
+            respDoc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+            respDoc.RootElement.GetProperty("status").GetString().Should().Be("accepted");
 
-                responseJson.Should().NotBeNullOrWhiteSpace();
-                using var respDoc = JsonDocument.Parse(responseJson!);
-                respDoc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
-                respDoc.RootElement.GetProperty("status").GetString().Should().Be("accepted");
+            handoffEvent.Task.IsCompletedSuccessfully.Should().BeTrue();
+            received.Should().NotBeNull();
+            received!.Url.Should().Be("https://example.com/test_video.mp4");
+            received.Filename.Should().Be("test_video.mp4");
+            received.Quality.Should().Be("1080p");
+        }
 
-                var handoffCompleted = await Task.WhenAny(handoffEvent.Task, Task.Delay(2000));
-                handoffCompleted.Should().Be(handoffEvent.Task);
+        private sealed class TestDuplexStream : Stream
+        {
+            private readonly Stream _readStream;
+            private readonly Stream _writeStream;
 
-                received.Should().NotBeNull();
-                received!.Url.Should().Be("https://example.com/test_video.mp4");
-                received.Filename.Should().Be("test_video.mp4");
-                received.Quality.Should().Be("1080p");
-            }
-            finally
+            public TestDuplexStream(Stream readStream, Stream writeStream)
             {
-                await server.DisposeAsync();
+                _readStream = readStream;
+                _writeStream = writeStream;
             }
+
+            public override bool CanRead => _readStream.CanRead;
+            public override bool CanSeek => false;
+            public override bool CanWrite => _writeStream.CanWrite;
+            public override long Length => _writeStream.Length;
+            public override long Position { get => _writeStream.Position; set => throw new NotSupportedException(); }
+            public override void Flush() => _writeStream.Flush();
+            public override Task FlushAsync(CancellationToken cancellationToken) => _writeStream.FlushAsync(cancellationToken);
+            public override int Read(byte[] buffer, int offset, int count) => _readStream.Read(buffer, offset, count);
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _readStream.ReadAsync(buffer, offset, count, cancellationToken);
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => _readStream.ReadAsync(buffer, cancellationToken);
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => _writeStream.Write(buffer, offset, count);
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _writeStream.WriteAsync(buffer, offset, count, cancellationToken);
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => _writeStream.WriteAsync(buffer, cancellationToken);
         }
 
         [Fact]
@@ -89,8 +106,10 @@ namespace EDM.Tests.E2E
             var fRoot = fDoc.RootElement;
             fRoot.GetProperty("name").GetString().Should().Be("com.edm.downloader");
             fRoot.GetProperty("type").GetString().Should().Be("stdio");
-            fRoot.GetProperty("allowed_extensions").GetArrayLength().Should().Be(1);
-            fRoot.GetProperty("allowed_extensions")[0].GetString().Should().Be("edm-extension@edm.app");
+            fRoot.GetProperty("allowed_extensions").GetArrayLength().Should().Be(2);
+            var allowedExtensions = fRoot.GetProperty("allowed_extensions").EnumerateArray().Select(x => x.GetString()).ToList();
+            allowedExtensions.Should().Contain("edm-extension@edm.app");
+            allowedExtensions.Should().Contain("edm@exclusive-download-manager.com");
         }
 
         [Fact]

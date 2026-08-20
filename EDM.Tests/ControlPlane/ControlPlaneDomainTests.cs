@@ -156,7 +156,8 @@ namespace EDM.Tests.ControlPlane
             db.ReleaseArtifacts.Add(artifact);
             await db.SaveChangesAsync();
 
-            var controller = new UpdateController(db);
+            var releaseService = new ReleaseService(db);
+            var controller = new UpdateController(releaseService, db);
 
             var checkRequest = new UpdateCheckRequest(
                 Platform: ClientType.DesktopWindows,

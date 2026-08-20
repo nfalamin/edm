@@ -8,6 +8,8 @@ namespace EDM.Models
 {
     public class DownloadItem : INotifyPropertyChanged
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
         // Backing fields
         private string _fileName = string.Empty;
         private string _url = string.Empty;
@@ -27,7 +29,30 @@ namespace EDM.Models
         private string _cookies = string.Empty;
         private bool _isSelected = false;
 
+        private long _downloadedBytes = 0;
+        private long _totalBytes = 0;
+
+        // MediaDownloadJob properties
+        private string _title = string.Empty;
+        private string _manifestUrl = string.Empty;
+        private string _audioCodec = string.Empty;
+        private string _videoUrl = string.Empty;
+        private string _audioUrl = string.Empty;
+        private bool _requiresFfmpegMerge = false;
+        private string _formatArg = string.Empty;
+        private string _downloadIdentity = string.Empty;
+        private long _estimatedSizeBytes = 0;
+        private string _codec = string.Empty;
+        private string _container = string.Empty;
+        private bool _isAudioOnly = false;
+        private string _pageUrl = string.Empty;
+        private string _referer = string.Empty;
+        private string _userAgent = string.Empty;
+        private string _authHeader = string.Empty;
+        private string _postData = string.Empty;
+
         public string FileName { get => _fileName; set { _fileName = value ?? string.Empty; OnPropertyChanged(nameof(FileName)); } }
+        public string Title { get => _title; set { _title = value ?? string.Empty; OnPropertyChanged(nameof(Title)); } }
         public string Url { get => _url; set { _url = value ?? string.Empty; OnPropertyChanged(nameof(Url)); } }
         public string SavePath { get => _savePath; set { _savePath = value ?? string.Empty; OnPropertyChanged(nameof(SavePath)); } }
         public string Category { get => _category; set { _category = value ?? "General"; OnPropertyChanged(nameof(Category)); } }
@@ -35,10 +60,46 @@ namespace EDM.Models
         public string Quality { get => _quality; set { _quality = value ?? string.Empty; OnPropertyChanged(nameof(Quality)); } }
         public string Status { get => _status; set { _status = value ?? string.Empty; OnPropertyChanged(nameof(Status)); } }
         public string Size { get => _size; set { _size = value ?? string.Empty; OnPropertyChanged(nameof(Size)); } }
+        public long DownloadedBytes { get => _downloadedBytes; set { _downloadedBytes = value; OnPropertyChanged(nameof(DownloadedBytes)); } }
+        public long TotalBytes { get => _totalBytes; set { _totalBytes = value; OnPropertyChanged(nameof(TotalBytes)); } }
         public string TimeLeft { get => _timeLeft; set { _timeLeft = value ?? string.Empty; OnPropertyChanged(nameof(TimeLeft)); } }
         public string TransferRate { get => _transferRate; set { _transferRate = value ?? string.Empty; OnPropertyChanged(nameof(TransferRate)); } }
         public string LastTryDate { get => _lastTryDate; set { _lastTryDate = value ?? string.Empty; OnPropertyChanged(nameof(LastTryDate)); } }
         public string Description { get => _description; set { _description = value ?? string.Empty; OnPropertyChanged(nameof(Description)); } }
+
+        public string ManifestUrl { get => _manifestUrl; set { _manifestUrl = value ?? string.Empty; OnPropertyChanged(nameof(ManifestUrl)); } }
+        public string AudioCodec { get => _audioCodec; set { _audioCodec = value ?? string.Empty; OnPropertyChanged(nameof(AudioCodec)); } }
+        public string VideoUrl { get => _videoUrl; set { _videoUrl = value ?? string.Empty; OnPropertyChanged(nameof(VideoUrl)); } }
+        public string AudioUrl { get => _audioUrl; set { _audioUrl = value ?? string.Empty; OnPropertyChanged(nameof(AudioUrl)); } }
+        public bool RequiresFfmpegMerge { get => _requiresFfmpegMerge; set { _requiresFfmpegMerge = value; OnPropertyChanged(nameof(RequiresFfmpegMerge)); } }
+        public string FormatArg { get => _formatArg; set { _formatArg = value ?? string.Empty; OnPropertyChanged(nameof(FormatArg)); } }
+        public string DownloadIdentity { get => _downloadIdentity; set { _downloadIdentity = value ?? string.Empty; OnPropertyChanged(nameof(DownloadIdentity)); } }
+        public long EstimatedSizeBytes { get => _estimatedSizeBytes; set { _estimatedSizeBytes = value; OnPropertyChanged(nameof(EstimatedSizeBytes)); } }
+        public string Codec { get => _codec; set { _codec = value ?? string.Empty; OnPropertyChanged(nameof(Codec)); } }
+        public string Container { get => _container; set { _container = value ?? string.Empty; OnPropertyChanged(nameof(Container)); } }
+        public bool IsAudioOnly { get => _isAudioOnly; set { _isAudioOnly = value; OnPropertyChanged(nameof(IsAudioOnly)); } }
+        public string PageUrl { get => _pageUrl; set { _pageUrl = value ?? string.Empty; OnPropertyChanged(nameof(PageUrl)); } }
+        public string Referer { get => _referer; set { _referer = value ?? string.Empty; OnPropertyChanged(nameof(Referer)); } }
+        public string UserAgent { get => _userAgent; set { _userAgent = value ?? string.Empty; OnPropertyChanged(nameof(UserAgent)); } }
+        [JsonIgnore]
+        public string AuthHeader { get => _authHeader; set { _authHeader = value ?? string.Empty; OnPropertyChanged(nameof(AuthHeader)); } }
+
+        /// <summary>DPAPI encrypted authorization header for storage at rest.</summary>
+        public string EncryptedAuthHeader
+        {
+            get => string.IsNullOrWhiteSpace(_authHeader) ? string.Empty : EDM.Services.ProxyService.EncryptPassword(_authHeader);
+            set => _authHeader = string.IsNullOrWhiteSpace(value) ? string.Empty : EDM.Services.ProxyService.DecryptPassword(value);
+        }
+
+        [JsonIgnore]
+        public string PostData { get => _postData; set { _postData = value ?? string.Empty; OnPropertyChanged(nameof(PostData)); } }
+
+        /// <summary>DPAPI encrypted POST data for storage at rest.</summary>
+        public string EncryptedPostData
+        {
+            get => string.IsNullOrWhiteSpace(_postData) ? string.Empty : EDM.Services.ProxyService.EncryptPassword(_postData);
+            set => _postData = string.IsNullOrWhiteSpace(value) ? string.Empty : EDM.Services.ProxyService.DecryptPassword(value);
+        }
 
         /// <summary>Optional session cookies captured from browser extension for authenticated downloads.</summary>
         [JsonIgnore]
@@ -97,12 +158,34 @@ namespace EDM.Models
         [JsonIgnore]
         public CancellationToken CancellationToken => _cts.Token;
 
+        /// <summary>
+        /// Active background execution Task (if running).
+        /// </summary>
+        [JsonIgnore]
+        public Task? ActiveDownloadTask { get; set; }
+
         /// <summary>Cancels the current token and replaces with a fresh one for the next start.</summary>
         public void CancelAndReset()
         {
             var old = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
             try { old.Cancel(); } catch { /* already disposed */ }
             old.Dispose();
+        }
+
+        /// <summary>
+        /// Gracefully waits for any active download task to exit.
+        /// </summary>
+        public async Task WaitForCompletionAsync(TimeSpan timeout)
+        {
+            var task = ActiveDownloadTask;
+            if (task == null || task.IsCompleted) return;
+
+            try
+            {
+                using var timeoutCts = new CancellationTokenSource(timeout);
+                await task.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
+            }
+            catch { /* task cancelled or timed out */ }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -112,12 +195,14 @@ namespace EDM.Models
         private string? _verificationAlgorithm;
         private string? _trustedVerificationHash;
         private string? _computedVerificationHash;
+        private string? _verificationMessage;
         private DateTime? _verificationTimestamp;
 
         public VerificationState VerificationState { get => _verificationState; set { _verificationState = value; OnPropertyChanged(nameof(VerificationState)); } }
         public string? VerificationAlgorithm { get => _verificationAlgorithm; set { _verificationAlgorithm = value; OnPropertyChanged(nameof(VerificationAlgorithm)); } }
         public string? TrustedVerificationHash { get => _trustedVerificationHash; set { _trustedVerificationHash = value; OnPropertyChanged(nameof(TrustedVerificationHash)); } }
         public string? ComputedVerificationHash { get => _computedVerificationHash; set { _computedVerificationHash = value; OnPropertyChanged(nameof(ComputedVerificationHash)); } }
+        public string? VerificationMessage { get => _verificationMessage; set { _verificationMessage = value; OnPropertyChanged(nameof(VerificationMessage)); } }
         public DateTime? VerificationTimestamp { get => _verificationTimestamp; set { _verificationTimestamp = value; OnPropertyChanged(nameof(VerificationTimestamp)); } }
 
         protected void OnPropertyChanged(string propertyName)

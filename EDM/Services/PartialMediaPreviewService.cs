@@ -70,17 +70,24 @@ namespace EDM.Services
 
                     // Copy initial chunk of up to 50 MB for quick preview
                     long copyLimit = Math.Min(source.Length, 52_428_800);
-                    byte[] buffer = new byte[81920];
+                    byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(81920);
                     long totalCopied = 0;
 
-                    while (totalCopied < copyLimit)
+                    try
                     {
-                        int toRead = (int)Math.Min(buffer.Length, copyLimit - totalCopied);
-                        int read = await source.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
-                        if (read == 0) break;
+                        while (totalCopied < copyLimit)
+                        {
+                            int toRead = (int)Math.Min(buffer.Length, copyLimit - totalCopied);
+                            int read = await source.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                            if (read == 0) break;
 
-                        await dest.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                        totalCopied += read;
+                            await dest.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                            totalCopied += read;
+                        }
+                    }
+                    finally
+                    {
+                        System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                     }
                 }
 
@@ -100,7 +107,13 @@ namespace EDM.Services
 
         public bool LaunchPreviewPlayer(string previewSnapshotPath)
         {
-            if (!File.Exists(previewSnapshotPath)) return false;
+            if (string.IsNullOrWhiteSpace(previewSnapshotPath) || !File.Exists(previewSnapshotPath)) return false;
+
+            if (!IsMediaExtension(previewSnapshotPath))
+            {
+                LoggingService.LogWarning($"[PartialMediaPreviewService] Blocked attempt to launch non-media file: {previewSnapshotPath}");
+                return false;
+            }
 
             try
             {

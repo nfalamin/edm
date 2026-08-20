@@ -61,11 +61,13 @@ namespace EDM.Tests.Services
                 string jsText = File.ReadAllText(contentJsPath);
                 string cssText = File.ReadAllText(contentCssPath);
 
-                jsText.Should().Contain("attachVideoOverlay", $"content.js in {extDir} must implement attachVideoOverlay");
+                jsText.Should().Contain("MediaCandidateDetector", $"content.js in {extDir} must implement MediaCandidateDetector");
+                jsText.Should().Contain("IdmDownloadOverlay", $"content.js in {extDir} must implement IdmDownloadOverlay");
                 jsText.Should().Contain("MutationObserver", $"content.js in {extDir} must use MutationObserver for dynamic video detection");
-                jsText.Should().Contain("dataset.edmOverlayAttached", $"content.js in {extDir} must prevent duplicate button injection");
+                jsText.Should().Contain("generateDownloadIdentity", $"content.js in {extDir} must implement deterministic DownloadIdentity calculation");
 
-                cssText.Should().Contain("edm-video-overlay-btn", $"content.css in {extDir} must style the video overlay button");
+                cssText.Should().Contain("edm-floating-panel", $"content.css in {extDir} must style the floating panel");
+                cssText.Should().Contain("edm-floating-btn", $"content.css in {extDir} must style the download button");
             }
         }
     }

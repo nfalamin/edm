@@ -15,14 +15,26 @@ namespace EDM.Services
 
         public IReadOnlyCollection<MediaDownloadItem> GetDetectedMedia() => _detectedItems.Values.ToList();
 
-        public bool TryRegisterMedia(string mediaUrl, string mimeType, string sourcePage, long sizeBytes = -1, string quality = "Unknown", bool requiresAuth = false)
+        public bool TryRegisterMedia(
+            string mediaUrl,
+            string mimeType,
+            string sourcePage,
+            long sizeBytes = -1,
+            string quality = "Unknown",
+            bool requiresAuth = false,
+            string title = "",
+            byte[]? encryptedCookies = null,
+            byte[]? encryptedAuthHeader = null,
+            bool isLive = false,
+            bool isDrmProtected = false,
+            string drmSystem = "")
         {
             if (string.IsNullOrWhiteSpace(mediaUrl)) return false;
 
             // Reject DRM stream URLs explicitly
-            if (mediaUrl.Contains("widevine", StringComparison.OrdinalIgnoreCase) || mediaUrl.Contains("playready", StringComparison.OrdinalIgnoreCase))
+            if (isDrmProtected || mediaUrl.Contains("widevine", StringComparison.OrdinalIgnoreCase) || mediaUrl.Contains("playready", StringComparison.OrdinalIgnoreCase))
             {
-                LoggingService.Log($"[MediaDownloadService] Rejecting DRM stream: {mediaUrl}");
+                LoggingService.Log($"[MediaDownloadService] Rejecting DRM stream: {mediaUrl} (System: {drmSystem})");
                 return false;
             }
 
@@ -32,6 +44,7 @@ namespace EDM.Services
 
             var item = new MediaDownloadItem
             {
+                Title = !string.IsNullOrWhiteSpace(title) ? title : Path.GetFileName(mediaUrl),
                 MediaUrl = mediaUrl,
                 MimeType = mimeType,
                 Category = category,
@@ -40,6 +53,11 @@ namespace EDM.Services
                 Format = ext,
                 SourcePage = sourcePage,
                 RequiresAuth = requiresAuth,
+                EncryptedCookies = encryptedCookies,
+                EncryptedAuthHeader = encryptedAuthHeader,
+                IsLive = isLive,
+                IsDrmProtected = isDrmProtected,
+                DrmSystem = drmSystem,
                 DownloadState = "Detected",
                 Selected = true
             };

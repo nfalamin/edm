@@ -4,7 +4,9 @@ using System.Windows.Threading;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 using CommunityToolkit.Mvvm.Input;
+using EDM.Helpers;
 using EDM.Models;
 using EDM.Services;
 using EDM.Services.History;
@@ -131,7 +133,7 @@ namespace EDM.ViewModels
         private static readonly string[] ProgramExts   = { ".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".appimage" };
         private static readonly string[] CompressedExts = { ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".tar.gz" };
 
-        private static bool HasExtension(string fileName, string[] extensions)
+        private static bool HasExtension(string? fileName, string[] extensions)
         {
             if (string.IsNullOrEmpty(fileName)) return false;
             string lower = fileName.ToLowerInvariant();
@@ -286,7 +288,7 @@ namespace EDM.ViewModels
         }
 
         /// <summary>
-        /// Delete selected or completed download items
+        /// Delete selected download items with full lifecycle cleanup (cancels active tasks, purges temp files, removes DB records)
         /// </summary>
         [RelayCommand]
         public void DeleteSelected()
@@ -294,7 +296,6 @@ namespace EDM.ViewModels
             var itemsToDelete = AllDownloads.Where(d => d.IsSelected).ToList();
             if (!itemsToDelete.Any() && AllDownloads.Any())
             {
-                // Delete first completed or last item if none explicitly selected
                 var target = AllDownloads.FirstOrDefault(d => d.Status == "Completed") ?? AllDownloads.LastOrDefault();
                 if (target != null) itemsToDelete.Add(target);
             }
@@ -302,13 +303,17 @@ namespace EDM.ViewModels
             foreach (var item in itemsToDelete)
             {
                 AllDownloads.Remove(item);
+                BackgroundTaskManager.FireAndForget($"DeleteDownload_{item.Id}", async () =>
+                {
+                    await DownloadLifecycleManager.Instance.DeleteDownloadAsync(item, deleteFileFromDisk: false).ConfigureAwait(false);
+                });
             }
             ApplyFilter();
             RecalculateMetrics();
         }
 
         /// <summary>
-        /// Delete a download item
+        /// Delete a download item with full lifecycle cleanup
         /// </summary>
         [RelayCommand]
         public void DeleteDownload(DownloadItem? download)
@@ -316,6 +321,11 @@ namespace EDM.ViewModels
             if (download == null) return;
 
             AllDownloads.Remove(download);
+            BackgroundTaskManager.FireAndForget($"DeleteDownload_{download.Id}", async () =>
+            {
+                await DownloadLifecycleManager.Instance.DeleteDownloadAsync(download, deleteFileFromDisk: false).ConfigureAwait(false);
+            });
+
             ApplyFilter();
             RecalculateMetrics();
         }
@@ -352,81 +362,172 @@ namespace EDM.ViewModels
             }
         }
 
+        private static bool IsYouTubeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                   (uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase) ||
+                    url.Contains("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+                    url.Contains("youtu.be", StringComparison.OrdinalIgnoreCase));
+        }
+
         /// <summary>
         /// Runs real download via DownloadService, using item's own PauseSource and CancellationToken.
-        /// Falls back to smooth simulated progress loop if DownloadService is unavailable.
         /// </summary>
         public async Task StartDownloadProcessAsync(DownloadItem item)
         {
-            if (item == null) return;
+            if (item == null || string.IsNullOrWhiteSpace(item.Url)) return;
+
+            item.Status = "Connecting...";
+            item.TransferRate = "0 B/s";
+            item.TimeLeft = "Calculating...";
+            RecalculateMetrics();
 
             var downloadService = (App.ServiceProvider?.GetService(typeof(DownloadService)) as DownloadService) ?? new DownloadService();
-            if (!string.IsNullOrWhiteSpace(item.Url) && !string.IsNullOrWhiteSpace(item.SavePath))
+            if (string.IsNullOrWhiteSpace(item.SavePath))
             {
-                var progress = new Progress<DownloadProgressInfo>(info =>
-                {
-                    System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        item.Progress = info.ProgressPercentage;
-                        if (info.TotalBytes.HasValue && info.TotalBytes.Value > 0)
-                        {
-                            item.Size = FormatBytes(info.TotalBytes.Value);
-                        }
-                        item.TransferRate = info.SpeedBytesPerSecond > 0 ? $"{info.SpeedBytesPerSecond / (1024.0 * 1024.0):F2} MB/s" : "0 B/s";
-                        item.TimeLeft = info.RemainingSeconds > 0 ? TimeSpan.FromSeconds(Math.Min(info.RemainingSeconds, 86400 * 30)).ToString(@"hh\:mm\:ss") : "Calculating...";
-                        if (info.ProgressPercentage >= 100 || info.IsCompleted)
-                        {
-                            item.Status = "Completed";
-                            item.TransferRate = "--";
-                            item.TimeLeft = "Completed";
-                        }
-                        RecalculateMetrics();
-                    });
-                });
+                string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                item.SavePath = Path.Combine(downloadsDir, string.IsNullOrWhiteSpace(item.FileName) ? "download.bin" : item.FileName);
+            }
 
+            var progress = new Progress<DownloadProgressInfo>(info =>
+            {
+                System.Windows.Application.Current?.Dispatcher?.InvokeAsync(() =>
+                {
+                    item.Progress = info.ProgressPercentage;
+                    if (info.TotalBytes.HasValue && info.TotalBytes.Value > 0)
+                    {
+                        item.Size = FormatBytes(info.TotalBytes.Value);
+                        item.TotalBytes = info.TotalBytes.Value;
+                    }
+                    item.DownloadedBytes = info.BytesReceived;
+
+                    if (info.SpeedBytesPerSecond >= 1024 * 1024)
+                        item.TransferRate = $"{info.SpeedBytesPerSecond / (1024.0 * 1024.0):F2} MB/s";
+                    else if (info.SpeedBytesPerSecond >= 1024)
+                        item.TransferRate = $"{info.SpeedBytesPerSecond / 1024.0:F1} KB/s";
+                    else if (info.SpeedBytesPerSecond > 0)
+                        item.TransferRate = $"{info.SpeedBytesPerSecond:F0} B/s";
+                    else
+                        item.TransferRate = "0 B/s";
+
+                    item.TimeLeft = info.RemainingSeconds > 0 
+                        ? TimeSpan.FromSeconds(Math.Min(info.RemainingSeconds, 86400 * 30)).ToString(@"hh\:mm\:ss") 
+                        : (info.IsCompleted ? "Completed" : "Calculating...");
+
+                    if (!string.IsNullOrWhiteSpace(info.Status))
+                    {
+                        item.Status = info.Status;
+                    }
+                    if (info.ProgressPercentage >= 100 || info.IsCompleted)
+                    {
+                        item.Status = "Completed";
+                        item.TransferRate = "--";
+                        item.TimeLeft = "Completed";
+                    }
+                    RecalculateMetrics();
+                });
+            });
+
+            string itemId = item.Id.ToString("N");
+            DownloadQueueScheduler.Instance.Enqueue(new QueuedDownloadItem
+            {
+                DownloadId = itemId,
+                Url = item.Url,
+                DestinationPath = item.SavePath,
+                TotalBytes = item.TotalBytes,
+                RemainingBytes = item.TotalBytes > item.DownloadedBytes ? item.TotalBytes - item.DownloadedBytes : item.TotalBytes,
+                Priority = DownloadPriority.Normal,
+                State = QueueItemState.Downloading
+            });
+
+            var task = Task.Run(async () =>
+            {
                 try
                 {
-                    // Execute real multi-segment download pipeline
                     await downloadService.StartDownloadAsync(
-                        item.Url,
-                        item.SavePath,
+                        item,
                         progress,
                         item.PauseSource,
                         () => -1,
                         item.CancellationToken
                     ).ConfigureAwait(false);
 
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    DownloadQueueScheduler.Instance.MarkCompleted(itemId);
+
+                    var disp = System.Windows.Application.Current?.Dispatcher;
+                    if (disp != null)
                     {
-                        item.Status = "Completed";
-                        item.Progress = 100.0;
-                        item.TransferRate = "--";
-                        item.TimeLeft = "Completed";
-                        RecalculateMetrics();
-                    });
+                        await disp.InvokeAsync(() =>
+                        {
+                            item.Status = "Completed";
+                            item.Progress = 100.0;
+                            item.TransferRate = "--";
+                            item.TimeLeft = "Completed";
+                            RecalculateMetrics();
+                        });
+                    }
                 }
                 catch (OperationCanceledException)
                 {
+                    DownloadQueueScheduler.Instance.MarkFailed(itemId);
                     LoggingService.Log($"[DownloadManagerViewModel] Download cancelled: {item.FileName}");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    var disp = System.Windows.Application.Current?.Dispatcher;
+                    if (disp != null)
                     {
-                        if (item.Status == "Downloading") item.Status = "Stopped";
-                        item.TransferRate = "0 B/s";
-                        RecalculateMetrics();
-                    });
+                        await disp.InvokeAsync(() =>
+                        {
+                            if (item.Status == "Downloading" || item.Status == "Connecting...") item.Status = "Stopped";
+                            item.TransferRate = "0 B/s";
+                            RecalculateMetrics();
+                        });
+                    }
                 }
                 catch (Exception ex)
                 {
+                    DownloadQueueScheduler.Instance.MarkFailed(itemId);
                     LoggingService.LogException($"[DownloadManagerViewModel] Download failed for {item.FileName}", ex);
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    var disp = System.Windows.Application.Current?.Dispatcher;
+                    if (disp != null)
                     {
-                        item.Status = "Error";
-                        item.TransferRate = "0 B/s";
-                        item.TimeLeft = "Failed";
-                        RecalculateMetrics();
-                    });
+                        await disp.InvokeAsync(() =>
+                        {
+                            if (ex is DownloadAuthenticationException authEx)
+                            {
+                                item.Status = authEx.GetDisplayStatus();
+                            }
+                            else if (ex.InnerException is DownloadAuthenticationException innerAuth)
+                            {
+                                item.Status = innerAuth.GetDisplayStatus();
+                            }
+                            else
+                            {
+                                item.Status = "Error";
+                            }
+                            item.TransferRate = "0 B/s";
+                            item.TimeLeft = "Failed";
+                            RecalculateMetrics();
+                        });
+                    }
                 }
-            }
+                finally
+                {
+                    // Auto-trigger next item from queue if slots available
+                    var nextQueued = DownloadQueueScheduler.Instance.TryGetNextDownloadToStart();
+                    if (nextQueued != null)
+                    {
+                        var nextItem = AllDownloads.FirstOrDefault(d => d.Id.ToString("N") == nextQueued.DownloadId);
+                        if (nextItem != null && (nextItem.Status == "Queued" || nextItem.Status == "Waiting"))
+                        {
+                            _ = StartDownloadProcessAsync(nextItem);
+                        }
+                    }
+                }
+            });
+
+            item.ActiveDownloadTask = task;
+            await task.ConfigureAwait(false);
         }
 
         // ==================== HISTORY LOADING ====================
@@ -469,94 +570,96 @@ namespace EDM.ViewModels
 
 
         /// <summary>
-        /// Delete all downloads from list and history database
+        /// Delete all downloads from list and history database with complete lifecycle cleanup
         /// </summary>
         [RelayCommand]
         public void DeleteAll()
         {
+            var itemsCopy = AllDownloads.ToList();
             AllDownloads.Clear();
             ApplyFilter();
             RecalculateMetrics();
 
-            Task.Run(async () =>
+            BackgroundTaskManager.FireAndForget("DeleteAllDownloads", async () =>
             {
                 try
                 {
+                    await DownloadLifecycleManager.Instance.DeleteDownloadsAsync(itemsCopy, deleteFilesFromDisk: false).ConfigureAwait(false);
                     var historyService = App.ServiceProvider?.GetService(typeof(HistoryService)) as HistoryService ?? new HistoryService();
                     await historyService.ClearHistoryAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogException("[DownloadManagerViewModel] Failed to clear DB history", ex);
+                    LoggingService.LogException("[DownloadManagerViewModel] Failed to clear downloads and DB history", ex);
                 }
             });
         }
 
         // ==================== METRICS UPDATE METHODS ====================
 
+        private long _lastMetricsTick = 0;
+        private int _metricsQueued = 0;
+
         /// <summary>
-        /// Recalculate all KPI metrics from the AllDownloads collection
-        /// Updates: TotalDownloadsCount, ActiveDownloadsCount, CompletedDownloadsCount, TotalSizeDownloaded
-        /// Uses Dispatcher to ensure UI thread safety for WPF binding updates
+        /// Recalculate all KPI metrics directly from the live AllDownloads collection.
+        /// Throttled to max 5 recalculation dispatches per second (200ms debounce) for ultra-high UI throughput.
         /// </summary>
-        public void RecalculateMetrics()
+        public void RecalculateMetrics(bool force = false)
         {
-            // Dispatch to UI thread for thread-safe property updates
-            Dispatcher.CurrentDispatcher?.BeginInvoke(() =>
+            long now = Environment.TickCount64;
+            if (!force && now - Interlocked.Read(ref _lastMetricsTick) < 200)
+            {
+                if (Interlocked.CompareExchange(ref _metricsQueued, 1, 0) == 0)
+                {
+                    Task.Delay(200).ContinueWith(_ =>
+                    {
+                        Interlocked.Exchange(ref _metricsQueued, 0);
+                        RecalculateMetricsInternal();
+                    });
+                }
+                return;
+            }
+            RecalculateMetricsInternal();
+        }
+
+        private void RecalculateMetricsInternal()
+        {
+            Interlocked.Exchange(ref _lastMetricsTick, Environment.TickCount64);
+            var app = System.Windows.Application.Current;
+            var dispatcher = app?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+            dispatcher?.BeginInvoke(DispatcherPriority.Background, () =>
             {
                 try
                 {
-                    // Count totals directly from live collection
                     int total = AllDownloads?.Count ?? 0;
-                    int active = AllDownloads?.Count(d => d.Status != null && d.Status.Contains("Downloading")) ?? 0;
-                    int completed = AllDownloads?.Count(d => d.Status != null && d.Status.Contains("Completed")) ?? 0;
+                    int active = AllDownloads?.Count(d => d.Status != null && d.Status.Contains("Downloading", StringComparison.OrdinalIgnoreCase)) ?? 0;
+                    int completed = AllDownloads?.Count(d => d.Status != null && d.Status.Contains("Completed", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
-                    // Calculate real total downloaded bytes from live items
-                    double totalBytes = 0;
+                    long sumBytes = 0;
                     if (AllDownloads != null)
                     {
                         foreach (var item in AllDownloads)
                         {
-                            if (item == null) continue;
-                            double bytes = ParseSizeToBytes(item.Size);
-                            if (item.Status != null && item.Status.Contains("Completed"))
+                            if (item != null && item.DownloadedBytes > 0)
                             {
-                                totalBytes += bytes;
+                                sumBytes += item.DownloadedBytes;
                             }
-                            else if (bytes > 0 && item.Progress > 0)
+                            else if (item != null && item.Status != null && item.Status.Contains("Completed", StringComparison.OrdinalIgnoreCase))
                             {
-                                totalBytes += bytes * (item.Progress / 100.0);
+                                sumBytes += SizeFormatter.ParseToBytes(item.Size);
                             }
                         }
                     }
 
-                    string sizeFmt;
-                    if (totalBytes >= 1024L * 1024 * 1024)
-                    {
-                        sizeFmt = $"{totalBytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
-                    }
-                    else if (totalBytes >= 1024 * 1024)
-                    {
-                        sizeFmt = $"{totalBytes / (1024.0 * 1024.0):F1} MB";
-                    }
-                    else if (totalBytes >= 1024)
-                    {
-                        sizeFmt = $"{totalBytes / 1024.0:F0} KB";
-                    }
-                    else
-                    {
-                        sizeFmt = $"{totalBytes:F0} B";
-                    }
-
-                    // Update properties
                     TotalDownloadsCount = total;
                     ActiveDownloadsCount = active;
                     CompletedDownloadsCount = completed;
-                    TotalSizeDownloaded = sizeFmt;
+                    TotalSizeDownloaded = sumBytes > 0 ? SizeFormatter.FormatBytes(sumBytes, "0 B") : "0 B";
+
+                    DownloadMetricsService.Instance.SetActiveDownloadsCount(active);
                 }
                 catch (Exception ex)
                 {
-                    // Log error, don't crash UI
                     System.Diagnostics.Debug.WriteLine($"Error in RecalculateMetrics: {ex.Message}");
                 }
             });
@@ -564,40 +667,13 @@ namespace EDM.ViewModels
 
         public static string FormatBytes(long bytes)
         {
-            if (bytes >= 1024L * 1024 * 1024)
-                return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
-            if (bytes >= 1024 * 1024)
-                return $"{bytes / (1024.0 * 1024.0):F1} MB";
-            if (bytes >= 1024)
-                return $"{bytes / 1024.0:F0} KB";
-            return $"{bytes} B";
+            return SizeFormatter.FormatBytes(bytes, "0 B");
         }
 
         private static double ParseSizeToBytes(string? sizeStr)
         {
-            if (string.IsNullOrWhiteSpace(sizeStr)) return 0;
-            string s = sizeStr.Trim();
-            if (s.EndsWith("GB", StringComparison.OrdinalIgnoreCase))
-            {
-                if (double.TryParse(s[..^2].Trim(), out double gb)) return gb * 1024.0 * 1024.0 * 1024.0;
-            }
-            else if (s.EndsWith("MB", StringComparison.OrdinalIgnoreCase))
-            {
-                if (double.TryParse(s[..^2].Trim(), out double mb)) return mb * 1024.0 * 1024.0;
-            }
-            else if (s.EndsWith("KB", StringComparison.OrdinalIgnoreCase))
-            {
-                if (double.TryParse(s[..^2].Trim(), out double kb)) return kb * 1024.0;
-            }
-            else if (s.EndsWith("B", StringComparison.OrdinalIgnoreCase))
-            {
-                if (double.TryParse(s[..^1].Trim(), out double b)) return b;
-            }
-            else if (double.TryParse(s, out double val))
-            {
-                return val;
-            }
-            return 0;
+            long bytes = SizeFormatter.ParseToBytes(sizeStr);
+            return bytes > 0 ? bytes : 0;
         }
 
         /// <summary>

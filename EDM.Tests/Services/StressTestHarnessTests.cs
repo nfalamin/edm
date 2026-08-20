@@ -13,7 +13,7 @@ namespace EDM.Tests.Services
         public async Task RunFullStressTestSuite_ExecutesCleanly()
         {
             // Act
-            await StressTestProgram.Main(Array.Empty<string>());
+            await StressTestProgram.RunStressTestAsync(Array.Empty<string>());
 
             // Assert
             Assert.True(true);

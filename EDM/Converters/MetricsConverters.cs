@@ -84,4 +84,61 @@ namespace EDM.Converters
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// Converts raw byte counts into human readable B, KB, MB, GB, TB format using SizeFormatter.
+    /// </summary>
+    public class BytesToHumanSizeConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is long bytes)
+            {
+                return EDM.Helpers.SizeFormatter.FormatBytes(bytes, "0 B");
+            }
+            if (value is int intBytes)
+            {
+                return EDM.Helpers.SizeFormatter.FormatBytes(intBytes, "0 B");
+            }
+            if (value is double dBytes)
+            {
+                return EDM.Helpers.SizeFormatter.FormatBytes((long)Math.Max(0, dBytes), "0 B");
+            }
+            if (value is string s && long.TryParse(s, out long parsed))
+            {
+                return EDM.Helpers.SizeFormatter.FormatBytes(parsed, "0 B");
+            }
+
+            return "0 B";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// Returns Visible when count is 0 (or null/empty collection), otherwise Collapsed.
+    /// </summary>
+    public class EmptyCountToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is int count)
+            {
+                return count == 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            }
+            if (value is System.Collections.ICollection coll)
+            {
+                return coll.Count == 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            }
+            return System.Windows.Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

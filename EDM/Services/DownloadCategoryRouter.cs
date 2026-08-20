@@ -75,11 +75,31 @@ namespace EDM.Services
 
         public CategoryRule DetermineCategory(string filename)
         {
+            return DetermineCategory(filename, null, null, null);
+        }
+
+        public CategoryRule DetermineCategory(string filename, string? contentType, string? url = null, byte[]? headerBytes = null)
+        {
+            var detected = FileTypeDetector.DetectFromSignals(filename, contentType, url, headerBytes);
+
+            string targetCategoryName = detected switch
+            {
+                DetectedFileType.Compressed => "Compressed",
+                DetectedFileType.Video => "Video",
+                DetectedFileType.Audio => "Music",
+                DetectedFileType.Documents => "Documents",
+                DetectedFileType.Programs => "Programs",
+                _ => "General"
+            };
+
+            var match = _categories.FirstOrDefault(c => c.Name.Equals(targetCategoryName, StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match;
+
             string ext = Path.GetExtension(filename);
             if (!string.IsNullOrEmpty(ext))
             {
-                var match = _categories.FirstOrDefault(c => c.Extensions.Contains(ext));
-                if (match != null) return match;
+                var extMatch = _categories.FirstOrDefault(c => c.Extensions.Contains(ext));
+                if (extMatch != null) return extMatch;
             }
 
             return new CategoryRule

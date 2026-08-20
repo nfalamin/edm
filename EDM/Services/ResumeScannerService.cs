@@ -43,28 +43,49 @@ namespace EDM.Services
                             var metaPath = Path.Combine(dir, "metadata.json");
                             if (!File.Exists(metaPath)) continue;
 
-                            var raw = await File.ReadAllTextAsync(metaPath).ConfigureAwait(false);
-                            // DownloadMetadata is internal in MultiPartDownloader; same namespace allows access
-                            var meta = JsonSerializer.Deserialize<DownloadMetadata>(raw);
-                            if (meta == null) continue;
+                            // 1. Try reading via DurableMetadataManager (Schema v1-v3)
+                            var metaManager = new DurableMetadataManager();
+                            var state = await metaManager.ReadStateAsync(metaPath, CancellationToken.None).ConfigureAwait(false);
 
-                            // basic sanity checks
-                            if (string.IsNullOrWhiteSpace(meta.Destination)) continue;
-
-                            var item = new DownloadItem
+                            if (state != null && !string.IsNullOrWhiteSpace(state.DestinationPath))
                             {
-                                Url = meta.Url ?? string.Empty,
-                                SavePath = meta.Destination,
-                                FileName = Path.GetFileName(meta.Destination) ?? string.Empty,
-                                Status = "Resumable",
-                                Description = "Found partial download; resume available",
-                                LastTryDate = DateTime.Now.ToString("MMM dd, yyyy")
-                            };
+                                long downloaded = state.Segments?.Sum(s => s.BytesDownloaded) ?? 0;
+                                double progress = state.TotalBytes > 0 ? (downloaded * 100.0 / state.TotalBytes) : 0;
 
-                            // attach a metadata helper path so the UI can find meta dir for cleanup or resume
-                            try { item.Description += $" (meta: {Path.GetFileName(dir)})"; } catch (Exception ex) { LoggingService.Log($"[ResumeScannerService] Failed to append meta description for {dir}: {ex.Message}"); }
+                                var item = new DownloadItem
+                                {
+                                    Id = Guid.TryParse(state.DownloadId, out var gid) ? gid : Guid.NewGuid(),
+                                    Url = !string.IsNullOrWhiteSpace(state.Url) ? state.Url : state.OriginalUrl,
+                                    SavePath = state.DestinationPath,
+                                    FileName = !string.IsNullOrWhiteSpace(state.Filename) ? state.Filename : (Path.GetFileName(state.DestinationPath) ?? "download.bin"),
+                                    Status = "Paused",
+                                    DownloadedBytes = downloaded,
+                                    TotalBytes = state.TotalBytes,
+                                    Progress = progress,
+                                    Size = FormatBytes(state.TotalBytes),
+                                    Description = $"Recoverable partial download ({progress:F1}%)",
+                                    LastTryDate = state.LastUpdatedTimeUtc.ToLocalTime().ToString("MMM dd, yyyy")
+                                };
+                                result.Add(item);
+                                continue;
+                            }
 
-                            result.Add(item);
+                            // 2. Legacy fallback
+                            var raw = await File.ReadAllTextAsync(metaPath).ConfigureAwait(false);
+                            var meta = JsonSerializer.Deserialize<DownloadMetadata>(raw);
+                            if (meta != null && !string.IsNullOrWhiteSpace(meta.Destination))
+                            {
+                                var item = new DownloadItem
+                                {
+                                    Url = meta.Url ?? string.Empty,
+                                    SavePath = meta.Destination,
+                                    FileName = Path.GetFileName(meta.Destination) ?? string.Empty,
+                                    Status = "Paused",
+                                    Description = "Found partial download; resume available",
+                                    LastTryDate = DateTime.Now.ToString("MMM dd, yyyy")
+                                };
+                                result.Add(item);
+                            }
                         }
                         catch (Exception ex) { LoggingService.Log($"[ResumeScannerService] Processing meta dir {dir} failed: {ex.Message}"); }
                     }
@@ -73,6 +94,20 @@ namespace EDM.Services
             catch (Exception ex) { LoggingService.Log($"[ResumeScannerService] FindResumableDownloadsAsync failed: {ex.Message}"); }
 
             return result;
+        }
+
+        private static string FormatBytes(long bytes)
+        {
+            if (bytes <= 0) return "0 B";
+            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+            int i = 0;
+            double dbl = bytes;
+            while (dbl >= 1024 && i < suffixes.Length - 1)
+            {
+                dbl /= 1024.0;
+                i++;
+            }
+            return $"{dbl:0.##} {suffixes[i]}";
         }
     }
 }

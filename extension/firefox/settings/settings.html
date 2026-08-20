@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDM Extension Settings</title>
+    <link rel="stylesheet" href="../src/ui/theme.css">
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <div class="edm-settings-app">
+        <!-- Sidebar Navigation -->
+        <aside class="edm-settings-sidebar">
+            <div class="edm-sidebar-brand">
+                <img src="../icons/icon-48.png" alt="EDM" class="edm-brand-logo">
+                <div class="edm-brand-titles">
+                    <span class="edm-brand-main">Exclusive Download Manager</span>
+                    <span class="edm-brand-sub">Extension Settings v1.0.0</span>
+                </div>
+            </div>
+
+            <nav class="edm-sidebar-nav">
+                <button class="edm-nav-item active" data-tab="general">
+                    <span class="edm-nav-icon">⚙️</span>
+                    <span>General & Interception</span>
+                </button>
+                <button class="edm-nav-item" data-tab="filetypes">
+                    <span class="edm-nav-icon">📁</span>
+                    <span>File Types & Filters</span>
+                </button>
+                <button class="edm-nav-item" data-tab="media">
+                    <span class="edm-nav-icon">🎬</span>
+                    <span>Video Sniffer & Overlay</span>
+                </button>
+                <button class="edm-nav-item" data-tab="theme">
+                    <span class="edm-nav-icon">🎨</span>
+                    <span>Appearance & Theme</span>
+                </button>
+                <button class="edm-nav-item" data-tab="diagnostics">
+                    <span class="edm-nav-icon">🔍</span>
+                    <span>Native Diagnostics</span>
+                </button>
+            </nav>
+
+            <div class="edm-sidebar-footer">
+                <a href="../dashboard/dashboard.html" class="edm-btn-secondary" style="width: 100%;">
+                    Open Web Dashboard ↗
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Settings Content Area -->
+        <main class="edm-settings-main">
+            <!-- 1. General Settings -->
+            <section class="edm-tab-content active" id="tab-general">
+                <div class="edm-page-header">
+                    <h2>General & Download Interception</h2>
+                    <p class="edm-text-muted">Configure how EDM intercepts browser downloads and communicates with desktop app.</p>
+                </div>
+
+                <div class="edm-card-group">
+                    <div class="edm-glass-card edm-setting-row">
+                        <div class="edm-setting-info">
+                            <div class="edm-setting-title">Auto-Capture Browser Downloads</div>
+                            <div class="edm-setting-desc">Automatically route matching file downloads to Exclusive Download Manager.</div>
+                        </div>
+                        <label class="edm-switch">
+                            <input type="checkbox" id="settingAutoCapture" checked>
+                            <span class="edm-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="edm-glass-card edm-setting-row">
+                        <div class="edm-setting-info">
+                            <div class="edm-setting-title">Alt-Key Quick Bypass</div>
+                            <div class="edm-setting-desc">Holding the <kbd>Alt</kbd> key while clicking a download link bypasses EDM and uses the browser default downloader.</div>
+                        </div>
+                        <label class="edm-switch">
+                            <input type="checkbox" id="settingAltBypass" checked>
+                            <span class="edm-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="edm-glass-card edm-setting-row">
+                        <div class="edm-setting-info">
+                            <div class="edm-setting-title">Duplicate Interception Guard</div>
+                            <div class="edm-setting-desc">Prevent multiple download dialogs when clicking links rapidly (3000ms sliding protection).</div>
+                        </div>
+                        <label class="edm-switch">
+                            <input type="checkbox" id="settingDedupGuard" checked>
+                            <span class="edm-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. File Types -->
+            <section class="edm-tab-content" id="tab-filetypes">
+                <div class="edm-page-header">
+                    <h2>File Types & Filters</h2>
+                    <p class="edm-text-muted">Specify which file extensions should be intercepted automatically by EDM.</p>
+                </div>
+
+                <div class="edm-glass-card edm-card-padded">
+                    <div class="edm-input-group">
+                        <input type="text" id="newExtInput" class="edm-input" placeholder="e.g. mkv, dmg, torrent">
+                        <button id="addExtBtn" class="edm-btn-primary">+ Add Extension</button>
+                    </div>
+
+                    <div class="edm-chips-container" id="extChipsContainer">
+                        <!-- Populated dynamically via settings.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Video Sniffer -->
+            <section class="edm-tab-content" id="tab-media">
+                <div class="edm-page-header">
+                    <h2>Video Sniffer & Overlay Bar</h2>
+                    <p class="edm-text-muted">Configure in-page floating download pills and player detection thresholds.</p>
+                </div>
+
+                <div class="edm-card-group">
+                    <div class="edm-glass-card edm-setting-row">
+                        <div class="edm-setting-info">
+                            <div class="edm-setting-title">Show In-Page Floating Download Bar</div>
+                            <div class="edm-setting-desc">Displays a sleek download pill snapped to active video players (YouTube, Vimeo, etc.).</div>
+                        </div>
+                        <label class="edm-switch">
+                            <input type="checkbox" id="settingFloatingBar" checked>
+                            <span class="edm-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="edm-glass-card edm-setting-row">
+                        <div class="edm-setting-info">
+                            <div class="edm-setting-title">Ignore Video Thumbnails & Small Previews</div>
+                            <div class="edm-setting-desc">Prevents false-positive popups on video elements smaller than 160×100 pixels.</div>
+                        </div>
+                        <label class="edm-switch">
+                            <input type="checkbox" id="settingIgnoreThumbnails" checked>
+                            <span class="edm-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Appearance & Theme -->
+            <section class="edm-tab-content" id="tab-theme">
+                <div class="edm-page-header">
+                    <h2>Appearance & Theme</h2>
+                    <p class="edm-text-muted">Customize color theme and visual presentation.</p>
+                </div>
+
+                <div class="edm-glass-card edm-card-padded">
+                    <label class="edm-form-label">Theme Mode</label>
+                    <select id="themeSelect" class="edm-select" style="width: 240px;">
+                        <option value="dark">Dark Theme (Default)</option>
+                        <option value="light">Light Theme</option>
+                        <option value="system">Follow System Theme</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- 5. Diagnostics -->
+            <section class="edm-tab-content" id="tab-diagnostics">
+                <div class="edm-page-header">
+                    <h2>Native Host Diagnostics</h2>
+                    <p class="edm-text-muted">Verify IPC connection to EDM.NativeHost.exe and desktop background engine.</p>
+                </div>
+
+                <div class="edm-glass-card edm-card-padded">
+                    <div class="edm-diag-status-card">
+                        <div class="edm-diag-indicator">
+                            <span class="edm-status-dot edm-status-online" id="diagStatusDot"></span>
+                            <span id="diagStatusText">Checking Native Host...</span>
+                        </div>
+                        <button id="testConnectionBtn" class="edm-btn-primary">Ping Native Host</button>
+                    </div>
+
+                    <div class="edm-diag-console" id="diagConsole">
+                        [EDM DIAGNOSTICS] Ready to test native messaging pipeline.
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="settings.js"></script>
+</body>
+</html>

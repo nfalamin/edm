@@ -61,89 +61,295 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="12,0,0,0">
 
-                    <!-- Light Mode Button -->
-                    <Button x:Name="LightModeBtn" Click="LightModeBtn_Click"
+                    <!-- AI Assistant Button (🤖) -->
+                    <Button x:Name="TopAiBtn" Click="TopAiBtn_Click"
                             Width="36" Height="36" Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" ToolTip="Switch to Light Mode" Margin="0,0,6,0">
+                            Cursor="Hand" ToolTip="EDM AI Assistant (Offline Chat &amp; Diagnostics)" Margin="0,0,6,0">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="LightBrd" Background="{DynamicResource CardInputBg}" 
+                                <Border x:Name="AiBrd" Background="{DynamicResource CardInputBg}" 
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
                                         Width="36" Height="36" CornerRadius="10">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
+                                        <DropShadowEffect Color="#8B4DFF" BlurRadius="8" ShadowDepth="1" Opacity="0.4"/>
                                     </Border.Effect>
-                                    <TextBlock Text="☀️" FontSize="15" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Text="🤖" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="LightBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
-                                        <Setter TargetName="LightBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter TargetName="AiBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="AiBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
 
-                    <!-- Dark Mode Button (Active Glow) -->
-                    <Button x:Name="DarkModeBtn" Click="DarkModeBtn_Click"
+                    <!-- Language Selector Button (🌐) with Flyout -->
+                    <Grid Margin="0,0,6,0">
+                        <Button x:Name="LanguageBtn" Click="LanguageBtn_Click"
+                                Width="36" Height="36" Background="Transparent" BorderThickness="0"
+                                Cursor="Hand" ToolTip="Language">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="LangBrd" Background="{DynamicResource CardInputBg}" 
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                            Width="36" Height="36" CornerRadius="10">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="🌐" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="LangBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                            <Setter TargetName="LangBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Language Selection Popup -->
+                        <Popup x:Name="LanguagePopup" StaysOpen="False" AllowsTransparency="True"
+                               PlacementTarget="{Binding ElementName=LanguageBtn}" Placement="Bottom"
+                               HorizontalOffset="-180" VerticalOffset="8">
+                            <Border Width="240" Background="{DynamicResource SecondaryBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="12" Padding="10">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.35"/>
+                                </Border.Effect>
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="Select Language" FontWeight="Bold" FontSize="12" 
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="8,4,8,8"/>
+
+                                    <Button Tag="en-US" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇺🇸" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="English (US)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="bn-BD" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇧🇩" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="বাংলা (Bengali)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="hi-IN" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇮🇳" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="हिन्दी (Hindi)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="te-IN" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇮🇳" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="తెలుగు (Telugu)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="es-ES" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇪🇸" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Español (Spanish)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="ar-SA" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇸🇦" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="العربية (Arabic) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="ur-PK" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇵🇰" FontSize="14" Margin="0,0,10,0"/>
+                                            <TextBlock Text="اردو (Urdu) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
+                    <!-- Help / Support Button (❓) -->
+                    <Button x:Name="TopSupportBtn" Click="TopSupportBtn_Click"
                             Width="36" Height="36" Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" ToolTip="Switch to Dark Mode" Margin="0,0,8,0">
+                            Cursor="Hand" ToolTip="Support &amp; Help Center" Margin="0,0,6,0">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="DarkBrd" Background="{DynamicResource CardInputBg}" 
-                                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" 
+                                <Border x:Name="SupportBrd" Background="{DynamicResource CardInputBg}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
                                         Width="36" Height="36" CornerRadius="10">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="#2E86FF" BlurRadius="8" ShadowDepth="1" Opacity="0.4"/>
+                                        <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
                                     </Border.Effect>
-                                    <TextBlock Text="🌙" FontSize="15" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Text="❓" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="DarkBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
-                                        <Setter TargetName="DarkBrd" Property="BorderBrush" Value="#8B4DFF"/>
+                                        <Setter TargetName="SupportBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="SupportBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
 
-                    <!-- Notification Bell (Vibrant & High Contrast) -->
-                    <Button x:Name="NotificationBtn" Click="Notification_Click"
+                    <!-- About EDM Button (ℹ️) -->
+                    <Button x:Name="TopAboutBtn" Click="TopAboutBtn_Click"
                             Width="36" Height="36" Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" ToolTip="Notifications" Margin="0,0,10,0">
+                            Cursor="Hand" ToolTip="About EDM &amp; Version History" Margin="0,0,6,0">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="NotifBrd" Background="{DynamicResource CardInputBg}" 
+                                <Border x:Name="AboutBrd" Background="{DynamicResource CardInputBg}" 
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
                                         Width="36" Height="36" CornerRadius="10">
                                     <Border.Effect>
                                         <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
                                     </Border.Effect>
-                                    <Grid>
+                                    <TextBlock Text="ℹ️" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="AboutBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="AboutBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Settings Button (Gear) -->
+                    <Button x:Name="TopSettingsBtn" Click="TopSettingsBtn_Click"
+                            Width="36" Height="36" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Settings" Margin="0,0,6,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="SettingsBrd" Background="{DynamicResource CardInputBg}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                        Width="36" Height="36" CornerRadius="10">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
+                                    </Border.Effect>
+                                    <TextBlock Text="⚙️" FontSize="15" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="SettingsBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="SettingsBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Theme Toggle Button (Light/Dark Switch) -->
+                    <Button x:Name="ThemeToggleBtn" Click="ThemeToggle_Click"
+                            Width="36" Height="36" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Toggle Theme" Margin="0,0,6,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="ThemeBrd" Background="{DynamicResource CardInputBg}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                        Width="36" Height="36" CornerRadius="10">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
+                                    </Border.Effect>
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="ThemeBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="ThemeBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock x:Name="ThemeIconText" Text="🌙" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+
+                    <!-- Notification Bell with Flyout Popup -->
+                    <Grid Margin="0,0,10,0">
+                        <Button x:Name="NotificationBtn" Click="Notification_Click"
+                                Width="36" Height="36" Background="Transparent" BorderThickness="0"
+                                Cursor="Hand" ToolTip="Notifications">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="NotifBrd" Background="{DynamicResource CardInputBg}" 
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                            Width="36" Height="36" CornerRadius="10">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
+                                        </Border.Effect>
                                         <TextBlock Text="🔔" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        <Grid x:Name="NotificationBadgeGrid" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0">
-                                            <Ellipse Width="14" Height="14" Fill="#EF4444"/>
-                                            <TextBlock x:Name="NotificationCountText" Text="0" FontSize="8" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="NotifBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                            <Setter TargetName="NotifBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Notification Badge Overlay -->
+                        <Grid x:Name="NotificationBadgeGrid" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" IsHitTestVisible="False">
+                            <Ellipse Width="14" Height="14" Fill="#EF4444"/>
+                            <TextBlock x:Name="NotificationCountText" Text="0" FontSize="8" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Notification Flyout Popup -->
+                        <Popup x:Name="NotificationPopup" StaysOpen="False" AllowsTransparency="True"
+                               PlacementTarget="{Binding ElementName=NotificationBtn}" Placement="Bottom"
+                               HorizontalOffset="-260" VerticalOffset="8">
+                            <Border Width="320" MaxHeight="400" Background="{DynamicResource SecondaryBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="12" Padding="14">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.3"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Popup Header -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Notifications" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Content="Mark all read" FontSize="11" Foreground="{DynamicResource AccentBrush}"
+                                                    Background="Transparent" BorderThickness="0" Cursor="Hand" Click="MarkAllRead_Click" Margin="0,0,8,0"/>
+                                            <Button Content="Clear" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                                                    Background="Transparent" BorderThickness="0" Cursor="Hand" Click="ClearNotifications_Click"/>
+                                        </StackPanel>
                                     </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="NotifBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
-                                        <Setter TargetName="NotifBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+
+                                    <!-- Notifications List -->
+                                    <ScrollViewer Grid.Row="1" MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel x:Name="NotificationListPanel" Orientation="Vertical">
+                                            <TextBlock x:Name="EmptyNotificationText" Text="No notifications yet." Foreground="{DynamicResource SecondaryTextBrush}"
+                                                       FontSize="12" HorizontalAlignment="Center" Margin="0,20"/>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <!-- Profile Pill -->
-                    <Border Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            CornerRadius="20" Padding="8,5" Cursor="Hand" ToolTip="User Account">
+                    <Border x:Name="ProfilePillBorder" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="20" Padding="8,5" Cursor="Hand" ToolTip="User Account &amp; License"
+                            MouseLeftButtonUp="ProfilePill_Click">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>

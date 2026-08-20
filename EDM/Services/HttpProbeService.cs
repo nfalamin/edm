@@ -38,15 +38,33 @@ namespace EDM.Services
             _httpClient = httpClient ?? SharedHttpClient.Instance;
         }
 
+        public Task<HttpProbeResult> ProbeUrlAsync(
+            string url,
+            string savePath,
+            DownloadCredentials? credentials,
+            string? cookies,
+            CancellationToken cancellationToken)
+        {
+            return ProbeUrlAsync(url, savePath, credentials, cookies, null, null, null, cancellationToken);
+        }
+
         public async Task<HttpProbeResult> ProbeUrlAsync(
             string url,
             string savePath,
             DownloadCredentials? credentials = null,
             string? cookies = null,
+            string? userAgent = null,
+            string? referer = null,
+            string? authHeader = null,
             CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Download URL is empty.", nameof(url));
+
+            if (DownloadService.IsVideoStreamingUrl(url))
+            {
+                throw new InvalidOperationException($"'{url}' is a streaming media page and cannot be probed as a direct file. Use media resolution engine.");
+            }
 
             if (!FileNamingHelper.TryCreateHttpUri(url.Trim(), out var requestUri) || requestUri == null)
             {
@@ -62,9 +80,16 @@ namespace EDM.Services
             }
 
             string? directory = Path.GetDirectoryName(savePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            try
             {
-                Directory.CreateDirectory(directory);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Log($"[HttpProbeService] Directory creation check failed: {ex.Message}");
             }
 
             long? totalBytes = null;
@@ -74,24 +99,79 @@ namespace EDM.Services
             DateTimeOffset? capturedLastModified = null;
             Uri? finalUri = null;
 
+            void ApplyProbeHeaders(HttpRequestMessage req)
+            {
+                if (!string.IsNullOrWhiteSpace(userAgent))
+                {
+                    string cleanUa = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(userAgent);
+                    req.Headers.Remove("User-Agent");
+                    req.Headers.TryAddWithoutValidation("User-Agent", cleanUa);
+                }
+                if (!string.IsNullOrWhiteSpace(referer))
+                {
+                    string cleanRef = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(referer);
+                    if (Uri.TryCreate(cleanRef, UriKind.Absolute, out var refUri))
+                    {
+                        req.Headers.Referrer = refUri;
+                    }
+                }
+                if (credentials != null && !credentials.IsEmpty)
+                {
+                    req.Headers.Authorization = credentials.ToBasicAuthHeader();
+                }
+                else if (!string.IsNullOrWhiteSpace(authHeader))
+                {
+                    string cleanAuth = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(authHeader);
+                    var parts = cleanAuth.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 2)
+                    {
+                        req.Headers.Authorization = new AuthenticationHeaderValue(parts[0], parts[1]);
+                    }
+                    else
+                    {
+                        req.Headers.TryAddWithoutValidation("Authorization", cleanAuth);
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(cookies))
+                {
+                    string cleanCookies = HttpHeaderSecuritySanitizer.SanitizeHeaderValue(cookies);
+                    if (cleanCookies.Length > 16384) cleanCookies = cleanCookies.Substring(0, 16384);
+                    req.Headers.TryAddWithoutValidation("Cookie", cleanCookies);
+                }
+            }
+
             // Step 1: Initial GET/HEAD probe with retry for transient server failures
             HttpResponseMessage? response = null;
             for (int attempt = 0; attempt < 4; attempt++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 using var probeReq = new HttpRequestMessage(HttpMethod.Get, requestUri);
-                if (credentials != null && !credentials.IsEmpty)
-                {
-                    probeReq.Headers.Authorization = credentials.ToBasicAuthHeader();
-                }
-                if (!string.IsNullOrWhiteSpace(cookies))
-                {
-                    probeReq.Headers.TryAddWithoutValidation("Cookie", cookies);
-                }
+                ApplyProbeHeaders(probeReq);
 
                 try
                 {
                     response = await _httpClient.SendAsync(probeReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    
+                    if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        response.Dispose();
+                        throw new DownloadAuthenticationException(
+                            AuthenticationErrorType.AuthenticationRequired,
+                            $"Authentication required (401) during probe for '{requestUri.Host}'.",
+                            HttpStatusCode.Unauthorized,
+                            requestUri);
+                    }
+
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        response.Dispose();
+                        throw new DownloadAuthenticationException(
+                            AuthenticationErrorType.Forbidden,
+                            $"Access forbidden (403) during probe for '{requestUri.Host}'.",
+                            HttpStatusCode.Forbidden,
+                            requestUri);
+                    }
+
                     int code = (int)response.StatusCode;
                     if (code == 500 || code == 502 || code == 503 || code == 504 || code == 408 || code == 429)
                     {
@@ -137,18 +217,28 @@ namespace EDM.Services
             {
                 using var rangeReq = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 rangeReq.Headers.Range = new RangeHeaderValue(0, 1);
-                if (credentials != null && !credentials.IsEmpty)
-                {
-                    rangeReq.Headers.Authorization = credentials.ToBasicAuthHeader();
-                }
-                if (!string.IsNullOrWhiteSpace(cookies))
-                {
-                    rangeReq.Headers.TryAddWithoutValidation("Cookie", cookies);
-                }
+                ApplyProbeHeaders(rangeReq);
 
                 using var rangeResp = await _httpClient.SendAsync(rangeReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 serverSupportsResume = (rangeResp.StatusCode == HttpStatusCode.PartialContent);
-                LoggingService.Log($"[HttpProbeService] Robust Range probe (Range: bytes=0-1) => StatusCode: {rangeResp.StatusCode}, Confirmed 206 Resume: {serverSupportsResume}");
+
+                if (serverSupportsResume)
+                {
+                    if ((!totalBytes.HasValue || totalBytes.Value <= 0) && rangeResp.Content.Headers.ContentRange?.Length.HasValue == true)
+                    {
+                        totalBytes = rangeResp.Content.Headers.ContentRange.Length.Value;
+                        LoggingService.Log($"[HttpProbeService] Total file size extracted from Content-Range: {totalBytes.Value} bytes");
+                    }
+                    if (string.IsNullOrEmpty(capturedETag) && rangeResp.Headers.ETag != null)
+                    {
+                        capturedETag = rangeResp.Headers.ETag.Tag;
+                    }
+                    if (!capturedLastModified.HasValue && rangeResp.Content.Headers.LastModified.HasValue)
+                    {
+                        capturedLastModified = rangeResp.Content.Headers.LastModified;
+                    }
+                }
+                LoggingService.Log($"[HttpProbeService] Robust Range probe (Range: bytes=0-1) => StatusCode: {rangeResp.StatusCode}, Confirmed 206 Resume: {serverSupportsResume}, TotalBytes: {totalBytes}");
             }
             catch (Exception ex)
             {
@@ -210,7 +300,7 @@ namespace EDM.Services
             {
                 RequestUri = requestUri,
                 FinalUri = finalUri,
-                SavePath = savePath,
+                SavePath = savePath ?? string.Empty,
                 TotalBytes = totalBytes,
                 ServerSupportsResume = serverSupportsResume,
                 ContentDisposition = capturedCd,

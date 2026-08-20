@@ -28,10 +28,10 @@ namespace EDM.ControlPlane.Api.Services
         private readonly ControlPlaneDbContext _dbContext;
         private readonly IPrivacySafeDeviceService _deviceService;
 
-        public AuditLoggingService(ControlPlaneDbContext dbContext, IPrivacySafeDeviceService deviceService)
+        public AuditLoggingService(ControlPlaneDbContext dbContext, IPrivacySafeDeviceService? deviceService = null)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-            _deviceService = deviceService ?? throw new ArgumentNullException(nameof(deviceService));
+            _deviceService = deviceService ?? new PrivacySafeDeviceService();
         }
 
         public async Task LogActionAsync(

@@ -8,29 +8,43 @@ namespace EDM.Services
 {
     public class AntivirusScannerService
     {
-        private static readonly string[] PossibleDefenderPaths = new[]
+        public static string? ResolveDefenderExecutable()
         {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Windows Defender", "MpCmdRun.exe"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Defender", "MpCmdRun.exe"),
-            @"C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.23050.5-0\MpCmdRun.exe"
-        };
+            // 1. Check Standard Program Files locations
+            string progFiles = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Windows Defender", "MpCmdRun.exe");
+            if (File.Exists(progFiles)) return progFiles;
+
+            string progFilesX86 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Defender", "MpCmdRun.exe");
+            if (File.Exists(progFilesX86)) return progFilesX86;
+
+            // 2. Check dynamic Platform directory in CommonApplicationData (%ProgramData%)
+            try
+            {
+                string platformDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Microsoft", "Windows Defender", "Platform");
+                if (Directory.Exists(platformDir))
+                {
+                    var platformExe = Directory.GetFiles(platformDir, "MpCmdRun.exe", SearchOption.AllDirectories);
+                    if (platformExe.Length > 0)
+                    {
+                        // Return the latest modified platform executable
+                        return platformExe[0];
+                    }
+                }
+            }
+            catch { }
+
+            return null;
+        }
 
         public bool IsDefenderAvailable()
         {
-            foreach (var path in PossibleDefenderPaths)
-            {
-                if (File.Exists(path)) return true;
-            }
-            return false;
+            var path = ResolveDefenderExecutable();
+            return !string.IsNullOrEmpty(path) && File.Exists(path);
         }
 
         public string GetDefenderPath()
         {
-            foreach (var path in PossibleDefenderPaths)
-            {
-                if (File.Exists(path)) return path;
-            }
-            return PossibleDefenderPaths[0]; // fallback
+            return ResolveDefenderExecutable() ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Windows Defender", "MpCmdRun.exe");
         }
 
         public async Task<bool> ScanFileAsync(string filePath, CancellationToken cancellationToken = default)
@@ -50,12 +64,16 @@ namespace EDM.Services
             var psi = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = $"-Scan -ScanType 3 -File \"{filePath}\"",
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
+            psi.ArgumentList.Add("-Scan");
+            psi.ArgumentList.Add("-ScanType");
+            psi.ArgumentList.Add("3");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(filePath);
 
             try
             {

@@ -105,6 +105,17 @@ namespace EDM.Services
                 if (newPosition < 0) newPosition = 0;
                 if (newPosition > _queue.Count) newPosition = _queue.Count;
                 _queue.Insert(newPosition, entry);
+
+                // Sync with queue definition model and persist state
+                var qModel = _queues.FirstOrDefault(q => q.Id == entry.QueueId);
+                if (qModel != null && qModel.ItemIds.Contains(itemId))
+                {
+                    qModel.ItemIds.Remove(itemId);
+                    int insertIdx = Math.Clamp(newPosition, 0, qModel.ItemIds.Count);
+                    qModel.ItemIds.Insert(insertIdx, itemId);
+                    SaveQueuesToDisk();
+                }
+
                 return true;
             }
         }

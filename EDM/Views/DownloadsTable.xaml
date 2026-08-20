@@ -12,6 +12,8 @@
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
         <converters:FileTypeIconCharConverter x:Key="FileTypeIconCharConverter"/>
         <converters:FileTypeIconColorConverter x:Key="FileTypeIconColorConverter"/>
+        <converters:BytesToHumanSizeConverter x:Key="BytesToHumanSizeConverter"/>
+        <converters:EmptyCountToVisibilityConverter x:Key="EmptyCountToVisibilityConverter"/>
     </UserControl.Resources>
 
     <Grid>
@@ -134,7 +136,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="52"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="90"/>
                     <ColumnDefinition Width="100"/>
                     <ColumnDefinition Width="80"/>
                     <ColumnDefinition Width="110"/>
@@ -143,7 +145,7 @@
                     <ColumnDefinition Width="100"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="1" Text="File Name" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                <TextBlock Grid.Column="2" Text="Size" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="Size / Done" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="3" Text="Status" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="4" Text="Speed" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="5" Text="Progress" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -161,7 +163,8 @@
                  VirtualizingPanel.IsVirtualizing="True"
                  VirtualizingPanel.VirtualizationMode="Recycling"
                  VirtualizingPanel.ScrollUnit="Pixel"
-                 HorizontalContentAlignment="Stretch">
+                 HorizontalContentAlignment="Stretch"
+                 KeyDown="DownloadsItemsControl_KeyDown">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Padding" Value="0"/>
@@ -183,6 +186,7 @@
                                 Tag="{Binding}"
                                 MouseEnter="Row_MouseEnter"
                                 MouseLeave="Row_MouseLeave"
+                                MouseLeftButtonDown="Row_MouseLeftButtonDown"
                                 Background="{DynamicResource BackgroundBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="0,0,0,1"
@@ -199,13 +203,19 @@
 
                             <Border.ContextMenu>
                                 <ContextMenu Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource PrimaryTextBrush}">
-                                    <MenuItem Header="Open File" Click="MenuItem_OpenFile"/>
-                                    <MenuItem Header="Open Folder" Click="MenuItem_OpenFolder"/>
-                                    <Separator Background="#1E2D47"/>
-                                    <MenuItem Header="Redownload" Click="MenuItem_Redownload"/>
-                                    <MenuItem Header="Force Start" Click="MenuItem_ForceStart"/>
-                                    <Separator Background="#1E2D47"/>
-                                    <MenuItem Header="Copy URL" Click="MenuItem_CopyUrl"/>
+                                    <MenuItem Header="▶ Resume / Start" Click="MenuItem_Resume"/>
+                                    <MenuItem Header="⏸ Pause" Click="MenuItem_Pause"/>
+                                    <MenuItem Header="🔄 Retry / Redownload" Click="MenuItem_Redownload"/>
+                                    <MenuItem Header="⏹ Cancel / Stop" Click="MenuItem_Cancel"/>
+                                    <MenuItem Header="🗑 Delete" Click="MenuItem_Delete"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
+                                    <MenuItem Header="📂 Open File" Click="MenuItem_OpenFile"/>
+                                    <MenuItem Header="📁 Open Folder" Click="MenuItem_OpenFolder"/>
+                                    <MenuItem Header="📄 Download Properties" Click="MenuItem_Properties"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
+                                    <MenuItem Header="⚡ Force Start" Click="MenuItem_ForceStart"/>
+                                    <MenuItem Header="⚡ Show Turbo Progress Window" Click="MenuItem_ShowProgressWindow"/>
+                                    <MenuItem Header="📋 Copy URL" Click="MenuItem_CopyUrl"/>
                                 </ContextMenu>
                             </Border.ContextMenu>
 
@@ -213,7 +223,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="52"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="90"/>
                                     <ColumnDefinition Width="100"/>
                                     <ColumnDefinition Width="80"/>
                                     <ColumnDefinition Width="110"/>
@@ -234,7 +244,7 @@
                                                Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
 
-                                <!-- File Name -->
+                                <!-- File Name & Category -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,8,0">
                                     <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"
                                                FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
@@ -242,9 +252,11 @@
                                                Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,2,0,0"/>
                                 </StackPanel>
 
-                                <!-- Size -->
-                                <TextBlock Grid.Column="2" Text="{Binding Size}"
-                                           Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" VerticalAlignment="Center"/>
+                                <!-- Size & Downloaded -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Size}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding DownloadedBytes, Converter={StaticResource BytesToHumanSizeConverter}}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,2,0,0"/>
+                                </StackPanel>
 
                                 <!-- Status -->
                                 <TextBlock Grid.Column="3" Text="{Binding Status}"
@@ -349,6 +361,20 @@
                     </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <!-- Empty State (Shown when no items match current filter/list) -->
+        <Border x:Name="EmptyStateBorder" Grid.Row="2" Background="Transparent" 
+                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,40"
+                Visibility="{Binding FilteredDownloads.Count, Converter={StaticResource EmptyCountToVisibilityConverter}}"
+                IsHitTestVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border Width="60" Height="60" CornerRadius="30" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,14" HorizontalAlignment="Center">
+                    <TextBlock Text="📥" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="No downloads found in this view" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Click '+ Add URL' above or paste a link to start downloading" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
     </Grid>
 
 </UserControl>

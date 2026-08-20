@@ -1,0 +1,163 @@
+/**
+ * EDM Extension - Dashboard Styling
+ * Version: 1.0.0
+ */
+
+.edm-dash-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Header */
+.edm-dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.edm-dash-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.edm-dash-logo {
+    width: 36px;
+    height: 36px;
+}
+
+.edm-dash-brand-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--edm-text-primary);
+}
+
+.edm-dash-search-wrap {
+    flex: 1;
+    max-width: 480px;
+}
+
+.edm-dash-search {
+    width: 100%;
+    background: var(--edm-bg-surface-elevated);
+    border: 1px solid var(--edm-border);
+    border-radius: var(--edm-radius-md);
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--edm-text-primary);
+    outline: none;
+}
+
+.edm-dash-search:focus {
+    border-color: var(--edm-border-focus);
+}
+
+.edm-dash-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Stats */
+.edm-dash-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.edm-stat-card {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.edm-stat-icon {
+    font-size: 28px;
+}
+
+.edm-stat-label {
+    font-size: 11.5px;
+    color: var(--edm-text-secondary);
+    margin-bottom: 2px;
+}
+
+.edm-stat-val {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--edm-text-primary);
+}
+
+/* Tabs */
+.edm-dash-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--edm-border);
+    padding-bottom: 12px;
+}
+
+.edm-dash-tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--edm-text-secondary);
+    padding: 8px 16px;
+    border-radius: var(--edm-radius-md);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.edm-dash-tab-btn:hover {
+    background: var(--edm-bg-surface-elevated);
+    color: var(--edm-text-primary);
+}
+
+.edm-dash-tab-btn.active {
+    background: var(--edm-primary-gradient);
+    color: #FFFFFF;
+    box-shadow: var(--edm-shadow-sm);
+}
+
+/* Table */
+.edm-table-card {
+    overflow: hidden;
+}
+
+.edm-dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 12.5px;
+}
+
+.edm-dash-table th {
+    padding: 14px 18px;
+    background: var(--edm-bg-surface-elevated);
+    color: var(--edm-text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--edm-border);
+}
+
+.edm-dash-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--edm-border);
+    color: var(--edm-text-primary);
+}
+
+.edm-dash-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.edm-dash-empty-table {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--edm-text-muted);
+}

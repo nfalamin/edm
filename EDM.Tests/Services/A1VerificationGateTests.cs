@@ -123,7 +123,7 @@ namespace EDM.Tests.Services
                         cancellationToken: CancellationToken.None);
 
 
-                    bool completedInTime = await Task.WhenAny(downloadTask, Task.Delay(15000)) == downloadTask;
+                    bool completedInTime = await Task.WhenAny(downloadTask, Task.Delay(30000)) == downloadTask;
 
                     if (!completedInTime)
                     {

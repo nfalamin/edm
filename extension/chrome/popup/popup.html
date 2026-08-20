@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDM Video Downloader</title>
+    <link rel="stylesheet" href="../src/ui/theme.css">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="edm-popup-container">
+        <!-- Header -->
+        <header class="edm-popup-header">
+            <div class="edm-brand-group">
+                <img src="../icons/icon-32.png" alt="EDM Logo" class="edm-popup-logo">
+                <div class="edm-brand-info">
+                    <div class="edm-brand-title">Exclusive Download Manager</div>
+                    <span class="edm-badge edm-badge-sd">v1.0.0</span>
+                </div>
+            </div>
+            <div class="edm-connection-status" id="connectionStatus" title="EDM Desktop Native Messaging Status">
+                <span class="edm-status-dot edm-status-online" id="statusDot"></span>
+                <span class="edm-status-text" id="statusText">Connected</span>
+            </div>
+        </header>
+
+        <!-- Current Tab Discovered Media Section -->
+        <section class="edm-section edm-media-section" id="mediaSection">
+            <div class="edm-section-header">
+                <span class="edm-section-title">Detected Media (Active Tab)</span>
+                <span class="edm-badge edm-badge-1080p" id="mediaCountBadge">0 Found</span>
+            </div>
+
+            <div class="edm-glass-card edm-media-card" id="mediaCard">
+                <div class="edm-media-empty" id="mediaEmpty">
+                    <svg class="edm-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    <p>No active media stream detected on this tab.</p>
+                    <span class="edm-text-muted">Play any video or audio on the page to capture.</span>
+                </div>
+
+                <div class="edm-media-details" id="mediaDetails" style="display: none;">
+                    <div class="edm-media-meta">
+                        <div class="edm-media-title" id="mediaTitle">Video Title</div>
+                        <div class="edm-media-sub">
+                            <span id="mediaQuality">1080p (Full HD)</span> • <span id="mediaDuration">0:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="edm-format-selector-row">
+                        <select id="popupFormatSelect" class="edm-select">
+                            <option value="">Select Quality...</option>
+                        </select>
+                        <button id="popupDownloadBtn" class="edm-btn-primary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Active Downloads Section -->
+        <section class="edm-section edm-downloads-section">
+            <div class="edm-section-header">
+                <span class="edm-section-title">Active Downloads</span>
+                <span class="edm-text-muted" id="activeCount">0 active</span>
+            </div>
+
+            <div class="edm-downloads-list" id="downloadsList">
+                <div class="edm-empty-downloads" id="downloadsEmpty">
+                    <p class="edm-text-muted">No downloads in progress</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Settings & Footer Navigation -->
+        <footer class="edm-popup-footer">
+            <div class="edm-footer-left">
+                <label class="edm-switch-label">
+                    <span class="edm-switch">
+                        <input type="checkbox" id="autoCaptureToggle" checked>
+                        <span class="edm-slider"></span>
+                    </span>
+                    <span>Auto-Capture</span>
+                </label>
+            </div>
+
+            <div class="edm-footer-right">
+                <button class="edm-btn-secondary edm-btn-icon" id="themeToggleBtn" title="Toggle Dark/Light Theme">
+                    🌙
+                </button>
+                <button class="edm-btn-secondary edm-btn-icon" id="openSettingsBtn" title="Open Extension Settings">
+                    ⚙️
+                </button>
+                <button class="edm-btn-secondary" id="openDashboardBtn" title="Open Full Dashboard">
+                    Dashboard ↗
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 #define MyAppName "Exclusive Download Manager"
 #define MyAppShortName "EDM"
-#define MyAppVersion "6.0.0"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "Exclusive Download Manager Technologies"
 #define MyAppExeName "EDM.exe"
 #define MyAppURL "https://github.com/exclusive/edm"

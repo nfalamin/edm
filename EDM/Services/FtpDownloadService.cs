@@ -21,7 +21,7 @@ namespace EDM.Services
     /// <summary>
     /// Production-grade dedicated FTP/FTPS downloader service.
     /// Supports multi-segment parallel downloads via FTP REST (Restart/Range) command,
-    /// passive mode (PASV/EPSV), authentication credentials, pause/resume, and bandwidth throttling.
+    /// passive mode (PASV/EPSV), authentication credentials, pause/resume, FTPS socket fallback, and bandwidth throttling.
     /// </summary>
     public class FtpDownloadService
     {
@@ -31,6 +31,8 @@ namespace EDM.Services
         {
             var uri = new Uri(ftpUrl);
             var result = new FtpProbeResult { Uri = uri };
+
+            string sanitizedUrl = ProtocolDetector.SanitizeUrlForLogging(ftpUrl);
 
             try
             {
@@ -50,7 +52,7 @@ namespace EDM.Services
             }
             catch (Exception ex)
             {
-                LoggingService.Log($"[FtpDownloadService] Probe SIZE failed for '{ftpUrl}': {ex.Message}");
+                LoggingService.Log($"[FtpDownloadService] Probe SIZE failed for '{sanitizedUrl}': {ex.Message}");
             }
 
             try
@@ -107,22 +109,98 @@ namespace EDM.Services
             CancellationToken cancellationToken,
             NetworkCredential? credential = null)
         {
-            LoggingService.Log($"[FtpDownloadService] Starting FTP download for '{ftpUrl}' to '{targetFilePath}' with {segmentCount} segments.");
+            string sanitizedUrl = ProtocolDetector.SanitizeUrlForLogging(ftpUrl);
+            LoggingService.Log($"[FtpDownloadService] Starting FTP download for '{sanitizedUrl}' to '{targetFilePath}' with {segmentCount} segments.");
+
+            var uri = new Uri(ftpUrl);
+
+            // Handle FTPS via FtpsClientEngine if FTPS scheme or port 990
+            if (uri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase) || uri.Port == 990)
+            {
+                await DownloadFtpsSocketAsync(ftpUrl, targetFilePath, progressReporter, pauseToken, speedLimitProvider, cancellationToken, credential).ConfigureAwait(false);
+                return;
+            }
 
             var probe = await ProbeFtpUrlAsync(ftpUrl, credential, cancellationToken).ConfigureAwait(false);
             long totalBytes = probe.ContentLength;
-            bool supportsRange = probe.SupportsRange && totalBytes > 0 && segmentCount > 1;
+            bool supportsRange = probe.SupportsRange && totalBytes > 0;
 
             Directory.CreateDirectory(Path.GetDirectoryName(targetFilePath) ?? Path.GetTempPath());
 
-            if (supportsRange)
+            if (supportsRange && segmentCount > 1)
             {
                 await DownloadSegmentedFtpAsync(ftpUrl, targetFilePath, totalBytes, segmentCount, progressReporter, pauseToken, speedLimitProvider, cancellationToken, credential).ConfigureAwait(false);
             }
             else
             {
-                await DownloadSingleThreadedFtpAsync(ftpUrl, targetFilePath, totalBytes, progressReporter, pauseToken, speedLimitProvider, cancellationToken, credential).ConfigureAwait(false);
+                await DownloadSingleThreadedFtpAsync(ftpUrl, targetFilePath, totalBytes, supportsRange, progressReporter, pauseToken, speedLimitProvider, cancellationToken, credential).ConfigureAwait(false);
             }
+        }
+
+        private async Task DownloadFtpsSocketAsync(
+            string ftpUrl,
+            string targetFilePath,
+            IProgress<DownloadProgressInfo> progressReporter,
+            PauseTokenSource pauseToken,
+            Func<double>? speedLimitProvider,
+            CancellationToken cancellationToken,
+            NetworkCredential? credential)
+        {
+            var uri = new Uri(ftpUrl);
+            string host = uri.Host;
+            int port = uri.Port > 0 ? uri.Port : 21;
+            string username = credential?.UserName ?? (string.IsNullOrEmpty(uri.UserInfo) ? "anonymous" : uri.UserInfo.Split(':')[0]);
+            string password = credential?.Password ?? (uri.UserInfo.Contains(':') ? uri.UserInfo.Split(':')[1] : "user@domain.com");
+            string remotePath = uri.AbsolutePath;
+
+            var engine = new FtpsClientEngine(host, port, username, password, useTls: true);
+
+            long existingBytes = File.Exists(targetFilePath) ? new FileInfo(targetFilePath).Length : 0;
+            FileMode fileMode = existingBytes > 0 ? FileMode.Append : FileMode.Create;
+
+            var speedTracker = new SpeedTracker();
+
+            progressReporter.Report(new DownloadProgressInfo
+            {
+                ProgressPercentage = 0,
+                BytesDownloaded = existingBytes,
+                TotalBytes = null,
+                ServerSupportsResume = true,
+                Status = "Connecting to FTPS Server via TLS..."
+            });
+
+            await using var fs = new FileStream(targetFilePath, fileMode, FileAccess.Write, FileShare.None, DefaultBufferSize, true);
+
+            var progress = new Progress<long>(totalDownloaded =>
+            {
+                double speed = speedTracker.UpdateAndGetSpeed(existingBytes + totalDownloaded);
+                progressReporter.Report(new DownloadProgressInfo
+                {
+                    BytesDownloaded = existingBytes + totalDownloaded,
+                    TotalBytes = null,
+                    SpeedBytesPerSecond = speed,
+                    ServerSupportsResume = true,
+                    Status = "Downloading FTPS Stream (TLS 1.3)..."
+                });
+            });
+
+            var result = await engine.DownloadFileAsync(remotePath, fs, resumeOffset: existingBytes, progress: progress, ct: cancellationToken).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                throw new IOException($"FTPS transfer failed: {result.ErrorMessage}");
+            }
+
+            long finalSize = new FileInfo(targetFilePath).Length;
+            progressReporter.Report(new DownloadProgressInfo
+            {
+                ProgressPercentage = 100,
+                BytesDownloaded = finalSize,
+                TotalBytes = finalSize,
+                SpeedBytesPerSecond = 0,
+                Status = "Completed",
+                IsCompleted = true
+            });
         }
 
         private async Task DownloadSegmentedFtpAsync(
@@ -136,23 +214,42 @@ namespace EDM.Services
             CancellationToken cancellationToken,
             NetworkCredential? credential)
         {
-            string tempDir = Path.Combine(Path.GetDirectoryName(targetFilePath) ?? Path.GetTempPath(), "edm_ftp_" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
+            string targetDir = Path.GetDirectoryName(targetFilePath) ?? Path.GetTempPath();
+            string stagingDir = Path.Combine(targetDir, "." + Path.GetFileName(targetFilePath) + ".ftp_segments");
+            Directory.CreateDirectory(stagingDir);
 
             long chunkSize = totalBytes / segmentCount;
-            var segments = new List<(int Index, long Start, long End, string PartPath)>();
+            var segments = new List<(int Index, long Start, long End, string PartPath, string TmpPath)>();
 
             for (int i = 0; i < segmentCount; i++)
             {
                 long start = i * chunkSize;
                 long end = (i == segmentCount - 1) ? totalBytes - 1 : (start + chunkSize - 1);
-                string partPath = Path.Combine(tempDir, $"seg_{i:D4}.part");
-                segments.Add((i, start, end, partPath));
+                string partPath = Path.Combine(stagingDir, $"seg_{i:D4}.part");
+                string tmpPath = Path.Combine(stagingDir, $"seg_{i:D4}.part.tmp");
+                segments.Add((i, start, end, partPath, tmpPath));
             }
 
             var downloadedBytesPerSeg = new ConcurrentDictionary<int, long>();
             var segmentFilePaths = new ConcurrentDictionary<int, string>();
-            long totalDownloaded = 0;
+            var speedTracker = new SpeedTracker();
+
+            // Pre-scan existing parts for resume
+            foreach (var seg in segments)
+            {
+                if (File.Exists(seg.PartPath))
+                {
+                    long len = new FileInfo(seg.PartPath).Length;
+                    long expectedLen = seg.End - seg.Start + 1;
+                    if (len == expectedLen)
+                    {
+                        downloadedBytesPerSeg[seg.Index] = len;
+                        segmentFilePaths[seg.Index] = seg.PartPath;
+                    }
+                }
+            }
+
+            long totalDownloaded = downloadedBytesPerSeg.Values.Sum();
 
             try
             {
@@ -165,6 +262,10 @@ namespace EDM.Services
                 await Parallel.ForEachAsync(segments, parallelOptions, async (seg, ct) =>
                 {
                     long segLength = seg.End - seg.Start + 1;
+
+                    // Skip if already downloaded
+                    if (segmentFilePaths.ContainsKey(seg.Index)) return;
+
                     long bytesWritten = 0;
 
                     var req = (FtpWebRequest)WebRequest.Create(new Uri(ftpUrl));
@@ -176,42 +277,68 @@ namespace EDM.Services
 
                     using (var resp = (FtpWebResponse)await req.GetResponseAsync().ConfigureAwait(false))
                     await using (var ftpStream = resp.GetResponseStream())
-                    await using (var fs = new FileStream(seg.PartPath, FileMode.Create, FileAccess.Write, FileShare.None, DefaultBufferSize, true))
+                    await using (var fs = new FileStream(seg.TmpPath, FileMode.Create, FileAccess.Write, FileShare.None, DefaultBufferSize, true))
                     {
-                        var buffer = new byte[DefaultBufferSize];
-                        while (bytesWritten < segLength)
+                        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
+                        long lastReportTicks = 0;
+                        try
                         {
-                            ct.ThrowIfCancellationRequested();
-                            if (pauseToken != null) await pauseToken.WaitIfPausedAsync().ConfigureAwait(false);
-
-                            int toRead = (int)Math.Min(buffer.Length, segLength - bytesWritten);
-                            int read = await ftpStream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
-                            if (read == 0) break;
-
-                            await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                            bytesWritten += read;
-
-                            downloadedBytesPerSeg[seg.Index] = bytesWritten;
-                            long currentTotal = downloadedBytesPerSeg.Values.Sum();
-                            Interlocked.Exchange(ref totalDownloaded, currentTotal);
-
-                            double pct = totalBytes > 0 ? (double)currentTotal / totalBytes * 100.0 : 0;
-                            progressReporter.Report(new DownloadProgressInfo
+                            while (bytesWritten < segLength)
                             {
-                                ProgressPercentage = Math.Min(99.9, pct),
-                                BytesDownloaded = currentTotal,
-                                TotalBytes = totalBytes,
-                                Status = $"Downloading FTP Segment {seg.Index + 1}/{segmentCount}..."
-                            });
+                                ct.ThrowIfCancellationRequested();
+                                if (pauseToken != null) await pauseToken.WaitIfPausedAsync().ConfigureAwait(false);
 
-                            // Apply speed limiting if active
-                            double limit = speedLimitProvider?.Invoke() ?? -1;
-                            if (limit > 0)
-                            {
-                                int delayMs = (int)(read / limit * 1000);
-                                if (delayMs > 0) await Task.Delay(Math.Min(delayMs, 100), ct).ConfigureAwait(false);
+                                int toRead = (int)Math.Min(buffer.Length, segLength - bytesWritten);
+                                int read = await ftpStream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                                if (read == 0) break;
+
+                                await fs.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                                bytesWritten += read;
+
+                                downloadedBytesPerSeg[seg.Index] = bytesWritten;
+                                long currentTotal = Interlocked.Add(ref totalDownloaded, read);
+
+                                long nowTicks = Environment.TickCount64;
+                                if (nowTicks - lastReportTicks >= 100 || currentTotal >= totalBytes)
+                                {
+                                    double currentSpeed = speedTracker.UpdateAndGetSpeed(currentTotal);
+                                    double remainingSecs = currentSpeed > 0 ? (totalBytes - currentTotal) / currentSpeed : 0;
+                                    double pct = totalBytes > 0 ? (double)currentTotal / totalBytes * 100.0 : 0;
+
+                                    progressReporter.Report(new DownloadProgressInfo
+                                    {
+                                        ProgressPercentage = Math.Min(99.9, pct),
+                                        BytesDownloaded = currentTotal,
+                                        TotalBytes = totalBytes,
+                                        SpeedBytesPerSecond = currentSpeed,
+                                        RemainingSeconds = remainingSecs,
+                                        ActiveConnections = segmentCount,
+                                        SegmentCount = segmentCount,
+                                        ServerSupportsResume = true,
+                                        Status = $"Downloading FTP Segments ({segmentCount} active)..."
+                                    });
+                                    lastReportTicks = nowTicks;
+                                }
+
+                                // Apply speed limiting if active
+                                double limit = speedLimitProvider?.Invoke() ?? -1;
+                                if (limit > 0)
+                                {
+                                    int delayMs = (int)(read / limit * 1000);
+                                    if (delayMs > 0) await Task.Delay(Math.Min(delayMs, 100), ct).ConfigureAwait(false);
+                                }
                             }
                         }
+                        finally
+                        {
+                            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                        }
+                    }
+
+                    if (File.Exists(seg.TmpPath))
+                    {
+                        if (File.Exists(seg.PartPath)) File.Delete(seg.PartPath);
+                        File.Move(seg.TmpPath, seg.PartPath);
                     }
 
                     segmentFilePaths[seg.Index] = seg.PartPath;
@@ -234,6 +361,8 @@ namespace EDM.Services
                     ProgressPercentage = 100,
                     BytesDownloaded = totalBytes,
                     TotalBytes = totalBytes,
+                    ActiveConnections = 0,
+                    SpeedBytesPerSecond = 0,
                     Status = "Completed",
                     IsCompleted = true
                 });
@@ -242,7 +371,10 @@ namespace EDM.Services
             {
                 try
                 {
-                    if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                    if (Directory.Exists(stagingDir) && totalDownloaded >= totalBytes)
+                    {
+                        Directory.Delete(stagingDir, true);
+                    }
                 }
                 catch { }
             }
@@ -252,50 +384,88 @@ namespace EDM.Services
             string ftpUrl,
             string targetFilePath,
             long totalBytes,
+            bool supportsRange,
             IProgress<DownloadProgressInfo> progressReporter,
             PauseTokenSource pauseToken,
             Func<double>? speedLimitProvider,
             CancellationToken cancellationToken,
             NetworkCredential? credential)
         {
+            long existingBytes = (supportsRange && File.Exists(targetFilePath)) ? new FileInfo(targetFilePath).Length : 0;
+            if (existingBytes >= totalBytes && totalBytes > 0)
+            {
+                progressReporter.Report(new DownloadProgressInfo
+                {
+                    ProgressPercentage = 100,
+                    BytesDownloaded = totalBytes,
+                    TotalBytes = totalBytes,
+                    Status = "Completed",
+                    IsCompleted = true
+                });
+                return;
+            }
+
             var req = (FtpWebRequest)WebRequest.Create(new Uri(ftpUrl));
             req.Method = WebRequestMethods.Ftp.DownloadFile;
             req.UseBinary = true;
             req.UsePassive = true;
+            if (existingBytes > 0) req.ContentOffset = existingBytes;
             if (credential != null) req.Credentials = credential;
 
-            long totalRead = 0;
+            long totalRead = existingBytes;
+            var speedTracker = new SpeedTracker();
+
+            FileMode fileMode = existingBytes > 0 ? FileMode.Append : FileMode.Create;
 
             using (var resp = (FtpWebResponse)await req.GetResponseAsync().ConfigureAwait(false))
             await using (var ftpStream = resp.GetResponseStream())
-            await using (var fs = new FileStream(targetFilePath, FileMode.Create, FileAccess.Write, FileShare.None, DefaultBufferSize, true))
+            await using (var fs = new FileStream(targetFilePath, fileMode, FileAccess.Write, FileShare.None, DefaultBufferSize, true))
             {
-                var buffer = new byte[DefaultBufferSize];
-                int read;
-
-                while ((read = await ftpStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+                var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
+                long lastReportTicks = 0;
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (pauseToken != null) await pauseToken.WaitIfPausedAsync().ConfigureAwait(false);
-
-                    await fs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                    totalRead += read;
-
-                    double pct = totalBytes > 0 ? (double)totalRead / totalBytes * 100.0 : 0;
-                    progressReporter.Report(new DownloadProgressInfo
+                    int read;
+                    while ((read = await ftpStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
                     {
-                        ProgressPercentage = totalBytes > 0 ? Math.Min(99.9, pct) : 0,
-                        BytesDownloaded = totalRead,
-                        TotalBytes = totalBytes > 0 ? totalBytes : null,
-                        Status = "Downloading FTP Stream..."
-                    });
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (pauseToken != null) await pauseToken.WaitIfPausedAsync().ConfigureAwait(false);
 
-                    double limit = speedLimitProvider?.Invoke() ?? -1;
-                    if (limit > 0)
-                    {
-                        int delayMs = (int)(read / limit * 1000);
-                        if (delayMs > 0) await Task.Delay(Math.Min(delayMs, 100), cancellationToken).ConfigureAwait(false);
+                        await fs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                        totalRead += read;
+
+                        long nowTicks = Environment.TickCount64;
+                        if (nowTicks - lastReportTicks >= 100 || (totalBytes > 0 && totalRead >= totalBytes))
+                        {
+                            double currentSpeed = speedTracker.UpdateAndGetSpeed(totalRead);
+                            double remainingSecs = (currentSpeed > 0 && totalBytes > 0) ? (totalBytes - totalRead) / currentSpeed : 0;
+                            double pct = totalBytes > 0 ? (double)totalRead / totalBytes * 100.0 : 0;
+
+                            progressReporter.Report(new DownloadProgressInfo
+                            {
+                                ProgressPercentage = totalBytes > 0 ? Math.Min(99.9, pct) : 0,
+                                BytesDownloaded = totalRead,
+                                TotalBytes = totalBytes > 0 ? totalBytes : null,
+                                SpeedBytesPerSecond = currentSpeed,
+                                RemainingSeconds = remainingSecs,
+                                ActiveConnections = 1,
+                                ServerSupportsResume = supportsRange,
+                                Status = "Downloading FTP Stream..."
+                            });
+                            lastReportTicks = nowTicks;
+                        }
+
+                        double limit = speedLimitProvider?.Invoke() ?? -1;
+                        if (limit > 0)
+                        {
+                            int delayMs = (int)(read / limit * 1000);
+                            if (delayMs > 0) await Task.Delay(Math.Min(delayMs, 100), cancellationToken).ConfigureAwait(false);
+                        }
                     }
+                }
+                finally
+                {
+                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                 }
             }
 
@@ -304,9 +474,12 @@ namespace EDM.Services
                 ProgressPercentage = 100,
                 BytesDownloaded = totalRead,
                 TotalBytes = totalRead,
+                ActiveConnections = 0,
+                SpeedBytesPerSecond = 0,
                 Status = "Completed",
                 IsCompleted = true
             });
         }
     }
 }
+

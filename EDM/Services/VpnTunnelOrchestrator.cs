@@ -164,9 +164,9 @@ namespace EDM.Services
                 using var proc = Process.Start(psi);
                 if (proc != null)
                 {
-                    while (!proc.StandardOutput.EndOfStream)
+                    string? line;
+                    while ((line = await proc.StandardOutput.ReadLineAsync(ct).ConfigureAwait(false)) != null)
                     {
-                        string? line = await proc.StandardOutput.ReadLineAsync(ct).ConfigureAwait(false);
                         if (!string.IsNullOrWhiteSpace(line))
                         {
                             profiles.Add(line.Trim());

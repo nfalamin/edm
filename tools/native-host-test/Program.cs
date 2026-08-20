@@ -47,7 +47,6 @@ var len = BitConverter.GetBytes(utf8.Length);
 await proc.StandardInput.BaseStream.WriteAsync(len, 0, len.Length);
 await proc.StandardInput.BaseStream.WriteAsync(utf8, 0, utf8.Length);
 await proc.StandardInput.BaseStream.FlushAsync();
-proc.StandardInput.Close();
 
 // Read ack: first 4 bytes length
 var outStream = proc.StandardOutput.BaseStream;

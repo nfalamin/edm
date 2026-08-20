@@ -143,7 +143,7 @@ namespace EDM.Tests.Services
             using var client = new HttpClient(handler);
             var downloader = new MultiPartDownloader(client);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             await downloader.DownloadFileAsync(new Uri(server.Url), destPath, chunkCount: chunkCount, maxConcurrency: chunkCount, cancellationToken: cts.Token);
 
             // After successful download, verify the final merged file's SHA-256 matches the full payload

@@ -11,7 +11,7 @@ namespace EDM.Services
     {
         public string ProfileId { get; set; } = "defender";
         public string ProfileName { get; set; } = "Windows Defender";
-        public string ExecutablePath { get; set; } = @"C:\Program Files\Windows Defender\MpCmdRun.exe";
+        public string ExecutablePath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Windows Defender", "MpCmdRun.exe");
         public string ArgumentsTemplate { get; set; } = "-Scan -ScanType 3 -File \"%FILE%\"";
         public List<int> CleanExitCodes { get; set; } = new() { 0 };
         public List<int> ThreatExitCodes { get; set; } = new() { 2 };
@@ -127,21 +127,21 @@ namespace EDM.Services
                 string dir = Path.GetDirectoryName(filePath) ?? string.Empty;
                 string name = Path.GetFileName(filePath);
 
-                // Resolve placeholders
-                string resolvedArgs = _activeProfile.ArgumentsTemplate
-                    .Replace("%FILE%", filePath)
-                    .Replace("%DIR%", dir)
-                    .Replace("%NAME%", name);
-
                 var psi = new ProcessStartInfo
                 {
                     FileName = _activeProfile.ExecutablePath,
-                    Arguments = resolvedArgs,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
+
+                // Populate ArgumentList with placeholder replacements
+                var tokens = ParseArgumentTokens(_activeProfile.ArgumentsTemplate, filePath, dir, name);
+                foreach (var token in tokens)
+                {
+                    psi.ArgumentList.Add(token);
+                }
 
                 using var proc = Process.Start(psi);
                 if (proc == null)
@@ -178,6 +178,51 @@ namespace EDM.Services
                 report.ScanOutput = $"Scan error: {ex.Message}";
                 return report;
             }
+        }
+
+        private static List<string> ParseArgumentTokens(string template, string file, string dir, string name)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrWhiteSpace(template)) return result;
+
+            var sb = new System.Text.StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < template.Length; i++)
+            {
+                char c = template[i];
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (char.IsWhiteSpace(c) && !inQuotes)
+                {
+                    if (sb.Length > 0)
+                    {
+                        result.Add(ResolveToken(sb.ToString(), file, dir, name));
+                        sb.Clear();
+                    }
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+
+            if (sb.Length > 0)
+            {
+                result.Add(ResolveToken(sb.ToString(), file, dir, name));
+            }
+
+            return result;
+        }
+
+        private static string ResolveToken(string rawToken, string file, string dir, string name)
+        {
+            return rawToken
+                .Replace("%FILE%", file)
+                .Replace("%DIR%", dir)
+                .Replace("%NAME%", name);
         }
     }
 }

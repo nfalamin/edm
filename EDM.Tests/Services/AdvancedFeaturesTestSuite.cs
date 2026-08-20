@@ -72,9 +72,30 @@ namespace EDM.Tests.Services
         public async Task SiteGrabberService_CrawlsMockHtmlPageAndDiscoversAssets()
         {
             var grabber = new SiteGrabberService();
-            var assets = await grabber.CrawlWebsiteAsync("https://invalid-non-existent-site-99.org", 1, CancellationToken.None).ConfigureAwait(false);
+            var assets = await grabber.CrawlWebsiteAsync("https://invalid-non-existent-site-99.org", 1, CancellationToken.None);
 
             assets.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void DownloadPathCategoryService_EnsuresStandardWorkspaceStructureCorrectly()
+        {
+            string tempRoot = Path.Combine(Path.GetTempPath(), $"edm_ws_test_{Guid.NewGuid():N}");
+            try
+            {
+                DownloadPathCategoryService.EnsureWorkspaceStructure(tempRoot);
+                Directory.Exists(tempRoot).Should().BeTrue();
+
+                foreach (var folder in DownloadPathCategoryService.StandardWorkspaceFolders)
+                {
+                    string subDir = Path.Combine(tempRoot, folder);
+                    Directory.Exists(subDir).Should().BeTrue($"Folder '{folder}' must exist in standard workspace layout");
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true);
+            }
         }
     }
 }

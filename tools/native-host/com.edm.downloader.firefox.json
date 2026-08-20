@@ -1,0 +1,10 @@
+﻿{
+    "path":  "D:\\Update EDM\\EDM\\EDM.NativeHost\\bin\\Debug\\net10.0-windows\\EDM.NativeHost.exe",
+    "description":  "Exclusive Download Manager Native Host Messaging Agent",
+    "name":  "com.edm.downloader",
+    "allowed_extensions":  [
+                               "edm-extension@edm.app",
+                               "edm@exclusive-download-manager.com"
+                           ],
+    "type":  "stdio"
+}

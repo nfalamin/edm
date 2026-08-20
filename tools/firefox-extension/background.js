@@ -1,195 +1,507 @@
-// background.js - Firefox WebExtension Background Script for EDM
-const NATIVE_HOST = "com.edm.downloader";
-const MEDIA_REGEX = /\.(mp4|m3u8|mpd|webm|mp3|m4a|aac|flac|ts|mkv|pdf|zip|rar|exe|iso)(\?.*)?$/i;
+/**
+ * EDM (Exclusive Download Manager) - Production Canonical Background Worker
+ * MV3 Service Worker Architecture for Chrome, Edge, and Firefox
+ * 
+ * Responsibilities:
+ * 1. Network Traffic Sniffing (M3U8, MPD, direct media, Content-Disposition).
+ * 2. Native Messaging Bridge (Stdio 32-bit LE binary framing).
+ * 3. Variant Resolution Proxy (GET_MEDIA_VARIANTS).
+ * 4. Transactional Download Dispatcher (EDM Desktop Native Host -> Local HTTP API -> Restricted Emergency Fallback).
+ */
 
+const NATIVE_HOST_NAME = "com.edm.downloader";
+const LOCAL_HTTP_ENDPOINT = "http://127.0.0.1:48912/handoff";
+const LOCAL_VARIANTS_ENDPOINT = "http://127.0.0.1:48912/variants";
+const HANDOFF_TIMEOUT_MS = 6000;
+
+// Per-tab media store
 const tabMediaStreams = new Map();
+const recentHandoffs = new Set();
 
-let settings = {
-  enabled: true,
-  excludedDomains: [],
-  fileExtensions: ["mp4", "m3u8", "mpd", "mp3", "webm", "zip", "rar", "exe"]
-};
-
-const api = typeof browser !== "undefined" ? browser : chrome;
-
-api.storage.local.get(["edmSettings"]).then((result) => {
-  if (result && result.edmSettings) {
-    settings = { ...settings, ...result.edmSettings };
-  }
-}).catch(() => {});
-
-api.contextMenus.create({
-  id: "edm_download_link",
-  title: "Download with EDM",
-  contexts: ["link", "image", "video", "audio"]
-});
-
-api.contextMenus.create({
-  id: "edm_download_selected",
-  title: "Download selected with EDM",
-  contexts: ["selection"]
-});
-
-api.contextMenus.create({
-  id: "edm_download_all",
-  title: "Download all links with EDM",
-  contexts: ["page"]
-});
-
-api.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab) return;
-
-  if (info.menuItemId === "edm_download_link" && info.linkUrl) {
-    sendToNativeHost(info.linkUrl, deriveFilename(info.linkUrl), "Context Menu Link");
-  } else if (info.menuItemId === "edm_download_selected" && info.selectionText) {
-    const urls = info.selectionText.match(/https?:\/\/[^\s]+/g);
-    if (urls) {
-      urls.forEach(url => sendToNativeHost(url, deriveFilename(url), "Selected Link"));
-    }
-  } else if (info.menuItemId === "edm_download_all" && tab.id) {
-    api.tabs.sendMessage(tab.id, { action: "EXTRACT_ALL_LINKS" }).then((response) => {
-      if (response && response.links) {
-        response.links.forEach(url => sendToNativeHost(url, deriveFilename(url), "Download All"));
-      }
-    }).catch(() => {});
-  }
-});
-
-api.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    if (!settings.enabled || !details.url || !details.tabId || details.tabId < 0) return;
-
-    if (MEDIA_REGEX.test(details.url)) {
-      let streams = tabMediaStreams.get(details.tabId) || [];
-      if (!streams.some(s => s.url === details.url)) {
-        let quality = "Media Stream";
-        if (details.url.endsWith(".m3u8")) quality = "HLS Stream (M3U8)";
-        else if (details.url.endsWith(".mpd")) quality = "DASH Stream (MPD)";
-        else if (details.url.includes("1080")) quality = "1080p Full HD";
-        else if (details.url.includes("720")) quality = "720p HD";
-
-        streams.push({
-          url: details.url,
-          quality: quality,
-          filename: deriveFilename(details.url),
-          timestamp: Date.now()
-        });
-
-        tabMediaStreams.set(details.tabId, streams);
-
-        api.tabs.sendMessage(details.tabId, {
-          action: "MEDIA_DETECTED",
-          streams: streams
-        }).catch(() => {});
-      }
-    }
-  },
-  { urls: ["<all_urls>"] }
-);
-
-api.runtime.onMessage.addListener((request, sender) => {
-  if (request.action === "START_EDM_DOWNLOAD") {
-    sendToNativeHost(request.url, request.filename, request.quality);
-    return Promise.resolve({ status: "SENT_TO_EDM" });
-  } else if (request.action === "GET_MEDIA_STREAMS") {
-    const tabId = sender.tab ? sender.tab.id : null;
-    const streams = tabId ? (tabMediaStreams.get(tabId) || []) : [];
-    return Promise.resolve({ streams: streams, settings: settings });
-  } else if (request.action === "UPDATE_SETTINGS") {
-    settings = { ...settings, ...request.settings };
-    api.storage.local.set({ edmSettings: settings });
-    return Promise.resolve({ status: "UPDATED" });
-  }
-  return true;
-});
-
-api.downloads.onCreated.addListener((item) => {
-  try {
-    if (!settings.enabled) return;
-
-    const url = item.url || "";
-    // Handle Blob URL safe fallback: Blob URIs cannot be fetched directly by external HTTP engines
-    if (url.startsWith("blob:")) {
-      console.info("[EDM Firefox Background] Blob URL detected. Allowing browser native engine to process safely.");
-      return;
-    }
-
-    if (!url || !/^https?:\/\//i.test(url)) return;
+// =============================================================================
+// 1. LIVE NETWORK STREAM SNIFFER
+// =============================================================================
+if (typeof chrome !== "undefined" && chrome.webRequest && chrome.webRequest.onHeadersReceived) {
+    const filter = { urls: ["<all_urls>"] };
 
     try {
-      const hostname = new URL(url).hostname;
-      if (settings.excludedDomains.some(d => hostname.includes(d))) return;
+        chrome.webRequest.onHeadersReceived.addListener(
+            (details) => {
+                if (!details.url || details.tabId < 0) return;
+
+                const url = details.url;
+                let isMedia = false;
+                let mimeType = "";
+                let contentLength = 0;
+                let isAttachment = false;
+
+                if (details.responseHeaders) {
+                    for (const header of details.responseHeaders) {
+                        const name = header.name.toLowerCase();
+                        const val = (header.value || "").toLowerCase();
+
+                        if (name === "content-type") {
+                            mimeType = val;
+                            if (val.includes("video/") ||
+                                val.includes("audio/") ||
+                                val.includes("application/vnd.apple.mpegurl") ||
+                                val.includes("application/x-mpegurl") ||
+                                val.includes("application/dash+xml") ||
+                                val.includes("application/octet-stream")) {
+                                isMedia = true;
+                            }
+                        } else if (name === "content-length") {
+                            contentLength = parseInt(header.value, 10) || 0;
+                        } else if (name === "content-disposition" && val.includes("attachment")) {
+                            isAttachment = true;
+                        }
+                    }
+                }
+
+                // URL Pattern matching fallback
+                if (!isMedia) {
+                    const cleanUrl = url.split("?")[0].toLowerCase();
+                    if (cleanUrl.endsWith(".m3u8") ||
+                        cleanUrl.endsWith(".mpd") ||
+                        cleanUrl.endsWith(".mp4") ||
+                        cleanUrl.endsWith(".webm") ||
+                        cleanUrl.endsWith(".mkv") ||
+                        cleanUrl.endsWith(".ts") ||
+                        cleanUrl.endsWith(".mp3") ||
+                        cleanUrl.endsWith(".m4a") ||
+                        cleanUrl.endsWith(".aac") ||
+                        cleanUrl.endsWith(".flac")) {
+                        isMedia = true;
+                    }
+                }
+
+                if (isMedia || isAttachment) {
+                    // Filter out small visual fragments/chunks (< 256KB) unless manifest
+                    const isManifest = url.includes(".m3u8") || url.includes(".mpd") || mimeType.includes("mpegurl") || mimeType.includes("dash+xml");
+                    if (!isManifest && contentLength > 0 && contentLength < 262144) {
+                        return;
+                    }
+
+                    if (!tabMediaStreams.has(details.tabId)) {
+                        tabMediaStreams.set(details.tabId, new Map());
+                    }
+
+                    const streamKey = url.split("?")[0];
+                    tabMediaStreams.get(details.tabId).set(streamKey, {
+                        url: url,
+                        mimeType: mimeType,
+                        contentLength: contentLength,
+                        isManifest: isManifest,
+                        timestamp: Date.now()
+                    });
+                }
+            },
+            filter,
+            ["responseHeaders"]
+        );
     } catch (e) {}
+}
 
-    const correlationId = "edm_corr_ff_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
-    const filename = item.filename || deriveFilename(url);
-
-    sendToNativeHostWithHandshake(correlationId, url, filename, "Browser Intercept", (success) => {
-      if (success) {
-        api.downloads.cancel(item.id).catch((err) => {
-          console.warn("[EDM Firefox Background] Download cancel notice:", err);
-        });
-      } else {
-        console.warn("[EDM Firefox Background] EDM Host handoff failed. Allowing native browser download to continue safely.");
-      }
+// Clean tab cache on tab removal
+if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.onRemoved) {
+    chrome.tabs.onRemoved.addListener((tabId) => {
+        tabMediaStreams.delete(tabId);
     });
-  } catch (err) {
-    console.error("[EDM Firefox Background] Interception error:", err);
-  }
+}
+
+// =============================================================================
+// 2. RUNTIME MESSAGE ROUTER
+// =============================================================================
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || !message.action) return false;
+
+    const tabId = (sender && sender.tab) ? sender.tab.id : -1;
+
+    if (message.action === "GET_MEDIA_VARIANTS") {
+        resolveMediaVariants(message.url, message.cookies, tabId)
+            .then(variants => sendResponse(variants))
+            .catch(err => {
+                console.warn("[EDM] Variant resolution error:", err);
+                sendResponse({ success: false, errorCode: "FORMAT_EXTRACTION_FAILED", error: err.message, variants: [] });
+            });
+        return true; // Async response
+    }
+
+    if (message.action === "GET_TAB_CAPTURED_MEDIA") {
+        const streams = (tabId >= 0 && tabMediaStreams.has(tabId)) 
+            ? Array.from(tabMediaStreams.get(tabId).values()) 
+            : [];
+        sendResponse({ success: true, streams: streams });
+        return false;
+    }
+
+    if (message.action === "START_EDM_DOWNLOAD" || message.action === "START_DOWNLOAD_REQUEST") {
+        const payload = message.candidate || message;
+        handoffDownloadToEdm(payload)
+            .then(result => sendResponse(result))
+            .catch(err => {
+                // Emergency direct browser fallback ONLY if permissible
+                executeEmergencyBrowserFallback(payload, err.message)
+                    .then(dlResult => sendResponse(dlResult))
+                    .catch(dlErr => sendResponse({ success: false, errorCode: "EDM_UNAVAILABLE", error: dlErr.message }));
+            });
+        return true; // Async response
+    }
+
+    if (message.action === "PING_EDM" || message.action === "TEST_NATIVE_PING") {
+        sendNativePing()
+            .then(res => sendResponse(res))
+            .catch(err => sendResponse({ success: false, errorCode: "NATIVE_HOST_UNAVAILABLE", error: err.message }));
+        return true;
+    }
+
+    if (message.action === "GET_NATIVE_STATUS") {
+        sendNativePing()
+            .then(res => sendResponse({ success: true, connected: !!(res && res.success), version: res?.version || "2.0.0" }))
+            .catch(() => sendResponse({ success: false, connected: false }));
+        return true;
+    }
+
+    return false;
 });
 
-function sendToNativeHost(url, filename, quality) {
-  const correlationId = "edm_corr_ff_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
-  sendToNativeHostWithHandshake(correlationId, url, filename, quality, null);
-}
+// =============================================================================
+// 3. VARIANT RESOLVER PROXY (Stdio -> HTTP -> Tab Sniffer Fallback)
+// =============================================================================
+async function resolveMediaVariants(url, cookies, tabId) {
+    if (!url) return { success: false, errorCode: "INVALID_MEDIA_URL", variants: [] };
 
-function sendToNativeHostWithHandshake(correlationId, url, filename, quality, callback) {
-  if (api.cookies && api.cookies.getAll) {
-    api.cookies.getAll({ url: url }).then((cookies) => {
-      const cookieHeader = (cookies || []).map((c) => `${c.name}=${c.value}`).join("; ");
-      dispatchNativeMessageWithHandshake(correlationId, url, filename, quality, cookieHeader, callback);
-    }).catch(() => {
-      dispatchNativeMessageWithHandshake(correlationId, url, filename, quality, "", callback);
-    });
-    return;
-  }
-  dispatchNativeMessageWithHandshake(correlationId, url, filename, quality, "", callback);
-}
+    // 1. Try Native Messaging Host
+    try {
+        const nativeResponse = await sendNativeMessageWithTimeout({
+            action: "GET_MEDIA_VARIANTS",
+            url: url,
+            cookies: cookies || ""
+        }, 5000);
 
-function dispatchNativeMessageWithHandshake(correlationId, url, filename, quality, cookies, callback) {
-  const message = {
-    action: "DOWNLOAD_REQUEST",
-    correlationId: correlationId,
-    url: url,
-    filename: filename,
-    quality: quality,
-    cookies: cookies,
-    source: "FirefoxExtension",
-    timestamp: new Date().toISOString()
-  };
+        if (nativeResponse && nativeResponse.success) {
+            const variantsList = nativeResponse.variants || nativeResponse.data || (nativeResponse.result && nativeResponse.result.variants) || [];
+            if (Array.isArray(variantsList) && variantsList.length > 0) {
+                return {
+                    success: true,
+                    title: nativeResponse.title || (nativeResponse.result && nativeResponse.result.title) || "",
+                    isDrmProtected: !!nativeResponse.isDrmProtected,
+                    variants: variantsList
+                };
+            }
+        }
+    } catch (nativeErr) {}
 
-  try {
-    api.runtime.sendNativeMessage(NATIVE_HOST, message).then((response) => {
-      const isSuccess = response && response.success === true;
-      if (callback) callback(isSuccess);
-    }).catch((err) => {
-      console.warn("[EDM Firefox] Native Messaging warning:", err);
-      if (callback) callback(false);
-    });
-  } catch (e) {
-    if (callback) callback(false);
-  }
-}
+    // 2. Try Local HTTP Endpoint
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-function deriveFilename(url) {
-  try {
-    const parsed = new URL(url);
-    const pathname = parsed.pathname;
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length > 0) {
-      const last = segments[segments.length - 1];
-      if (last.includes(".")) return decodeURIComponent(last);
+        const httpRes = await fetch(LOCAL_VARIANTS_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: url, cookies: cookies || "" }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (httpRes.ok) {
+            const data = await httpRes.json();
+            const variantsList = (data && (data.variants || data.data || (data.result && data.result.variants))) || [];
+            if (data && data.success && Array.isArray(variantsList) && variantsList.length > 0) {
+                return {
+                    success: true,
+                    title: data.title || (data.result && data.result.title) || "",
+                    isDrmProtected: !!data.isDrmProtected,
+                    variants: variantsList
+                };
+            }
+        }
+    } catch (httpErr) {}
+
+    // 3. Fallback: Return tab-sniffed media streams if available
+    if (tabId >= 0 && tabMediaStreams.has(tabId)) {
+        const sniffed = Array.from(tabMediaStreams.get(tabId).values());
+        if (sniffed.length > 0) {
+            const fallbackVariants = sniffed.map((s, idx) => {
+                const isAudio = (s.mimeType && s.mimeType.includes("audio")) || s.url.includes(".mp3") || s.url.includes(".m4a");
+                const ext = isAudio ? "m4a" : (s.url.includes(".webm") ? "webm" : "mp4");
+                return {
+                    variantId: "sniffed_" + idx,
+                    qualityLabel: isAudio ? "Audio Stream" : (s.isManifest ? "HLS/DASH Stream" : "Captured Media Stream"),
+                    container: ext,
+                    codec: isAudio ? "AAC" : "H.264",
+                    isAudioOnly: isAudio,
+                    hasAudio: true,
+                    estimatedSizeBytes: s.contentLength || -1,
+                    directUrl: s.url,
+                    manifestUrl: s.isManifest ? s.url : ""
+                };
+            });
+
+            return {
+                success: true,
+                title: "Captured Stream",
+                variants: fallbackVariants
+            };
+        }
     }
-  } catch (e) {}
-  return "EDM_Media_" + Date.now() + ".mp4";
+
+    return { success: false, errorCode: "FORMAT_EXTRACTION_FAILED", variants: [] };
 }
+
+// =============================================================================
+// 4. TRANSACTIONAL NATIVE & HTTP HANDOFF WITH RESTRICTED EMERGENCY FALLBACK
+// =============================================================================
+async function handoffDownloadToEdm(payload) {
+    if (!payload || !payload.url) {
+        return { success: false, error: "Empty or invalid download URL." };
+    }
+
+    const dlUrl = (payload.url || "").trim();
+    if (!dlUrl.startsWith("http://") && !dlUrl.startsWith("https://") && !dlUrl.startsWith("ftp://") && !dlUrl.startsWith("ftps://")) {
+        return { success: false, error: "Unsupported URL scheme." };
+    }
+
+    if (dlUrl.length > 8192) {
+        return { success: false, error: "URL exceeds maximum allowed length." };
+    }
+
+    const correlationId = payload.correlationId || ("edm_corr_" + Date.now());
+    if (recentHandoffs.has(correlationId)) {
+        return { success: true, deduplicated: true };
+    }
+
+    recentHandoffs.add(correlationId);
+    setTimeout(() => recentHandoffs.delete(correlationId), 3000);
+
+    let safeFilename = (payload.filename || payload.fileName || "download").replace(/[\\\/:\*\?"<>\|]/g, "_").trim();
+    if (!safeFilename) safeFilename = "download";
+
+    const message = {
+        action: "DOWNLOAD_REQUEST",
+        url: dlUrl,
+        videoUrl: payload.videoUrl || dlUrl,
+        audioUrl: payload.audioUrl || "",
+        manifestUrl: payload.manifestUrl || "",
+        pageUrl: payload.pageUrl || "",
+        title: payload.title || "Video Media",
+        filename: safeFilename,
+        fileName: safeFilename,
+        quality: payload.quality || "",
+        format: payload.format || "",
+        formatId: payload.formatId || "",
+        formatArg: payload.formatArg || "",
+        width: payload.width || 0,
+        height: payload.height || 0,
+        fps: payload.fps || 0,
+        videoCodec: payload.videoCodec || payload.codec || "",
+        codec: payload.codec || "",
+        audioCodec: payload.audioCodec || "",
+        container: payload.container || "",
+        requiresFfmpegMerge: !!payload.requiresFfmpegMerge,
+        downloadIdentity: payload.downloadIdentity || "",
+        correlationId: correlationId,
+        estimatedSizeBytes: payload.estimatedSizeBytes || -1,
+        videoSizeBytes: payload.videoSizeBytes || -1,
+        audioSizeBytes: payload.audioSizeBytes || -1,
+        isAudioOnly: !!payload.isAudioOnly,
+        cookies: payload.cookies || "",
+        referer: payload.referer || payload.pageUrl || "",
+        userAgent: payload.userAgent || (typeof navigator !== "undefined" ? navigator.userAgent : ""),
+        mime: payload.mime || payload.mimeType || "",
+        authHeader: payload.authHeader || "",
+        postData: payload.postData || "",
+        tabId: payload.tabId || -1,
+        frameId: payload.frameId || 0,
+        source: "BrowserExtension_MV3",
+        timestamp: new Date().toISOString()
+    };
+
+    // Attempt 1: Native Messaging Host
+    try {
+        const nativeResponse = await sendNativeMessageWithTimeout(message, HANDOFF_TIMEOUT_MS);
+        if (nativeResponse && (nativeResponse.success || nativeResponse.status === "QUEUED" || nativeResponse.status === "STARTED" || nativeResponse.status === "accepted" || nativeResponse.status === "handed_off")) {
+            return { success: true, via: "native", response: nativeResponse };
+        }
+    } catch (nativeErr) {
+        console.info("[EDM] Native host unavailable, trying local HTTP fallback...");
+    }
+
+    // Attempt 2: Local HTTP Endpoint
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), HANDOFF_TIMEOUT_MS);
+
+        const response = await fetch(LOCAL_HTTP_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(message),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            const data = await response.json();
+            return { success: true, via: "http", response: data };
+        }
+    } catch (httpErr) {
+        console.info("[EDM] Local HTTP unavailable.");
+    }
+
+    // If both Native Host and HTTP failed, attempt emergency fallback if allowed
+    return await executeEmergencyBrowserFallback(payload, "EDM Desktop is not running.");
+}
+
+// Emergency Fallback: Strictly restricted to direct standalone media files
+async function executeEmergencyBrowserFallback(payload, reason) {
+    const downloadUrl = payload.videoUrl || payload.url;
+
+    // Rule: Never fallback for manifests (.m3u8, .mpd) or adaptive streams requiring FFmpeg merge
+    if (payload.requiresFfmpegMerge || payload.manifestUrl || (downloadUrl && (downloadUrl.includes(".m3u8") || downloadUrl.includes(".mpd")))) {
+        return {
+            success: false,
+            errorCode: "EDM_UNAVAILABLE",
+            error: "This media stream requires EDM Desktop (adaptive merge / HLS stream). Please start EDM to download."
+        };
+    }
+
+    // Rule: Never fallback to HTML watch page URLs
+    if (downloadUrl && (downloadUrl.includes("youtube.com/watch") || downloadUrl.includes("youtu.be/"))) {
+        return {
+            success: false,
+            errorCode: "INVALID_MEDIA_URL",
+            error: "Cannot download web page HTML as media. Please start EDM Desktop to resolve stream formats."
+        };
+    }
+
+    if (chrome && chrome.downloads && chrome.downloads.download) {
+        const filename = payload.filename || payload.fileName || "download.mp4";
+
+        return new Promise((resolve, reject) => {
+            chrome.downloads.download({
+                url: downloadUrl,
+                filename: filename,
+                saveAs: false,
+                conflictAction: "uniquify"
+            }, (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    console.warn(`[EDM] Emergency browser fallback invoked for ${filename}. Reason: ${reason}`);
+                    resolve({ success: true, via: "browser_emergency_fallback", downloadId: downloadId, fallbackReason: reason });
+                }
+            });
+        });
+    }
+
+    return {
+        success: false,
+        errorCode: "EDM_UNAVAILABLE",
+        error: "EDM is not running and browser download is unavailable."
+    };
+}
+
+// Stdio Native Messaging Helper
+function sendNativeMessageWithTimeout(message, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        if (!chrome.runtime || !chrome.runtime.sendNativeMessage) {
+            return reject(new Error("Native messaging not supported"));
+        }
+
+        let completed = false;
+        const timer = setTimeout(() => {
+            if (!completed) {
+                completed = true;
+                reject(new Error("Native messaging timed out"));
+            }
+        }, timeoutMs || 5000);
+
+        try {
+            chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, message, (response) => {
+                if (completed) return;
+                completed = true;
+                clearTimeout(timer);
+
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(response || { success: true });
+                }
+            });
+        } catch (err) {
+            if (!completed) {
+                completed = true;
+                clearTimeout(timer);
+                reject(err);
+            }
+        }
+    });
+}
+
+function sendNativePing() {
+    return sendNativeMessageWithTimeout({ action: "PING" }, 2000);
+}
+
+// =============================================================================
+// 5. SAFE BROWSER DOWNLOADS INTERCEPTION & BYPASS PROTECTION
+// =============================================================================
+const bypassNextUrls = new Set();
+
+function bypassNextUrl(url) {
+    if (!url) return;
+    bypassNextUrls.add(url);
+    setTimeout(() => bypassNextUrls.delete(url), 10000);
+}
+
+if (typeof chrome !== "undefined" && chrome.downloads && chrome.downloads.onCreated) {
+    chrome.downloads.onCreated.addListener(async (downloadItem) => {
+        if (!downloadItem || !downloadItem.url) return;
+        if (downloadItem.url.startsWith("blob:") || downloadItem.url.startsWith("data:")) return;
+
+        const url = downloadItem.url;
+        if (bypassNextUrls.has(url)) {
+            bypassNextUrls.delete(url);
+            return;
+        }
+
+        const correlationId = "browser_dl_" + downloadItem.id;
+
+        let cookiesStr = "";
+        try {
+            if (chrome.cookies && chrome.cookies.getAll) {
+                const cookieList = await chrome.cookies.getAll({ url: url });
+                if (cookieList && cookieList.length > 0) {
+                    cookiesStr = cookieList.map(c => `${c.name}=${c.value}`).join("; ");
+                }
+            }
+        } catch (e) {}
+
+        const handoffResult = await handoffDownloadToEdm({
+            url: url,
+            videoUrl: url,
+            filename: downloadItem.filename || "",
+            referer: downloadItem.referrer || downloadItem.finalUrl || "",
+            pageUrl: downloadItem.referrer || "",
+            userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+            mime: downloadItem.mime || "",
+            fileSize: downloadItem.fileSize || -1,
+            cookies: cookiesStr,
+            correlationId: correlationId,
+            source: "BrowserDownloadInterception"
+        });
+
+        // Transactional: ONLY cancel browser download if EDM explicitly accepted
+        if (handoffResult && handoffResult.success) {
+            try {
+                chrome.downloads.cancel(downloadItem.id);
+                if (chrome.downloads.erase) {
+                    chrome.downloads.erase({ id: downloadItem.id });
+                }
+            } catch (err) {}
+        }
+    });
+}
+

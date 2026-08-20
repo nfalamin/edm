@@ -1,0 +1,1016 @@
+| Step | বিষয়                                           | Prompt |
+| ---- | ---------------------------------------------- | -----: |
+| 1    | Full Codebase Re-Audit & Baseline              |      2 |
+| 2    | Project/Framework/Build Health                 |      2 |
+| 3    | Architecture & Service Duplication             |      3 |
+| 4    | Download Engine Core                           |      4 |
+| 5    | IDM-Level Dynamic Segmentation                 |      3 |
+| 6    | Resume & Crash Recovery                        |      3 |
+| 7    | Network/HTTP Edge Cases                        |      4 |
+| 8    | Queue & Scheduler                              |      3 |
+| 9    | Browser Extension & Native Messaging           |      5 |
+| 10   | Cookies/Headers/Authentication/Browser Context |      3 |
+| 11   | HLS/DASH/Media/YouTube                         |      4 |
+| 12   | Torrent/FTP/Protocol Layer                     |      3 |
+| 13   | Security & Integrity                           |      4 |
+| 14   | Performance/RAM/CPU/Disk                       |      4 |
+| 15   | WPF UI/MVVM                                    |      3 |
+| 16   | Testing/Stress/Failure Testing                 |      5 |
+| 17   | Website + Dashboard + Cloud + Desktop          |      5 |
+| 18   | Final IDM Parity/Release Audit                 |      4 |
+\\
+
+
+ঠিক আছে। আপনি প্রথমে জিজ্ঞেস করেছিলেন **“EDM GitHub সম্পূর্ণ audit করলে কী কী সমস্যা, কী ভালো, IDM থেকে কতটা পিছিয়ে?”**—সেখান থেকে এখন পর্যন্ত আমাদের আলোচনায় পাওয়া সমস্যাগুলোকে আমি এবার **একটি পূর্ণ remediation roadmap** হিসেবে সাজাচ্ছি।
+
+এটা এখনই Google Antigravity-কে দেওয়ার prompt নয়—আগে **কোন কোন সমস্যা আছে, কোন Step-এ কয়টি prompt থাকবে, কোন path/file area নিয়ে কাজ হবে**—সেটা পরিষ্কার করছি। এরপর চাইলে আমি এই কাঠামোর প্রতিটি Step-এর **copy-paste-ready Antigravity prompt** বানিয়ে দেব।
+
+---
+
+# EDM Complete Problem Map
+
+## মোট পরিকল্পনা
+
+আমি মোট **18টি Step** রাখছি।
+
+| Step | বিষয়                                           | Prompt |
+| ---- | ---------------------------------------------- | -----: |
+| 1    | Full Codebase Re-Audit & Baseline              |      2 |
+| 2    | Project/Framework/Build Health                 |      2 |
+| 3    | Architecture & Service Duplication             |      3 |
+| 4    | Download Engine Core                           |      4 |
+| 5    | IDM-Level Dynamic Segmentation                 |      3 |
+| 6    | Resume & Crash Recovery                        |      3 |
+| 7    | Network/HTTP Edge Cases                        |      4 |
+| 8    | Queue & Scheduler                              |      3 |
+| 9    | Browser Extension & Native Messaging           |      5 |
+| 10   | Cookies/Headers/Authentication/Browser Context |      3 |
+| 11   | HLS/DASH/Media/YouTube                         |      4 |
+| 12   | Torrent/FTP/Protocol Layer                     |      3 |
+| 13   | Security & Integrity                           |      4 |
+| 14   | Performance/RAM/CPU/Disk                       |      4 |
+| 15   | WPF UI/MVVM                                    |      3 |
+| 16   | Testing/Stress/Failure Testing                 |      5 |
+| 17   | Website + Dashboard + Cloud + Desktop          |      5 |
+| 18   | Final IDM Parity/Release Audit                 |      4 |
+
+**মোট: 64টি focused prompt।**
+
+একটি Step-এর সব prompt একসাথে না দিয়ে, **একটি Step-এর prompt-গুলো ধারাবাহিকভাবে Antigravity-কে দেওয়া হবে**। এতে সে প্রতিটি বিষয় শেষ করে তারপর পরেরটায় যাবে।
+
+---
+
+# STEP 1 — Full Codebase Re-Audit
+
+### সমস্যা
+
+সবচেয়ে আগে Antigravity-কে পুরো repository আবার scan করাতে হবে।
+
+কারণ AI যদি শুধু নিজের ধারণা দিয়ে fix করে, তাহলে ভুল জায়গায় পরিবর্তন করার সম্ভাবনা থাকবে।
+
+### প্রধান path
+
+```text
+/
+├── EDM/
+├── EDM.Tests/
+├── *.sln
+├── *.csproj
+├── README
+├── Browser Extensions
+├── NativeMessaging
+└── Configuration/Installer files
+```
+
+### Prompt 1
+
+**Complete repository inventory + architecture map**
+
+সে প্রতিটি:
+
+* `.cs`
+* `.xaml`
+* `.json`
+* `.csproj`
+* extension
+* native host
+* test
+* configuration
+
+খুঁজে dependency map করবে।
+
+### Prompt 2
+
+**Evidence-based bug audit**
+
+নিয়ম:
+
+> “তুমি কোনো সমস্যা অনুমান করে সত্য হিসেবে বলবে না। প্রথমে actual code/path/line দেখে verify করবে।”
+
+এখানে output:
+
+```text
+Problem
+Path
+Class
+Method
+Why
+Severity
+Evidence
+Recommended fix
+```
+
+---
+
+# STEP 2 — Project / Framework / Build Health
+
+### সমস্যা
+
+আমাদের আগের audit-এ সবচেয়ে গুরুত্বপূর্ণ mismatch:
+
+```text
+আপনার পুরোনো পরিকল্পনা → .NET 8
+বর্তমান repository → net10.0-windows
+```
+
+### Path
+
+```text
+EDM/EDM.csproj
+*.sln
+Directory.*
+NuGet configuration
+```
+
+### Prompt 1
+
+Framework/dependency audit।
+
+### Prompt 2
+
+Build এবং dependency compatibility audit।
+
+দেখবে:
+
+* duplicate package
+* unnecessary package
+* incompatible package
+* WPF + WinForms requirement
+* warnings
+* nullable
+* analyzers
+* publish configuration
+* x64
+* Release build
+
+---
+
+# STEP 3 — Architecture Cleanup
+
+এটা অত্যন্ত গুরুত্বপূর্ণ।
+
+### মূল সমস্যা
+
+আমাদের audit-এ:
+
+```text
+DownloadService
+      ↕
+DownloadOrchestrator
+      ↕
+অন্যান্য service
+```
+
+এর মধ্যে responsibility overlap দেখা গেছে।
+
+### Path
+
+```text
+EDM/Services/
+EDM/Domain/
+EDM/Infrastructure/
+EDM/Models/
+```
+
+### Prompt 1
+
+Service dependency graph তৈরি।
+
+### Prompt 2
+
+`DownloadService` বনাম `DownloadOrchestrator` responsibility separation।
+
+### Prompt 3
+
+Target architecture বানানো।
+
+লক্ষ্য:
+
+```text
+UI
+ ↓
+ViewModel
+ ↓
+Application Layer
+ ↓
+Download Orchestrator
+ ↓
+Download Engine
+ ↓
+Network
+```
+
+যাতে circular/duplicate responsibility না থাকে।
+
+---
+
+# STEP 4 — Download Engine Core
+
+এটাই EDM-এর **heart**।
+
+### Path
+
+```text
+EDM/Services/MultiPartDownloader.cs
+EDM/Services/DownloadService.cs
+EDM/Services/DownloadOrchestrator.cs
+```
+
+### সমস্যাগুলো
+
+* range handling
+* segment lifecycle
+* retry
+* merge
+* cancellation
+* pause
+* concurrency
+* failure handling
+* finalization
+
+সব IDM-level করতে হবে।
+
+### Prompt 1
+
+পুরো download lifecycle audit।
+
+### Prompt 2
+
+HTTP Range/206/200 fallback ঠিক করা।
+
+### Prompt 3
+
+Retry/cancellation/pause/resume state machine।
+
+### Prompt 4
+
+Final merge এবং file integrity architecture।
+
+---
+
+# STEP 5 — IDM-Level Dynamic Segmentation
+
+এটা **সবচেয়ে গুরুত্বপূর্ণ performance কাজগুলোর একটি।**
+
+বর্তমান EDM-এর adaptive connection controller আছে, কিন্তু:
+
+> adaptive connection count ≠ IDM-এর full dynamic segmentation।
+
+### Path
+
+```text
+EDM/Services/AdaptiveConnectionController.cs
+EDM/Services/MultiPartDownloader.cs
+EDM/Services/ChunkSizer.cs
+```
+
+### Prompt 1
+
+বর্তমান segmentation algorithm audit।
+
+### Prompt 2
+
+IDM-style dynamic segment splitting design।
+
+### Prompt 3
+
+Connection reuse + segment stealing + remaining-range optimization implement।
+
+Target:
+
+```text
+Segment A ────────→ done
+                     ↓
+Connection reuse
+                     ↓
+Remaining largest segment
+                     ↓
+Split
+```
+
+---
+
+# STEP 6 — Resume & Crash Recovery
+
+### সমস্যা
+
+বর্তমান EDM-এ durable metadata ভালো foundation হলেও আরও কঠিন failure case test করতে হবে।
+
+### Path
+
+```text
+EDM/Services/DurableMetadataManager.cs
+EDM/Services/MultiPartDownloader.cs
+```
+
+### Prompt 1
+
+Metadata lifecycle audit।
+
+### Prompt 2
+
+Crash-safe resume।
+
+Test করবে:
+
+* PC shutdown
+* process kill
+* app crash
+* power loss simulation
+* partial segment
+* corrupted metadata
+* `.tmp`
+* `.bak`
+
+### Prompt 3
+
+ETag/Last-Modified/file-size পরিবর্তনের পরে resume policy।
+
+---
+
+# STEP 7 — Network & HTTP Edge Cases
+
+### সমস্যা
+
+বাস্তব internet downloader-এ normal `200/206` যথেষ্ট নয়।
+
+### Path
+
+```text
+EDM/Services/Network*
+EDM/Services/Http*
+EDM/Services/MultiPartDownloader.cs
+```
+
+### Prompt 1
+
+HTTP status handling।
+
+Test:
+
+```text
+200
+206
+301
+302
+307
+308
+401
+403
+404
+408
+416
+429
+500
+502
+503
+504
+```
+
+### Prompt 2
+
+Network interruption/reconnect।
+
+### Prompt 3
+
+Slow server/timeout/connection reset।
+
+### Prompt 4
+
+Proxy/DNS/TLS/IPv4/IPv6 এবং network change।
+
+---
+
+# STEP 8 — Queue & Scheduler
+
+### Path
+
+```text
+EDM/Services/DownloadQueueScheduler.cs
+EDM/Services/
+EDM/MainWindow.xaml.cs
+```
+
+### সমস্যা
+
+Scheduler engine আছে, কিন্তু application integration সম্পূর্ণ polished নয়।
+
+### Prompt 1
+
+Queue state/persistence audit।
+
+### Prompt 2
+
+Scheduler integration complete।
+
+### Prompt 3
+
+IDM-level scheduling:
+
+```text
+Start time
+Stop time
+Max simultaneous
+Bandwidth
+Queue priority
+Retry
+After-completion action
+```
+
+---
+
+# STEP 9 — Browser Extension & Native Messaging
+
+🔥 **এটাই আপনার বর্তমান সবচেয়ে গুরুত্বপূর্ণ সমস্যা।**
+
+### Path
+
+```text
+Browser Extensions/
+NativeMessaging/
+manifest.json
+native messaging host
+Chrome
+Edge
+Firefox
+```
+
+এখানে Antigravity-কে **একদম actual installed/runtime path verify করতে হবে।**
+
+### Prompt 1
+
+Extension পুরো audit।
+
+দেখবে:
+
+* manifest
+* permissions
+* service worker
+* content script
+* messaging
+* download listener
+
+### Prompt 2
+
+Native Messaging Host audit।
+
+দেখবে:
+
+```text
+Extension
+ ↓
+connectNative()
+ ↓
+Native Host
+ ↓
+EDM
+```
+
+কোথায় break করছে।
+
+### Prompt 3
+
+Chrome registration fix।
+
+### Prompt 4
+
+Edge registration fix।
+
+### Prompt 5
+
+Firefox native messaging আলাদাভাবে verify।
+
+---
+
+# STEP 10 — Browser Context
+
+Extension শুধু URL পাঠালেই IDM হয় না।
+
+### সমস্যা
+
+বিশেষ করে:
+
+```text
+Cookie
+Referer
+User-Agent
+Authorization
+POST data
+Temporary URL
+Blob
+Authenticated download
+```
+
+### Path
+
+```text
+Browser Extension
+NativeMessaging
+DownloadOrchestrator
+HTTP client layer
+```
+
+### Prompt 1
+
+Browser context transfer system।
+
+### Prompt 2
+
+Cookie/header/authenticated download।
+
+### Prompt 3
+
+IDM-এর মতো download interception edge cases।
+
+---
+
+# STEP 11 — HLS / DASH / Media
+
+### Path
+
+```text
+EDM/Services/*Media*
+EDM/Services/*Hls*
+EDM/Services/*Dash*
+yt-dlp integration
+FFmpeg integration
+```
+
+### Prompt 1
+
+HLS audit:
+
+```text
+m3u8
+master playlist
+variant
+segments
+AES encryption
+live/VOD
+```
+
+### Prompt 2
+
+DASH audit:
+
+```text
+MPD
+video representation
+audio representation
+segments
+```
+
+### Prompt 3
+
+yt-dlp integration।
+
+### Prompt 4
+
+FFmpeg merge/conversion/error handling।
+
+---
+
+# STEP 12 — Torrent / FTP / Other Protocols
+
+### Path
+
+```text
+Torrent
+MonoTorrent/libtorrent integration
+FTP/FTPS services
+Protocol routing
+DownloadOrchestrator
+```
+
+### Prompt 1
+
+Torrent lifecycle audit।
+
+### Prompt 2
+
+FTP/FTPS reliability।
+
+### Prompt 3
+
+Protocol abstraction এমন করা যাতে নতুন protocol যোগ করতে core downloader ভাঙতে না হয়।
+
+---
+
+# STEP 13 — Security
+
+এখানে আপনার architecture ভালো, কিন্তু enforcement আরও শক্ত করতে হবে।
+
+### Path
+
+```text
+EDM/Services/DownloadSecurityPipeline.cs
+IntegrityVerificationService.cs
+```
+
+### Prompt 1
+
+পুরো security pipeline audit।
+
+### Prompt 2
+
+Safe Browsing mandatory enforcement।
+
+### Prompt 3
+
+Authenticode policy ঠিক করা।
+
+বর্তমান concern:
+
+```text
+Invalid signature
+ ↓
+Warning
+ ↓
+Defender clean
+ ↓
+Possibly approve
+```
+
+এটা policy-driven করতে হবে।
+
+### Prompt 4
+
+SHA-256 + Defender + quarantine + malicious download handling।
+
+---
+
+# STEP 14 — Performance
+
+🔥 IDM-এর সঙ্গে speed comparison-এর জন্য এটা গুরুত্বপূর্ণ।
+
+### Path
+
+```text
+MultiPartDownloader
+AdaptiveConnectionController
+ChunkSizer
+buffer/memory classes
+disk writer
+telemetry
+```
+
+### Prompt 1
+
+CPU/RAM allocation audit।
+
+### Prompt 2
+
+Disk I/O audit।
+
+বর্তমান concern:
+
+```text
+preallocate
+ ↓
+segment files
+ ↓
+read
+ ↓
+merge
+ ↓
+write final
+```
+
+অপ্রয়োজনীয় disk I/O আছে কিনা verify করতে হবে।
+
+### Prompt 3
+
+Telemetry optimization।
+
+বর্তমানে 100ms telemetry loop আছে—এটা benchmark করে 250/500ms বা adaptive করা যায় কিনা দেখতে হবে।
+
+### Prompt 4
+
+Large-file benchmark:
+
+```text
+1 GB
+10 GB
+50 GB
+100 GB+
+```
+
+---
+
+# STEP 15 — WPF UI / MVVM
+
+### Path
+
+```text
+EDM/MainWindow.xaml
+EDM/MainWindow.xaml.cs
+EDM/ViewModels/
+EDM/Views/
+EDM/Themes/
+```
+
+### সমস্যা
+
+`MainWindow.xaml.cs`-এ business logic বেশি ঢুকে যাওয়ার concern আছে।
+
+### Prompt 1
+
+Code-behind audit।
+
+### Prompt 2
+
+MVVM migration।
+
+Target:
+
+```text
+XAML
+ ↓
+ViewModel
+ ↓
+Service
+```
+
+### Prompt 3
+
+Theme/library cleanup এবং UI performance।
+
+বিশেষ করে:
+
+```text
+ModernWpf
+FluentWPF
+WinForms
+```
+
+কোনটা প্রয়োজন সেটা verify করবে।
+
+---
+
+# STEP 16 — Testing
+
+🔥 এখানে সবচেয়ে বেশি কাজ করতে হবে।
+
+### Path
+
+```text
+EDM.Tests/
+```
+
+### Prompt 1
+
+Existing tests audit।
+
+### Prompt 2
+
+Core downloader integration tests।
+
+### Prompt 3
+
+Failure injection tests।
+
+### Prompt 4
+
+Stress/load tests।
+
+### Prompt 5
+
+End-to-end test:
+
+```text
+Browser
+ ↓
+Extension
+ ↓
+Native Messaging
+ ↓
+EDM
+ ↓
+Download
+ ↓
+Resume
+ ↓
+Verify
+```
+
+---
+
+# STEP 17 — Website + Dashboard + Desktop এক করা
+
+এটা আপনার নতুন বড় লক্ষ্য।
+
+## Target architecture
+
+```text
+                    EDM WEBSITE
+                         │
+                    EDM DASHBOARD
+                         │
+                    EDM CLOUD API
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+        Desktop Agent         Browser System
+              │
+       Download Engine
+```
+
+### Path নতুনভাবে হবে
+
+```text
+EDM.Cloud/
+EDM.Api/
+EDM.Agent/
+EDM.Dashboard/
+EDM.Web/
+EDM.Shared/
+```
+
+### Prompt 1
+
+Cloud architecture design।
+
+### Prompt 2
+
+ASP.NET Core API।
+
+### Prompt 3
+
+SignalR real-time control।
+
+### Prompt 4
+
+Device pairing/authentication।
+
+### Prompt 5
+
+Remote control:
+
+```text
+Start
+Pause
+Resume
+Cancel
+Retry
+Queue
+Priority
+Speed limit
+Scheduler
+```
+
+Dashboard থেকে।
+
+---
+
+# STEP 18 — Final IDM Parity Audit
+
+সব fix করার পরে **আবার audit**।
+
+### Prompt 1
+
+IDM বনাম EDM feature matrix।
+
+```text
+Feature
+IDM
+EDM
+Status
+Evidence
+Gap
+```
+
+### Prompt 2
+
+Performance comparison।
+
+### Prompt 3
+
+Security/reliability audit।
+
+### Prompt 4
+
+Release readiness:
+
+```text
+Build
+Tests
+Installer
+Browser Extension
+Native Host
+Auto Update
+Crash recovery
+Logs
+Privacy
+Security
+```
+
+---
+
+# ⚠️ Antigravity-কে প্রতিটি Step-এর আগে যে নিয়ম দিতে হবে
+
+প্রতিটি Step-এর prompt-এর শুরুতেই আমি এই ধরনের instruction রাখব:
+
+> **“এই কাজ শুরু করার আগে আমার repository-এর actual code, file structure, dependency এবং existing implementation গভীরভাবে inspect করো। কোনো code অনুমান করে লিখবে না। যে সমস্যা বলছো তার exact file path, class, method এবং প্রয়োজন হলে line reference দাও। কোনো কিছু ইতিমধ্যে ভালোভাবে implement করা থাকলে সেটা আবার rewrite করবে না। আগে diagnosis, তারপর plan, তারপর implementation। একটি change করার আগে তার impact অন্য service-এ কী হবে যাচাই করো। কাজ শেষে build/test চালিয়ে ফলাফল দেখাও। কোনো test/build সম্ভব না হলে স্পষ্টভাবে বলো। তুমি 100% correct ধরে নেবে না—প্রতিটি assumption actual code দিয়ে verify করবে।”**
+
+এটা খুব গুরুত্বপূর্ণ।
+
+---
+
+# 📊 কোন Step কতটা জরুরি?
+
+| Step                   | Priority  |
+| ---------------------- | --------- |
+| 1 Re-audit             | 🔴 P0     |
+| 2 Build                | 🔴 P0     |
+| 3 Architecture         | 🔴 P0     |
+| 4 Download Core        | 🔴 P0     |
+| 5 Dynamic Segmentation | 🔴 P0     |
+| 6 Resume               | 🔴 P0     |
+| 7 Network              | 🔴 P0     |
+| 8 Queue                | 🔴 P0     |
+| 9 Extension            | 🔴 **P0** |
+| 10 Browser Context     | 🔴 **P0** |
+| 11 Media               | 🟠 P1     |
+| 12 Protocol            | 🟠 P1     |
+| 13 Security            | 🔴 P0     |
+| 14 Performance         | 🔴 P0     |
+| 15 UI                  | 🟠 P1     |
+| 16 Testing             | 🔴 **P0** |
+| 17 Cloud/Dashboard     | 🟠 P1     |
+| 18 Final Audit         | 🔴 P0     |
+
+---
+
+# 🧠 সবচেয়ে গুরুত্বপূর্ণ: আমরা কীভাবে Antigravity-কে কাজ করাব
+
+আমি **64টা prompt একসাথে দেব না**।
+
+আপনি করবেন:
+
+```text
+STEP 1
+ ↓
+Prompt 1
+ ↓
+Antigravity কাজ করবে
+ ↓
+Prompt 2
+ ↓
+Antigravity কাজ করবে
+ ↓
+STEP 1 complete
+ ↓
+STEP 2
+```
+
+এতে Antigravity আপনার codebase-এ একসাথে 100টা পরিবর্তন করে project নষ্ট করার ঝুঁকি অনেক কমবে।
+
+আর প্রতিটি Step-এ আমি prompt-এর মধ্যে বলব:
+
+```text
+BEFORE
+ ↓
+Inspect
+ ↓
+Diagnose
+ ↓
+Show evidence
+ ↓
+Plan
+ ↓
+Implement
+ ↓
+Build
+ ↓
+Test
+ ↓
+Verify
+ ↓
+Report
+```
+
+এবং যেখানে architecture বোঝাতে সুবিধা হবে, তাকে **ASCII architecture diagram / flow diagram / dependency graph / performance graph** দিতে বলব।
+
+**আরেকটা গুরুত্বপূর্ণ বিষয়:** আপনার আগের EDM পরিকল্পনা ছিল `.NET 8 + WPF + XAML`; কিন্তু GitHub-এর বর্তমান repository `net10.0-windows`-এ গেছে। তাই Step 2-তে Antigravity-কে **নিজে code দেখে সিদ্ধান্ত নিতে বলব—blindly .NET 8-এ downgrade করতে নয়।**
+
+পরের ধাপে আমি চাইলে **STEP 1-এর ২টি prompt থেকে শুরু করে একদম copy-paste-ready Google Antigravity prompt** বানিয়ে দিতে পারি; তারপর একইভাবে Step 2 → Step 18।

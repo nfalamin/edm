@@ -72,7 +72,6 @@ namespace EDM.NativeHost
                     string rawJson = Encoding.UTF8.GetString(payloadBytes);
                     LoggingService.Log($"[EDM.NativeHost] Received native message: {NativeMessageListener.ScrubPayloadForLogs(rawJson)}");
 
-                    var doc = JsonDocument.Parse(rawJson);
                     var req = JsonSerializer.Deserialize<NativeMessageRequest>(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NativeMessageRequest();
 
                     string action = req.GetEffectiveAction();
@@ -105,6 +104,7 @@ namespace EDM.NativeHost
                             RequestId = req.RequestId,
                             Result = variants,
                             Data = variants.Variants,
+                            Variants = variants.Variants,
                             Error = variants.ErrorMessage
                         }).ConfigureAwait(false);
                         continue;
@@ -112,6 +112,8 @@ namespace EDM.NativeHost
 
                     if (string.Equals(action, "download_url", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(action, "START_DOWNLOAD", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "START_EDM_DOWNLOAD", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "DOWNLOAD_REQUEST", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(action, "intercept", StringComparison.OrdinalIgnoreCase))
                     {
                         string downloadUrl = req.Url ?? string.Empty;
@@ -126,6 +128,36 @@ namespace EDM.NativeHost
                             }).ConfigureAwait(false);
                             continue;
                         }
+
+                        // Strict URL validation to reject dangerous schemes & malformed URIs
+                        if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var parsedDlUri) ||
+                            (parsedDlUri.Scheme != "http" && parsedDlUri.Scheme != "https" && parsedDlUri.Scheme != "ftp" && parsedDlUri.Scheme != "ftps"))
+                        {
+                            await SendResponseAsync(new NativeMessageResponse
+                            {
+                                Success = false,
+                                Action = action,
+                                RequestId = req.RequestId,
+                                Error = "Invalid or unsupported download URL scheme."
+                            }).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        // Size guard rails to prevent buffer overflow & header exhaustion
+                        if (downloadUrl.Length > 8192 || (req.Cookies != null && req.Cookies.Length > 32768))
+                        {
+                            await SendResponseAsync(new NativeMessageResponse
+                            {
+                                Success = false,
+                                Action = action,
+                                RequestId = req.RequestId,
+                                Error = "Payload exceeds maximum safe size limits."
+                            }).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        // Sanitize filename
+                        req.Filename = SecuritySanitizer.SanitizeFileName(req.GetEffectiveFileName());
 
                         // Send handoff to primary EDM application
                         bool handoffSuccess = await ForwardToEdmAppAsync(req).ConfigureAwait(false);
@@ -168,10 +200,29 @@ namespace EDM.NativeHost
                 Filename = req.GetEffectiveFileName(),
                 Cookies = req.Cookies,
                 PageUrl = req.PageUrl,
+                Referer = !string.IsNullOrWhiteSpace(req.Referer) ? req.Referer : req.PageUrl,
+                UserAgent = req.UserAgent,
+                AuthHeader = req.AuthHeader,
+                PostData = req.PostData,
+                TabId = req.TabId,
+                FrameId = req.FrameId,
                 Quality = req.Quality,
                 Format = req.Format,
                 Browser = req.Browser,
-                CorrelationId = req.CorrelationId
+                CorrelationId = req.CorrelationId,
+                DownloadIdentity = req.DownloadIdentity,
+                Source = req.Browser ?? "BrowserExtension",
+                AudioUrl = req.AudioUrl,
+                VideoUrl = req.VideoUrl,
+                FormatArg = req.FormatArg,
+                RequiresFfmpegMerge = req.RequiresFfmpegMerge ?? false,
+                Title = req.Title,
+                ManifestUrl = req.ManifestUrl,
+                AudioCodec = req.AudioCodec,
+                Codec = req.Codec,
+                Container = req.Container,
+                EstimatedSizeBytes = req.EstimatedSizeBytes,
+                IsAudioOnly = req.IsAudioOnly
             };
 
             string jsonPayload = JsonSerializer.Serialize(payload);
@@ -186,6 +237,7 @@ namespace EDM.NativeHost
                 using var reader = new StreamReader(pipeClient, Encoding.UTF8, leaveOpen: true);
 
                 await writer.WriteLineAsync(jsonPayload).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
                 string? responseLine = await reader.ReadLineAsync().ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(responseLine))
@@ -203,31 +255,39 @@ namespace EDM.NativeHost
             try
             {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string edmExe = Path.Combine(baseDir, "EDM.exe");
-
-                if (!File.Exists(edmExe))
+                string[] candidatePaths = new[]
                 {
-                    // Check parent directory
-                    string parentEdm = Path.Combine(Directory.GetParent(baseDir)?.FullName ?? baseDir, "EDM.exe");
-                    if (File.Exists(parentEdm)) edmExe = parentEdm;
-                }
+                    Path.Combine(baseDir, "EDM.exe"),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\EDM\bin\Debug\net10.0-windows\EDM.exe")),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\EDM\bin\Release\net10.0-windows\EDM.exe")),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\EDM\bin\Debug\net10.0-windows\EDM.exe")),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\EDM\bin\Release\net10.0-windows\EDM.exe")),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\EDM.exe")),
+                    Path.GetFullPath(Path.Combine(baseDir, @"..\EDM\EDM.exe")),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\EDM\EDM.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Exclusive Download Manager\EDM.exe")
+                };
 
-                if (File.Exists(edmExe))
+                string? edmExe = candidatePaths.FirstOrDefault(File.Exists);
+
+                if (!string.IsNullOrEmpty(edmExe) && File.Exists(edmExe))
                 {
                     string b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonPayload));
                     var psi = new ProcessStartInfo
                     {
                         FileName = edmExe,
-                        Arguments = $"--handoff {b64}",
-                        UseShellExecute = true
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     };
+                    psi.ArgumentList.Add("--handoff");
+                    psi.ArgumentList.Add(b64);
                     Process.Start(psi);
-                    LoggingService.Log($"[EDM.NativeHost] Successfully launched EDM.exe with handoff payload.");
+                    LoggingService.Log($"[EDM.NativeHost] Successfully launched EDM.exe with handoff payload from '{edmExe}'.");
                     return true;
                 }
                 else
                 {
-                    LoggingService.Log($"[EDM.NativeHost] EDM.exe not found at '{edmExe}'");
+                    LoggingService.Log($"[EDM.NativeHost] EDM.exe not found in candidate paths: {string.Join(", ", candidatePaths)}");
                 }
             }
             catch (Exception ex)

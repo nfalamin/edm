@@ -1,0 +1,57 @@
+================================================================================
+  EXCLUSIVE DOWNLOAD MANAGER (EDM) v1.0 — OFFICIAL INSTALLATION & SETUP GUIDE
+================================================================================
+
+[ENGLISH]
+1. INSTALLATION:
+   - Double-click `EDM_Setup_v1.0.exe` to run the official setup wizard.
+   - Follow the setup prompts to install EDM.
+   - Desktop and Start Menu shortcuts will be created automatically.
+
+2. BROWSER EXTENSION SETUP:
+   - Google Chrome:
+     1. Open Chrome and go to `chrome://extensions/`
+     2. Enable "Developer mode" in the top-right corner.
+     3. Extract `Browser_Extensions/edm-chrome-extension-v1.0.0.zip` or click "Load unpacked" and select the folder.
+   - Microsoft Edge:
+     1. Open Edge and go to `edge://extensions/`
+     2. Enable "Developer mode".
+     3. Extract `Browser_Extensions/edm-edge-extension-v1.0.0.zip` and click "Load unpacked".
+   - Mozilla Firefox:
+     1. Open Firefox and go to `about:debugging#/runtime/this-firefox`
+     2. Click "Load Temporary Add-on" and select `manifest.json` inside the extracted Firefox extension folder.
+
+3. FEATURES & USAGE:
+   - Dynamic Multi-Thread Turbo Downloader: Automatically splits downloads into parallel worker streams.
+   - Live 30-60 FPS Throughput Graph: Real-time network speed wave monitor.
+   - Instant Media & Stream Analyzer: Direct YouTube, HLS (.m3u8), and DASH (.mpd) link sniffing.
+   - Smart Category Routing & Batch Downloader.
+
+--------------------------------------------------------------------------------
+
+[বাংলা নির্দেশিকা - BENGALI]
+১. ইনস্টলেশন প্রক্রিয়া:
+   - `EDM_Setup_v1.0.exe` ফাইলটিতে ডাবল-ক্লিক করে সেটআপ উইজার্ড চালু করুন।
+   - স্ক্রিনের নির্দেশনা অনুযায়ী ইনস্টলেশন সম্পন্ন করুন।
+   - ইনস্টল শেষে ডেস্কটপে EDM-এর শর্টকাট আইকন তৈরি হবে।
+
+২. ব্রাউজার এক্সটেনশন সেটআপ:
+   - গুগল ক্রোম (Google Chrome):
+     ১. ক্রোম খুলে `chrome://extensions/` এ যান।
+     ২. ডানদিকের উপরে "Developer mode" অন করুন।
+     ৩. `Browser_Extensions/edm-chrome-extension-v1.0.0.zip` আনজিপ করে "Load unpacked" দিয়ে ফোল্ডারটি সিলেক্ট করুন।
+   - মাইক্রোসফট এজ (Microsoft Edge):
+     ১. এজ খুলে `edge://extensions/` এ যান।
+     ২. "Developer mode" অন করুন এবং আনজিপ করা এজ ফোল্ডারটি লোড করুন।
+   - ফায়ারফক্স (Mozilla Firefox):
+     ১. `about:debugging#/runtime/this-firefox` এ গিয়ে "Load Temporary Add-on" দিয়ে `manifest.json` ফাইলটি সিলেক্ট করুন।
+
+৩. প্রধান সুবিধাসমূহ:
+   - টার্বো মাল্টি-থ্রেডিং: সর্বোচ্চ ব্যান্ডউইথ স্পিডে একসাথে সব থ্রেড রান করবে।
+   - লাইভ স্পিড ওয়েভ গ্রাফ: রিয়েল-টাইমে ইন্টারনেটের গতি ওঠানামা প্রদর্শন।
+   - ইনস্ট্যান্ট সাইজ ও ভিডিও এনালাইসিস: ইউটিউব এবং স্ট্রিমিং সাইট থেকে দ্রুত সাইজ ও কোয়ালিটি ডিটেকশন।
+
+================================================================================
+Support Email: support@exclusive-download-manager.com
+Official Repository: https://github.com/exclusive-download-manager
+================================================================================

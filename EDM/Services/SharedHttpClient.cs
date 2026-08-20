@@ -17,7 +17,6 @@ namespace EDM.Services
         private static HttpClient? _client;
         private static ProxySettings? _appliedProxySettings;
         private static System.Threading.Timer? _graceTimer;
-        private static volatile bool _isDisposing;
 
         public static HttpClient Instance
         {

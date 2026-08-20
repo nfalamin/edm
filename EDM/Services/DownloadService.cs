@@ -13,7 +13,7 @@ using EDM.Services.Interfaces;
 
 namespace EDM.Services
 {
-    public class DownloadService
+    public class DownloadService : IDownloadService
     {
         // Helper throttled progress wrapper to coalesce frequent progress updates and avoid UI saturation.
         internal sealed class ThrottledProgress : IProgress<DownloadProgressInfo>, IDisposable
@@ -261,6 +261,25 @@ namespace EDM.Services
             return false;
         }
 
+        // Start a download for the provided DownloadItem. Delegates to DownloadOrchestrator.
+        public async Task StartDownloadAsync(
+            DownloadItem item,
+            IProgress<DownloadProgressInfo> progressReporter,
+            PauseTokenSource pauseToken,
+            Func<double> speedLimitProvider,
+            CancellationToken cancellationToken,
+            int? segmentCount = null)
+        {
+            await _orchestrator.StartDownloadAsync(
+                item,
+                progressReporter,
+                pauseToken,
+                speedLimitProvider,
+                cancellationToken,
+                segmentCount,
+                DiagnosticLog).ConfigureAwait(false);
+        }
+
         // Start a download for the provided url. Delegates to DownloadOrchestrator.
         public async Task StartDownloadAsync(
             string url,
@@ -273,17 +292,47 @@ namespace EDM.Services
             DownloadCredentials? credentials = null,
             string? cookies = null)
         {
-            await _orchestrator.StartDownloadAsync(
+            try
+            {
+                await _orchestrator.StartDownloadAsync(
+                    url,
+                    savePath,
+                    progressReporter,
+                    pauseToken,
+                    speedLimitProvider,
+                    cancellationToken,
+                    segmentCount,
+                    credentials,
+                    cookies,
+                    DiagnosticLog).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Status already reported via progressReporter
+            }
+            catch (Exception ex)
+            {
+                // Status already reported via progressReporter
+                LoggingService.Log($"[DownloadService] Download completed with status error: {ex.Message}");
+            }
+        }
+
+        // Implementation of IDownloadService.StartDownloadAsync with getRetryCount
+        public async Task StartDownloadAsync(
+            string url,
+            string savePath,
+            IProgress<DownloadProgressInfo> progress,
+            PauseTokenSource pauseToken,
+            Func<int> getRetryCount,
+            CancellationToken cancellationToken)
+        {
+            await StartDownloadAsync(
                 url,
                 savePath,
-                progressReporter,
+                progress,
                 pauseToken,
-                speedLimitProvider,
-                cancellationToken,
-                segmentCount,
-                credentials,
-                cookies,
-                DiagnosticLog).ConfigureAwait(false);
+                () => 0.0,
+                cancellationToken).ConfigureAwait(false);
         }
 
         // Internal single-thread download runner used by DownloadOrchestrator
@@ -314,12 +363,12 @@ namespace EDM.Services
                     response.EnsureSuccessStatusCode();
 
                     using (var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken))
-                    using (var fileStream = new FileStream(tempDest, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                    using (var fileStream = new FileStream(tempDest, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, true))
                     {
                     byte[]? buffer = null;
                     try
                     {
-                        buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(8192);
+                        buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
                         int bytesRead;
 
                         var stopwatch = Stopwatch.StartNew();
@@ -500,17 +549,19 @@ namespace EDM.Services
                 // Remove temp part files and meta directories
                 CleanUpTempFiles(savePath);
 
-                // Remove persisted segmented metadata (.edm.json and tmp)
+                // Remove persisted segmented metadata (.edm.json, .bak, and .tmp)
                 try
                 {
                     var meta = savePath + ".edm.json";
-                    var metaTmp = meta + ".tmp";
                     FileDeleteHelper.DeleteFileSafe(meta);
-                    FileDeleteHelper.DeleteFileSafe(metaTmp);
+                    FileDeleteHelper.DeleteFileSafe(meta + ".tmp");
+                    FileDeleteHelper.DeleteFileSafe(meta + ".bak");
+                    FileDeleteHelper.DeleteFileSafe(savePath + ".merging");
+                    FileDeleteHelper.DeleteFileSafe(savePath + ".tmpdl");
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.LogException("[DownloadService] Failed deleting metadata files", ex);
+                    LoggingService.LogException("[DownloadService] Failed deleting metadata/temp files", ex);
                 }
             }
             catch (Exception ex)

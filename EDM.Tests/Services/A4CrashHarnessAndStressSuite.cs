@@ -254,12 +254,26 @@ namespace EDM.Tests.Services
                 expectedSha256 = Convert.ToHexString(sha.ComputeHash(payload));
             }
 
-            int port = Random.Shared.Next(49000, 49999);
-            string prefix = $"http://127.0.0.1:{port}/crash-100/";
+            HttpListener? listener = null;
+            string prefix = "";
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    int port = Random.Shared.Next(49000, 59999);
+                    prefix = $"http://127.0.0.1:{port}/crash-100/";
+                    var l = new HttpListener();
+                    l.Prefixes.Add(prefix);
+                    l.Start();
+                    listener = l;
+                    break;
+                }
+                catch (HttpListenerException) when (attempt < 9) { }
+            }
 
-            using var listener = new HttpListener();
-            listener.Prefixes.Add(prefix);
-            listener.Start();
+            if (listener == null) throw new InvalidOperationException("Failed to bind HttpListener after retries");
+            using (listener)
+            {
 
             var serverTask = Task.Run(async () =>
             {
@@ -356,8 +370,9 @@ namespace EDM.Tests.Services
                 }
             }
 
-            listener.Stop();
+            try { listener.Stop(); } catch { }
             passedCycles.Should().Be(100, "All 100 ungraceful crash & recovery stress cycles must pass with 100% SHA256 match");
+            }
         }
     }
 }

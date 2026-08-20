@@ -76,6 +76,50 @@ namespace EDM.Services
             }
         }
 
+        private static readonly System.Text.RegularExpressions.Regex SecretPatterns = new(
+            @"(?i)(bearer\s+[A-Za-z0-9\-\._~\+\/]+=*)|(basic\s+[A-Za-z0-9\+\/=]+)|(cookies?[:=]\s*[^;\r\n&]+)|((password|token|sig|signature|secret|key|auth|sessionid)=[^&\s\r\n""]+)|(""(cookies?|authorization|token|password|auth|secret)""\s*:\s*""[^""]*"")",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>
+        /// Scrubs secrets, tokens, passwords, and sensitive cookies from log text.
+        /// </summary>
+        public static string SanitizeLogMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return message;
+            try
+            {
+                return SecretPatterns.Replace(message, m =>
+                {
+                    var val = m.Value;
+                    int colonIdx = val.IndexOf(':');
+                    if (colonIdx > 0 && val.StartsWith("\""))
+                    {
+                        var propName = val.Substring(0, colonIdx);
+                        return $"{propName}: \"[REDACTED]\"";
+                    }
+                    if (val.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "Bearer [REDACTED]";
+                    }
+                    if (val.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "Basic [REDACTED]";
+                    }
+                    int eqIdx = val.IndexOf('=');
+                    if (eqIdx > 0)
+                    {
+                        var key = val.Substring(0, eqIdx);
+                        return $"{key}=[REDACTED]";
+                    }
+                    return "[REDACTED]";
+                });
+            }
+            catch
+            {
+                return message;
+            }
+        }
+
         /// <summary>
         /// Logs an informational message with automatic timestamp and formatting.
         /// </summary>
@@ -84,7 +128,7 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
-                _logger?.Information(message);
+                _logger?.Information(SanitizeLogMessage(message));
             }
             catch (Exception ex)
             {
@@ -100,13 +144,20 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
+                string sanitizedMsg = SanitizeLogMessage(message);
                 if (properties?.Length > 0)
                 {
-                    _logger?.Information(message + " | Properties: {@Props}", properties);
+                    var cleanProps = properties.Select(p =>
+                    {
+                        string strVal = p.Value?.ToString() ?? string.Empty;
+                        return (p.Key, (object)SanitizeLogMessage(strVal));
+                    }).ToArray();
+
+                    _logger?.Information(sanitizedMsg + " | Properties: {@Props}", cleanProps);
                 }
                 else
                 {
-                    _logger?.Information(message);
+                    _logger?.Information(sanitizedMsg);
                 }
             }
             catch (Exception ex)
@@ -123,7 +174,7 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
-                _logger?.Error(ex, "[{Context}] Exception: {Message}", context, ex.Message);
+                _logger?.Error(ex, "[{Context}] Exception: {Message}", SanitizeLogMessage(context), SanitizeLogMessage(ex.Message));
             }
             catch (Exception logEx)
             {
@@ -139,7 +190,7 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
-                _logger?.Warning(message);
+                _logger?.Warning(SanitizeLogMessage(message));
             }
             catch (Exception ex)
             {
@@ -155,7 +206,7 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
-                _logger?.Fatal(ex, "=== STARTUP FAILURE at {Stage} ===", stage);
+                _logger?.Fatal(ex, "=== STARTUP FAILURE at {Stage} ===", SanitizeLogMessage(stage));
             }
             catch (Exception logEx)
             {
@@ -171,7 +222,7 @@ namespace EDM.Services
             EnsureInitialized();
             try
             {
-                _logger?.Error(ex, "=== Background Task Failed: {TaskName} ===", taskName);
+                _logger?.Error(ex, "=== Background Task Failed: {TaskName} ===", SanitizeLogMessage(taskName));
             }
             catch (Exception logEx)
             {

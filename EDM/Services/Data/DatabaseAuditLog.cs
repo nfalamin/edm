@@ -117,7 +117,7 @@ namespace EDM.Services.Data
             public string Query { get; set; } = string.Empty;
             public long ExecutionTimeMs { get; set; }
             public bool Success { get; set; }
-            public string ErrorMessage { get; set; } = string.Empty;
+            public string? ErrorMessage { get; set; }
 
             public override string ToString()
             {

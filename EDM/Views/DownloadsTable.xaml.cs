@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using EDM.Models;
+using EDM.Services;
 using EDM.ViewModels;
 
 namespace EDM.Views
@@ -213,7 +214,95 @@ namespace EDM.Views
             }
         }
 
+        /// <summary>
+        /// Handle row double click to open Turbo Progress Window or Properties Window
+        /// </summary>
+        private void Row_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2 && sender is Border border && border.Tag is DownloadItem download)
+            {
+                e.Handled = true;
+                OpenProgressOrPropertiesWindow(download);
+            }
+        }
+
+        private void OpenProgressOrPropertiesWindow(DownloadItem download)
+        {
+            if (download == null) return;
+            try
+            {
+                if (download.Status == "Completed" || download.Status == "Error" || download.Status == "Cancelled")
+                {
+                    var propWin = new DownloadPropertiesWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    propWin.Show();
+                }
+                else
+                {
+                    var progWin = new DownloadProgressWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    progWin.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[DownloadsTable] Failed to open Progress/Properties window", ex);
+            }
+        }
+
         // ==================== CONTEXT MENU HANDLERS ====================
+
+        /// <summary>
+        /// Context Menu: Show Turbo Progress Window
+        /// </summary>
+        private void MenuItem_ShowProgressWindow(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                try
+                {
+                    var progWin = new DownloadProgressWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    progWin.Show();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogException("[DownloadsTable] Failed to open Progress Window", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Context Menu: Download Properties
+        /// </summary>
+        private void MenuItem_Properties(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                try
+                {
+                    var propWin = new DownloadPropertiesWindow(download)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    propWin.Show();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogException("[DownloadsTable] Failed to open Properties Window", ex);
+                }
+            }
+        }
 
         /// <summary>
         /// Context Menu: Open File - Opens the downloaded file in its default application
@@ -261,6 +350,84 @@ namespace EDM.Views
         }
 
         /// <summary>
+        /// Context Menu: Resume / Start - Resumes a paused download or starts a queued one
+        /// </summary>
+        private void MenuItem_Resume(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download && _viewModel != null)
+            {
+                if (string.Equals(download.Status, "Paused", StringComparison.OrdinalIgnoreCase))
+                {
+                    download.PauseSource.Resume();
+                    download.Status = "Downloading";
+                }
+                else if (download.Status == "Queued" || download.Status == "Stopped" || download.Status == "Error")
+                {
+                    download.Status = "Downloading";
+                    _ = _viewModel.StartDownloadProcessAsync(download);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Context Menu: Pause - Pauses an active download
+        /// </summary>
+        private void MenuItem_Pause(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download && _viewModel != null)
+            {
+                if (download.Status != null && download.Status.Contains("Downloading", StringComparison.OrdinalIgnoreCase))
+                {
+                    download.PauseSource.Pause();
+                    download.Status = "Paused";
+                    download.TransferRate = "0 B/s";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Context Menu: Cancel / Stop - Stops the active download task
+        /// </summary>
+        private void MenuItem_Cancel(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                download.CancelAndReset();
+                download.Status = "Cancelled";
+                download.TransferRate = "0 B/s";
+                _viewModel?.RecalculateMetrics();
+            }
+        }
+
+        /// <summary>
+        /// Context Menu: Delete - Prompts user and deletes download
+        /// </summary>
+        private void MenuItem_Delete(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download && _viewModel != null)
+            {
+                var dlg = new DeleteConfirmationDialog
+                {
+                    FileName = download.FileName,
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    _viewModel.DeleteDownload(download);
+                }
+            }
+        }
+
+        /// <summary>
         /// Context Menu: Redownload - Restarts the download from the beginning
         /// </summary>
         private void MenuItem_Redownload(object sender, RoutedEventArgs e)
@@ -270,9 +437,11 @@ namespace EDM.Views
             if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download && _viewModel != null)
             {
                 download.Progress = 0.0;
-                download.Status = "Queued";
+                download.DownloadedBytes = 0;
+                download.Status = "Downloading";
                 download.TransferRate = "0 B/s";
-                download.TimeLeft = "--:--:--";
+                download.TimeLeft = "Calculating...";
+                _ = _viewModel.StartDownloadProcessAsync(download);
                 System.Diagnostics.Debug.WriteLine($"Redownload initiated: {download.FileName}");
             }
         }
@@ -286,9 +455,10 @@ namespace EDM.Views
             var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
             if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download && _viewModel != null)
             {
+                download.PauseSource.Resume();
                 download.Status = "Downloading";
-                download.Progress = 0.1;
-                download.TransferRate = "2.4 MB/s";
+                download.TransferRate = "0 B/s";
+                _ = _viewModel.StartDownloadProcessAsync(download);
                 System.Diagnostics.Debug.WriteLine($"Force start: {download.FileName}");
             }
         }
@@ -304,8 +474,74 @@ namespace EDM.Views
             {
                 if (!string.IsNullOrEmpty(download.Url))
                 {
-                    System.Windows.Forms.Clipboard.SetText(download.Url);
-                    System.Diagnostics.Debug.WriteLine($"URL copied: {download.Url}");
+                    try
+                    {
+                        System.Windows.Clipboard.SetText(download.Url);
+                        System.Diagnostics.Debug.WriteLine($"URL copied: {download.Url}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.LogException("[DownloadsTable] Failed to copy URL to clipboard", ex);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Keyboard accessibility shortcuts for list items
+        /// </summary>
+        private void DownloadsItemsControl_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (DownloadsItemsControl.SelectedItem is DownloadItem selected && _viewModel != null)
+            {
+                if (e.Key == Key.Delete)
+                {
+                    var dlg = new DeleteConfirmationDialog
+                    {
+                        FileName = selected.FileName,
+                        Owner = Window.GetWindow(this)
+                    };
+                    if (dlg.ShowDialog() == true)
+                    {
+                        _viewModel.DeleteDownload(selected);
+                    }
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Space)
+                {
+                    _viewModel.TogglePauseResume(selected);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Enter)
+                {
+                    if (string.Equals(selected.Status, "Completed", StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrEmpty(selected.SavePath) && System.IO.File.Exists(selected.SavePath))
+                    {
+                        try
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(selected.SavePath) { UseShellExecute = true });
+                        }
+                        catch { }
+                    }
+                    else
+                    {
+                        var propWin = new DownloadPropertiesWindow(selected);
+                        propWin.Owner = Window.GetWindow(this);
+                        propWin.ShowDialog();
+                    }
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                {
+                    if (!string.IsNullOrEmpty(selected.Url))
+                    {
+                        try
+                        {
+                            System.Windows.Clipboard.SetText(selected.Url);
+                        }
+                        catch { }
+                    }
+                    e.Handled = true;
                 }
             }
         }

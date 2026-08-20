@@ -13,7 +13,8 @@ namespace EDM.Services
     {
         public const string NativeHostName = "com.edm.downloader";
         public const string ChromeExtensionId = "knldjmfmopnpolahpmmgbagdohdnhkda";
-        public const string FirefoxExtensionId = "edm-extension@edm.app";
+        public const string FirefoxExtensionId = "edm@exclusive-download-manager.com";
+        public const string LegacyFirefoxExtensionId = "edm-extension@edm.app";
 
         public static string ResolveNativeHostExecutable()
         {
@@ -81,9 +82,28 @@ namespace EDM.Services
                 type = "stdio",
                 allowed_origins = new[]
                 {
+                    "chrome-extension://fgnkgamjcmfccjmkifdhipjgnagfgioe/",
                     $"chrome-extension://{ChromeExtensionId}/",
                     "chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkda/",
-                    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/"
+                    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/",
+                    "chrome-extension://pjnefijmagpdjfhhkpljicbbpicelgko/",
+                    "chrome-extension://agionbommeaifngbhincahgmoflcikhm/",
+                    "chrome-extension://aapbdbdomjkkjkaonfhkkikfgjllcleb/",
+                    "chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/",
+                    "chrome-extension://aicmkgpgakddgnaphhhpliifpcfhicfo/",
+                    "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/",
+                    "chrome-extension://ngpampappnmepgilojfohadhhmbhlaek/",
+                    "chrome-extension://joalfcmoabjccbphlngocfcpkglmalkj/",
+                    "chrome-extension://omfoimoadhlddiepbagphpoccblokgem/",
+                    "chrome-extension://nmmhkkegccagdldgiimedpiccmgmieda/",
+                    "chrome-extension://bcmmjkglicliekcndffbfgcfopnidllp/",
+                    "chrome-extension://caidcmannjgahlnbpmidmiecjcoiiigg/",
+                    "chrome-extension://aohghmighlieiainnegkcijnfilokake/",
+                    "chrome-extension://aapocclcgogkmnckokdopfmhonfmgoek/",
+                    "chrome-extension://felcaaldnbdncclmgdcncolpebgiejap/",
+                    "chrome-extension://apdfllckaahabafndbhieahigkjlhalf/",
+                    "chrome-extension://pjkljhegncpnkpknbcohdijeoejaedia/",
+                    "chrome-extension://blpcfgokakmgnkcojhhkbfbldkacnbeo/"
                 }
             };
 
@@ -103,7 +123,8 @@ namespace EDM.Services
                 type = "stdio",
                 allowed_extensions = new[]
                 {
-                    FirefoxExtensionId
+                    FirefoxExtensionId,
+                    LegacyFirefoxExtensionId
                 }
             };
 

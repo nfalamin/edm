@@ -35,9 +35,8 @@ namespace EDM.Tests.Services
 
             manifestJson.Should().NotBeNullOrEmpty();
             manifestJson.Should().Contain("com.edm.downloader");
-            manifestJson.Should().Contain("chrome-extension://*");
-            manifestJson.Should().Contain("edge-extension://*");
-            manifestJson.Should().Contain("moz-extension://*");
+            manifestJson.Should().Contain("chrome-extension://");
+            manifestJson.Should().Contain(BrowserExtensionInstaller.ChromeExtensionId);
             manifestJson.Should().Contain(testExePath.Replace(@"\", @"\\"));
         }
 

@@ -3,13 +3,13 @@
 
 [Setup]
 AppName=Exclusive Download Manager (EDM)
-AppVersion=2.0
+AppVersion=1.0
 AppPublisher=EDM Team
 AppPublisherURL=https://github.com/exclusive-download-manager
 DefaultDirName={autopf}\Exclusive Download Manager
 DefaultGroupName=Exclusive Download Manager (EDM)
 DisableProgramGroupPage=no
-OutputBaseFilename=EDMSetup
+OutputBaseFilename=EDM_Setup_v1.0
 OutputDir=Output
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -27,11 +27,11 @@ Name: "fileassoc"; Description: "Register EDM URL Protocol & File Associations";
 
 [Tasks]
 Name: desktopicon; Description: "Create a &Desktop shortcut"; GroupDescription: "Additional shortcuts:"
-Name: startmenuicon; Description: "Create a &Start Menu shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checked
+Name: startmenuicon; Description: "Create a &Start Menu shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Files]
-; Core Application Files
-Source: "..\..\EDM\bin\Release\net10.0-windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: main
+; Core Application Files (Published Release Binaries)
+Source: "..\..\publish\EDM\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: main
 
 ; Extension Manifest Templates
 Source: "..\chrome-extension\*"; DestDir: "{app}\extensions\chrome"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: main
@@ -45,15 +45,20 @@ Name: "{commondesktop}\Exclusive Download Manager"; Filename: "{app}\EDM.exe"; T
 
 [Registry]
 ; Protocol Handler for edm://
-HKCR; Subkey: "edm"; ValueType: string; ValueData: "URL:EDM Protocol Handler"; Flags: uninsdeletekey; Components: fileassoc
-HKCR; Subkey: "edm"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Flags: uninsdeletekey; Components: fileassoc
-HKCR; Subkey: "edm\shell\open\command"; ValueType: string; ValueData: """{app}\EDM.exe"" ""%1"""; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "edm"; ValueType: string; ValueData: "URL:EDM Protocol Handler"; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "edm"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "edm\shell\open\command"; ValueType: string; ValueData: """{app}\EDM.exe"" ""%1"""; Flags: uninsdeletekey; Components: fileassoc
 
 ; File Association for .edm batch download container
-HKCR; Subkey: ".edm"; ValueType: string; ValueData: "EDM.BatchDownload"; Flags: uninsdeletekey; Components: fileassoc
-HKCR; Subkey: "EDM.BatchDownload"; ValueType: string; ValueData: "EDM Download Batch File"; Flags: uninsdeletekey; Components: fileassoc
-HKCR; Subkey: "EDM.BatchDownload\DefaultIcon"; ValueType: string; ValueData: "{app}\EDM.exe,0"; Flags: uninsdeletekey; Components: fileassoc
-HKCR; Subkey: "EDM.BatchDownload\shell\open\command"; ValueType: string; ValueData: """{app}\EDM.exe"" ""%1"""; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: ".edm"; ValueType: string; ValueData: "EDM.BatchDownload"; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "EDM.BatchDownload"; ValueType: string; ValueData: "EDM Download Batch File"; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "EDM.BatchDownload\DefaultIcon"; ValueType: string; ValueData: "{app}\EDM.exe,0"; Flags: uninsdeletekey; Components: fileassoc
+Root: HKCR; Subkey: "EDM.BatchDownload\shell\open\command"; ValueType: string; ValueData: """{app}\EDM.exe"" ""%1"""; Flags: uninsdeletekey; Components: fileassoc
+
+; Chrome & Chromium Auto Extension Registration (IDM-style 1-click prompt)
+Root: HKCU; Subkey: "Software\Google\Chrome\Extensions\knldjmfmopnpolahpmmgbagdohdnhkda"; ValueType: string; ValueName: "update_url"; ValueData: "https://clients2.google.com/service/update2/crx"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Microsoft\Edge\Extensions\knldjmfmopnpolahpmmgbagdohdnhkda"; ValueType: string; ValueName: "update_url"; ValueData: "https://edge.microsoft.com/extensionwebstorebase/v1/crx"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\BraveSoftware\Brave-Browser\Extensions\knldjmfmopnpolahpmmgbagdohdnhkda"; ValueType: string; ValueName: "update_url"; ValueData: "https://clients2.google.com/service/update2/crx"; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\EDM.exe"; Description: "Launch Exclusive Download Manager"; Flags: nowait postinstall skipifsilent
@@ -69,67 +74,104 @@ var
   ChromeJson, EdgeJson, FirefoxJson: string;
   KeyChrome, KeyEdge, KeyFirefox: string;
 begin
-  ExePath := AppDir + '\EDM.exe';
-  EscapedExePath := StringReplace(ExePath, '\', '\\', True);
+  ExePath := AppDir + '\EDM.NativeHost.exe';
+  EscapedExePath := ExePath;
+  StringChange(EscapedExePath, '\', '\\');
 
   // Chrome Manifest & Registry
   ChromeManifestPath := AppDir + '\com.edm.downloader.windows.json';
-  ChromeJson := '{' + sLineBreak +
-    '  "name": "' + NativeHostName + '",' + sLineBreak +
-    '  "description": "EDM Chrome Native Messaging Host",' + sLineBreak +
-    '  "path": "' + EscapedExePath + '",' + sLineBreak +
-    '  "type": "stdio",' + sLineBreak +
-    '  "allowed_origins": [' + sLineBreak +
-    '    "chrome-extension://*"' + sLineBreak +
-    '  ]' + sLineBreak +
+  ChromeJson := '{' + #13#10 +
+    '  "name": "' + NativeHostName + '",' + #13#10 +
+    '  "description": "EDM Chrome Native Messaging Host",' + #13#10 +
+    '  "path": "' + EscapedExePath + '",' + #13#10 +
+    '  "type": "stdio",' + #13#10 +
+    '  "allowed_origins": [' + #13#10 +
+    '    "chrome-extension://fgnkgamjcmfccjmkifdhipjgnagfgioe/",' + #13#10 +
+    '    "chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkda/",' + #13#10 +
+    '    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/",' + #13#10 +
+    '    "chrome-extension://pjnefijmagpdjfhhkpljicbbpicelgko/",' + #13#10 +
+    '    "chrome-extension://agionbommeaifngbhincahgmoflcikhm/",' + #13#10 +
+    '    "chrome-extension://aapbdbdomjkkjkaonfhkkikfgjllcleb/",' + #13#10 +
+    '    "chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/",' + #13#10 +
+    '    "chrome-extension://aicmkgpgakddgnaphhhpliifpcfhicfo/",' + #13#10 +
+    '    "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/",' + #13#10 +
+    '    "chrome-extension://ngpampappnmepgilojfohadhhmbhlaek/",' + #13#10 +
+    '    "chrome-extension://joalfcmoabjccbphlngocfcpkglmalkj/",' + #13#10 +
+    '    "chrome-extension://omfoimoadhlddiepbagphpoccblokgem/",' + #13#10 +
+    '    "chrome-extension://nmmhkkegccagdldgiimedpiccmgmieda/",' + #13#10 +
+    '    "chrome-extension://bcmmjkglicliekcndffbfgcfopnidllp/",' + #13#10 +
+    '    "chrome-extension://caidcmannjgahlnbpmidmiecjcoiiigg/",' + #13#10 +
+    '    "chrome-extension://aohghmighlieiainnegkcijnfilokake/",' + #13#10 +
+    '    "chrome-extension://aapocclcgogkmnckokdopfmhonfmgoek/",' + #13#10 +
+    '    "chrome-extension://felcaaldnbdncclmgdcncolpebgiejap/",' + #13#10 +
+    '    "chrome-extension://apdfllckaahabafndbhieahigkjlhalf/",' + #13#10 +
+    '    "chrome-extension://pjkljhegncpnkpknbcohdijeoejaedia/",' + #13#10 +
+    '    "chrome-extension://blpcfgokakmgnkcojhhkbfbldkacnbeo/"' + #13#10 +
+    '  ]' + #13#10 +
     '}';
   SaveStringToFile(ChromeManifestPath, ChromeJson, False);
 
   KeyChrome := 'Software\Google\Chrome\NativeMessagingHosts\' + NativeHostName;
-  RegCreateKey(HKCU, KeyChrome);
   RegWriteStringValue(HKCU, KeyChrome, '', ChromeManifestPath);
 
   // Edge Manifest & Registry
   EdgeManifestPath := AppDir + '\com.edm.downloader.edge.json';
-  EdgeJson := '{' + sLineBreak +
-    '  "name": "' + NativeHostName + '",' + sLineBreak +
-    '  "description": "EDM Edge Native Messaging Host",' + sLineBreak +
-    '  "path": "' + EscapedExePath + '",' + sLineBreak +
-    '  "type": "stdio",' + sLineBreak +
-    '  "allowed_origins": [' + sLineBreak +
-    '    "extension://*",' + sLineBreak +
-    '    "chrome-extension://*"' + sLineBreak +
-    '  ]' + sLineBreak +
+  EdgeJson := '{' + #13#10 +
+    '  "name": "' + NativeHostName + '",' + #13#10 +
+    '  "description": "EDM Edge Native Messaging Host",' + #13#10 +
+    '  "path": "' + EscapedExePath + '",' + #13#10 +
+    '  "type": "stdio",' + #13#10 +
+    '  "allowed_origins": [' + #13#10 +
+    '    "chrome-extension://fgnkgamjcmfccjmkifdhipjgnagfgioe/",' + #13#10 +
+    '    "chrome-extension://knldjmfmopnpolahpmmgbagdohdnhkda/",' + #13#10 +
+    '    "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/",' + #13#10 +
+    '    "chrome-extension://pjnefijmagpdjfhhkpljicbbpicelgko/",' + #13#10 +
+    '    "chrome-extension://agionbommeaifngbhincahgmoflcikhm/",' + #13#10 +
+    '    "chrome-extension://aapbdbdomjkkjkaonfhkkikfgjllcleb/",' + #13#10 +
+    '    "chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/",' + #13#10 +
+    '    "chrome-extension://aicmkgpgakddgnaphhhpliifpcfhicfo/",' + #13#10 +
+    '    "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/",' + #13#10 +
+    '    "chrome-extension://ngpampappnmepgilojfohadhhmbhlaek/",' + #13#10 +
+    '    "chrome-extension://joalfcmoabjccbphlngocfcpkglmalkj/",' + #13#10 +
+    '    "chrome-extension://omfoimoadhlddiepbagphpoccblokgem/",' + #13#10 +
+    '    "chrome-extension://nmmhkkegccagdldgiimedpiccmgmieda/",' + #13#10 +
+    '    "chrome-extension://bcmmjkglicliekcndffbfgcfopnidllp/",' + #13#10 +
+    '    "chrome-extension://caidcmannjgahlnbpmidmiecjcoiiigg/",' + #13#10 +
+    '    "chrome-extension://aohghmighlieiainnegkcijnfilokake/",' + #13#10 +
+    '    "chrome-extension://aapocclcgogkmnckokdopfmhonfmgoek/",' + #13#10 +
+    '    "chrome-extension://felcaaldnbdncclmgdcncolpebgiejap/",' + #13#10 +
+    '    "chrome-extension://apdfllckaahabafndbhieahigkjlhalf/",' + #13#10 +
+    '    "chrome-extension://pjkljhegncpnkpknbcohdijeoejaedia/",' + #13#10 +
+    '    "chrome-extension://blpcfgokakmgnkcojhhkbfbldkacnbeo/"' + #13#10 +
+    '  ]' + #13#10 +
     '}';
   SaveStringToFile(EdgeManifestPath, EdgeJson, False);
 
   KeyEdge := 'Software\Microsoft\Edge\NativeMessagingHosts\' + NativeHostName;
-  RegCreateKey(HKCU, KeyEdge);
   RegWriteStringValue(HKCU, KeyEdge, '', EdgeManifestPath);
 
   // Firefox Manifest & Registry
   FirefoxManifestPath := AppDir + '\com.edm.downloader.firefox.json';
-  FirefoxJson := '{' + sLineBreak +
-    '  "name": "' + NativeHostName + '",' + sLineBreak +
-    '  "description": "EDM Firefox Native Messaging Host",' + sLineBreak +
-    '  "path": "' + EscapedExePath + '",' + sLineBreak +
-    '  "type": "stdio",' + sLineBreak +
-    '  "allowed_extensions": [' + sLineBreak +
-    '    "edm@exclusive-download-manager.com"' + sLineBreak +
-    '  ]' + sLineBreak +
+  FirefoxJson := '{' + #13#10 +
+    '  "name": "' + NativeHostName + '",' + #13#10 +
+    '  "description": "EDM Firefox Native Messaging Host",' + #13#10 +
+    '  "path": "' + EscapedExePath + '",' + #13#10 +
+    '  "type": "stdio",' + #13#10 +
+    '  "allowed_extensions": [' + #13#10 +
+    '    "edm@exclusive-download-manager.com"' + #13#10 +
+    '  ]' + #13#10 +
     '}';
   SaveStringToFile(FirefoxManifestPath, FirefoxJson, False);
 
   KeyFirefox := 'Software\Mozilla\NativeMessagingHosts\' + NativeHostName;
-  RegCreateKey(HKCU, KeyFirefox);
   RegWriteStringValue(HKCU, KeyFirefox, '', FirefoxManifestPath);
 end;
 
 procedure UnregisterNativeMessagingHosts();
 begin
-  try RegDeleteKey(HKCU, 'Software\Google\Chrome\NativeMessagingHosts\' + NativeHostName); except end;
-  try RegDeleteKey(HKCU, 'Software\Microsoft\Edge\NativeMessagingHosts\' + NativeHostName); except end;
-  try RegDeleteKey(HKCU, 'Software\Mozilla\NativeMessagingHosts\' + NativeHostName); except end;
+  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Google\Chrome\NativeMessagingHosts\' + NativeHostName);
+  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Microsoft\Edge\NativeMessagingHosts\' + NativeHostName);
+  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Mozilla\NativeMessagingHosts\' + NativeHostName);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -143,6 +185,7 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   UserDataPath: string;
+  UserAppDataPath: string;
 begin
   if CurUninstallStep = usUninstall then
   begin
@@ -151,13 +194,19 @@ begin
 
   if CurUninstallStep = usPostUninstall then
   begin
-    UserDataPath := ExpandConstant('{userprofile}\EDM');
-    if DirExists(UserDataPath) then
+    UserAppDataPath := ExpandConstant('{userappdata}\EDM');
+    if DirExists(UserAppDataPath) then
     begin
-      if MsgBox('Do you want to delete your download history, settings, and quarantined files?' + #13#10 + 'Location: ' + UserDataPath, mbConfirmation, MB_YESNO) = IDYES then
+      if MsgBox('Do you want to delete your download history, settings, and database?' + #13#10 + 'Location: ' + UserAppDataPath, mbConfirmation, MB_YESNO) = IDYES then
       begin
-        DelTree(UserDataPath, True, True, True);
+        DelTree(UserAppDataPath, True, True, True);
       end;
+    end;
+
+    UserDataPath := GetEnv('USERPROFILE') + '\EDM';
+    if (UserDataPath <> '\EDM') and DirExists(UserDataPath) then
+    begin
+      DelTree(UserDataPath, True, True, True);
     end;
   end;
 end;

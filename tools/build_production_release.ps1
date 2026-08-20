@@ -1,65 +1,92 @@
-# EDM Production Release Packaging & Security Hardening Script
+# EDM Production Release Packaging & Installer Build Script
 # Version: 1.0.0
 
-$rootDir = "D:\Project 2\10 AUG - 2.07AM\5 AUG\EDM"
+$ErrorActionPreference = "Stop"
+
+$rootDir = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $rootDir "Output"
-$binDir = Join-Path $rootDir "EDM\bin\Release\net10.0-windows"
+$distDir = Join-Path $rootDir "Dist"
+$publishDir = Join-Path $outputDir "publish"
 $isccExe = "C:\Program Files (x86)\Inno Setup 6\iscc.exe"
 
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 
-Write-Host "================================================="
-Write-Host " EDM PRODUCTION PACKAGING & RELEASE PIPELINE "
-Write-Host "================================================="
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host " EDM PRODUCTION PACKAGING & RELEASE PIPELINE     " -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
 
-# 1. Package Chrome & Edge Extensions
+# 1. Build and Publish .NET Desktop App and NativeHost
+Write-Host "[1/6] Publishing EDM.exe and EDM.NativeHost.exe..." -ForegroundColor Yellow
+$edmProj = Join-Path $rootDir "EDM\EDM.csproj"
+$nativeProj = Join-Path $rootDir "EDM.NativeHost\EDM.NativeHost.csproj"
+
+dotnet publish $edmProj -c Release -r win-x64 --self-contained false -o $publishDir | Out-Null
+dotnet publish $nativeProj -c Release -r win-x64 --self-contained false -o $publishDir | Out-Null
+
+# Copy Extension Assets into published directory for installer inclusion
+$extPublishDir = Join-Path $publishDir "extension"
+New-Item -ItemType Directory -Path $extPublishDir -Force | Out-Null
+Copy-Item -Path (Join-Path $rootDir "extension\*") -Destination $extPublishDir -Recurse -Force
+Write-Host "-> PASS: Published binaries and extension files prepared at $publishDir" -ForegroundColor Green
+
+# 2. Package Chrome & Edge Extensions
+Write-Host "[2/6] Packaging Chromium Extensions..." -ForegroundColor Yellow
 $chromeSrc = Join-Path $rootDir "extension\chrome"
-$chromeZip = Join-Path $outputDir "EDM-Chrome-Extension-v1.0.0.zip"
-$edgeZip = Join-Path $outputDir "EDM-Edge-Extension-v1.0.0.zip"
+$chromeZipDist = Join-Path $distDir "EDM_Extension_Chrome_v1.0.0.zip"
+$chromeZipOut = Join-Path $outputDir "EDM-Chrome-Extension-v1.0.0.zip"
+$edgeZipOut = Join-Path $outputDir "EDM-Edge-Extension-v1.0.0.zip"
 
-if (Test-Path $chromeZip) { Remove-Item -Force $chromeZip }
-if (Test-Path $edgeZip) { Remove-Item -Force $edgeZip }
+Compress-Archive -Path "$chromeSrc\*" -DestinationPath $chromeZipDist -Force
+Copy-Item $chromeZipDist $chromeZipOut -Force
+Copy-Item $chromeZipDist $edgeZipOut -Force
+Write-Host "-> PASS: Packaged Chrome & Edge Extension ZIPs" -ForegroundColor Green
 
-Compress-Archive -Path "$chromeSrc\*" -DestinationPath $chromeZip -Force
-Compress-Archive -Path "$chromeSrc\*" -DestinationPath $edgeZip -Force
-Write-Host "[PASS] Packaged Chrome & Edge Extension ZIPs"
-
-# 2. Package Firefox Extension
+# 3. Package Firefox Extension
+Write-Host "[3/6] Packaging Firefox Extension..." -ForegroundColor Yellow
 $firefoxSrc = Join-Path $rootDir "extension\firefox"
-$firefoxZip = Join-Path $outputDir "EDM-Firefox-Extension-v1.0.0.zip"
-if (Test-Path $firefoxZip) { Remove-Item -Force $firefoxZip }
+$firefoxZipDist = Join-Path $distDir "EDM_Extension_Firefox_v1.0.0.zip"
+$firefoxZipOut = Join-Path $outputDir "EDM-Firefox-Extension-v1.0.0.zip"
 
-Compress-Archive -Path "$firefoxSrc\*" -DestinationPath $firefoxZip -Force
-Write-Host "[PASS] Packaged Firefox Extension ZIP"
+Compress-Archive -Path "$firefoxSrc\*" -DestinationPath $firefoxZipDist -Force
+Copy-Item $firefoxZipDist $firefoxZipOut -Force
+Write-Host "-> PASS: Packaged Firefox Extension ZIP" -ForegroundColor Green
 
-# 3. Package Portable Desktop Release ZIP
+# 4. Package Portable Desktop Release ZIP
+Write-Host "[4/6] Packaging Portable Windows ZIP..." -ForegroundColor Yellow
 $portableZip = Join-Path $outputDir "EDM-v1.0.0-Portable.zip"
 if (Test-Path $portableZip) { Remove-Item -Force $portableZip }
 
-$tempPortable = Join-Path $env:TEMP ("edm_portable_" + [Guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $tempPortable -Force | Out-Null
-Copy-Item -Path "$binDir\*" -Destination $tempPortable -Recurse -Force
-Compress-Archive -Path "$tempPortable\*" -DestinationPath $portableZip -Force
-Remove-Item -Recurse -Force $tempPortable -ErrorAction SilentlyContinue
-Write-Host "[PASS] Packaged Portable Windows ZIP"
+Compress-Archive -Path "$publishDir\*" -DestinationPath $portableZip -Force
+Write-Host "-> PASS: Packaged Portable Windows ZIP" -ForegroundColor Green
 
-# 4. Compile Inno Setup Installer
+# 5. Compile Inno Setup Installer
+Write-Host "[5/6] Compiling Inno Setup Installer..." -ForegroundColor Yellow
 if (Test-Path $isccExe) {
-    Write-Host "[INSTALLER] Compiling EDMSetup.iss via Inno Setup 6..."
     $issPath = Join-Path $rootDir "EDMSetup.iss"
     $proc = Start-Process -FilePath $isccExe -ArgumentList "`"$issPath`"" -NoNewWindow -Wait -PassThru
     if ($proc.ExitCode -eq 0) {
-        Write-Host "[PASS] Inno Setup Installer compiled successfully -> Output\EDM_Setup.exe"
-        Copy-Item (Join-Path $outputDir "EDM_Setup.exe") (Join-Path $outputDir "EDMSetup.exe") -Force
+        $setupExe = Join-Path $outputDir "EDM_Setup.exe"
+        $setupAlt = Join-Path $outputDir "EDMSetup.exe"
+        if (Test-Path $setupExe) {
+            Copy-Item $setupExe $setupAlt -Force
+            Write-Host "-> PASS: Inno Setup Installer compiled successfully -> Output\EDM_Setup.exe" -ForegroundColor Green
+        }
     } else {
         Write-Error "[FAIL] Inno Setup compilation failed with exit code $($proc.ExitCode)"
     }
+} else {
+    Write-Warning "ISCC.exe not found at $isccExe"
 }
 
-# 5. Calculate Real SHA-256 Hashes
+# 6. Calculate Real SHA-256 Hashes and Generate Release Manifest
+Write-Host "`n[6/6] Computing Real SHA-256 Hashes..." -ForegroundColor Yellow
 $filesToHash = @(
     "EDM.exe",
     "EDM.dll",
+    "EDM.NativeHost.exe",
+    "EDM_Setup.exe",
     "EDMSetup.exe",
     "EDM-v1.0.0-Portable.zip",
     "EDM-Chrome-Extension-v1.0.0.zip",
@@ -68,11 +95,10 @@ $filesToHash = @(
 
 $manifestArtifacts = @{}
 
-Write-Host "`n--- REAL SHA-256 HASH VERIFICATION ---"
 foreach ($f in $filesToHash) {
     $fullPath = Join-Path $outputDir $f
     if (! (Test-Path $fullPath)) {
-        $fullPath = Join-Path $binDir $f
+        $fullPath = Join-Path $publishDir $f
     }
 
     if (Test-Path $fullPath) {
@@ -83,13 +109,10 @@ foreach ($f in $filesToHash) {
             "sizeBytes" = $size
             "path" = $f
         }
-        Write-Host "$f ($size bytes): $hash"
-    } else {
-        Write-Host "Warning: $f not found at $fullPath"
+        Write-Host "  $f ($size bytes): $hash" -ForegroundColor Gray
     }
 }
 
-# 6. Generate release-manifest.json
 $releaseManifest = @{
     "version" = "1.0.0"
     "releaseDate" = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -111,7 +134,6 @@ $jsonStr = $releaseManifest | ConvertTo-Json -Depth 5
 Set-Content -Path (Join-Path $outputDir "release-manifest.json") -Value $jsonStr -Force
 Set-Content -Path (Join-Path $rootDir "release-manifest.json") -Value $jsonStr -Force
 
-# Generate update.json for UpdateService
 $updateJson = @{
     "version" = "1.0.0"
     "mandatory" = $false
@@ -123,4 +145,6 @@ $updateStr = $updateJson | ConvertTo-Json -Depth 3
 Set-Content -Path (Join-Path $outputDir "update.json") -Value $updateStr -Force
 Set-Content -Path (Join-Path $rootDir "update.json") -Value $updateStr -Force
 
-Write-Host "`n[PASS] release-manifest.json and update.json generated successfully."
+Write-Host "=================================================" -ForegroundColor Green
+Write-Host " PRODUCTION BUILD & PACKAGING COMPLETED [PASS]   " -ForegroundColor Green
+Write-Host "=================================================" -ForegroundColor Green

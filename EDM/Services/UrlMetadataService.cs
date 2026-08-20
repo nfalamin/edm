@@ -167,64 +167,94 @@ namespace EDM.Services
         }
 
         /// <summary>
-        /// Parses metadata JSON response from YtDlpService.
-        /// This is a simplified implementation - extend based on actual YtDlp output.
+        /// Parses metadata JSON response from YtDlpService using System.Text.Json.
         /// </summary>
         private VideoMetadata ParseMetadata(string metadataJson, string url)
         {
             var metadata = new VideoMetadata();
 
+            if (string.IsNullOrWhiteSpace(metadataJson))
+            {
+                metadata.Title = ExtractTitleFromUrl(url);
+                metadata.AvailableResolutions = new List<string> { "720p", "480p", "360p" };
+                metadata.MaxResolution = "720p";
+                return metadata;
+            }
+
             try
             {
-                // Extract title (basic parsing - extend based on YtDlp JSON format)
-                if (metadataJson.Contains("\"title\""))
-                {
-                    var titleStart = metadataJson.IndexOf("\"title\"") + 8;
-                    var titleEnd = metadataJson.IndexOf("\"", titleStart);
-                    if (titleEnd > titleStart)
-                    {
-                        metadata.Title = metadataJson.Substring(titleStart, titleEnd - titleStart)
-                            .Trim('"', ' ');
-                    }
-                }
+                using var doc = System.Text.Json.JsonDocument.Parse(metadataJson);
+                var root = doc.RootElement;
 
-                // Set default title from URL if not found
-                if (string.IsNullOrEmpty(metadata.Title))
+                // 1. Title
+                if (root.TryGetProperty("title", out var titleProp) && titleProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    metadata.Title = titleProp.GetString() ?? string.Empty;
+                }
+                if (string.IsNullOrWhiteSpace(metadata.Title))
                 {
                     metadata.Title = ExtractTitleFromUrl(url);
                 }
 
-                // Extract available formats (simplified)
-                if (metadataJson.Contains("\"formats\""))
+                // 2. Duration
+                if (root.TryGetProperty("duration", out var durProp))
                 {
-                    // Parse formats array - implementation depends on YtDlp output
-                    // For now, assume common formats are available
-                    metadata.AvailableFormats = new List<string> { "mp4", "webm", "mkv" };
-                    metadata.AvailableResolutions = new List<string> { "1080p", "720p", "480p", "360p" };
-                    metadata.MaxResolution = "1080p";
+                    if (durProp.ValueKind == System.Text.Json.JsonValueKind.Number && durProp.TryGetInt32(out int dur))
+                    {
+                        metadata.DurationSeconds = dur;
+                    }
+                    else if (durProp.ValueKind == System.Text.Json.JsonValueKind.String && int.TryParse(durProp.GetString(), out int durStr))
+                    {
+                        metadata.DurationSeconds = durStr;
+                    }
+                }
+
+                // 3. Formats & Resolutions
+                var formatsList = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var resolutionsList = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int maxHeight = 0;
+
+                if (root.TryGetProperty("formats", out var formatsProp) && formatsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var f in formatsProp.EnumerateArray())
+                    {
+                        if (f.TryGetProperty("ext", out var extProp) && extProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            string ext = extProp.GetString() ?? string.Empty;
+                            if (!string.IsNullOrWhiteSpace(ext)) formatsList.Add(ext);
+                        }
+
+                        int height = 0;
+                        if (f.TryGetProperty("height", out var hProp) && hProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            height = hProp.GetInt32();
+                        }
+                        if (height > 0)
+                        {
+                            resolutionsList.Add($"{height}p");
+                            if (height > maxHeight) maxHeight = height;
+                        }
+                    }
+                }
+
+                if (formatsList.Count > 0)
+                {
+                    metadata.AvailableFormats = new List<string>(formatsList);
                 }
                 else
                 {
-                    // Fallback to common resolutions
-                    metadata.AvailableFormats = new List<string> { "mp4" };
-                    metadata.AvailableResolutions = new List<string> { "720p", "480p", "360p" };
-                    metadata.MaxResolution = "720p";
+                    metadata.AvailableFormats = new List<string> { "mp4", "webm", "mkv" };
                 }
 
-                // Extract duration 
-                if (metadataJson.Contains("\"duration\""))
+                if (resolutionsList.Count > 0)
                 {
-                    var durationStart = metadataJson.IndexOf("\"duration\"") + 10;
-                    var durationEnd = metadataJson.IndexOf(",", durationStart);
-                    if (durationEnd < 0) durationEnd = metadataJson.IndexOf("}", durationStart);
-
-                    if (durationEnd > durationStart)
-                    {
-                        var durationStr = metadataJson.Substring(durationStart, durationEnd - durationStart)
-                            .Trim(':', ' ');
-                        if (int.TryParse(durationStr, out int duration))
-                            metadata.DurationSeconds = duration;
-                    }
+                    metadata.AvailableResolutions = new List<string>(resolutionsList);
+                    metadata.MaxResolution = maxHeight > 0 ? $"{maxHeight}p" : "1080p";
+                }
+                else
+                {
+                    metadata.AvailableResolutions = new List<string> { "1080p", "720p", "480p", "360p" };
+                    metadata.MaxResolution = "1080p";
                 }
 
                 return metadata;
@@ -233,8 +263,8 @@ namespace EDM.Services
             {
                 LoggingService.LogException("[UrlMetadataService.ParseMetadata]", ex);
 
-                // Return partial metadata with at least title
                 metadata.Title = ExtractTitleFromUrl(url);
+                metadata.AvailableFormats = new List<string> { "mp4" };
                 metadata.AvailableResolutions = new List<string> { "720p", "480p", "360p" };
                 metadata.MaxResolution = "720p";
                 return metadata;

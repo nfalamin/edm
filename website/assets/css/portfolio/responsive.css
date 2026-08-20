@@ -1,0 +1,34 @@
+/* =========================================
+   5. Mobile Responsive Overrides
+   ========================================= */
+
+/* Global Resets for Mobile Fluidity & Preventing Horizontal Scroll */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Small devices (phones, 640px and down) */
+@media (max-width: 639px) {
+    .hero-photo {
+        max-width: 130%; /* Let the image scale inside the new fluid container */
+    }
+    
+    .glass-panel {
+        padding: 1rem !important; /* Slightly tighter padding on mobile */
+    }
+}
+
+/* Flexible container spacing */
+.max-w-7xl {
+    width: 100%;
+}
+
+/* Medium devices (tablets, 768px and down) */
+@media (max-width: 767px) {
+    h1.font-display {
+        font-size: 2.5rem; /* Better title scaling */
+        line-height: 1.1;
+    }
+}

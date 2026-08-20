@@ -87,6 +87,10 @@ namespace EDM.Services
                 }
 
                 var fullTargetDir = Path.GetFullPath(targetDir);
+                string safeTargetPrefix = fullTargetDir.EndsWith(Path.DirectorySeparatorChar.ToString()) 
+                    ? fullTargetDir 
+                    : fullTargetDir + Path.DirectorySeparatorChar;
+
                 int count = 0;
 
                 // Secure ZIP extraction with ZipSlip mitigation
@@ -99,7 +103,7 @@ namespace EDM.Services
                         var destinationFilePath = Path.GetFullPath(Path.Combine(fullTargetDir, entry.FullName));
 
                         // ZipSlip check: prevent path traversal attacks (e.g. ../../windows/system32)
-                        if (!destinationFilePath.StartsWith(fullTargetDir, StringComparison.OrdinalIgnoreCase))
+                        if (!destinationFilePath.StartsWith(safeTargetPrefix, StringComparison.OrdinalIgnoreCase))
                         {
                             throw new InvalidOperationException($"ZipSlip path traversal attempt detected in entry: {entry.FullName}");
                         }
@@ -138,6 +142,13 @@ namespace EDM.Services
             return $"http://127.0.0.1:{_streamPort}/edm-stream/play?file={Uri.EscapeDataString(partialFilePath)}";
         }
 
+        private static bool IsAllowedStreamingFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) return false;
+            string ext = Path.GetExtension(filePath).ToLowerInvariant();
+            return ext is ".mp4" or ".mkv" or ".webm" or ".avi" or ".mov" or ".ts" or ".mp3" or ".aac" or ".m4a" or ".flac" or ".part" or ".tmp";
+        }
+
         private async Task HandleStreamingRequestsAsync(CancellationToken ct)
         {
             if (_streamListener == null) return;
@@ -151,7 +162,7 @@ namespace EDM.Services
                     var resp = ctx.Response;
 
                     var fileParam = req.QueryString["file"];
-                    if (!string.IsNullOrEmpty(fileParam) && File.Exists(fileParam))
+                    if (!string.IsNullOrEmpty(fileParam) && IsAllowedStreamingFile(fileParam))
                     {
                         // Open with FileShare.ReadWrite so active downloading writer is not blocked
                         using var fs = new FileStream(fileParam, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);

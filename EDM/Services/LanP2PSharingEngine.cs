@@ -132,17 +132,24 @@ namespace EDM.Services
                             using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
                             using var dst = new FileStream(saveDestinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, true);
 
-                            var buffer = new byte[64 * 1024];
+                            var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(64 * 1024);
                             long readBytes = 0;
-                            int n;
-                            while ((n = await src.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false)) > 0)
+                            try
                             {
-                                await dst.WriteAsync(buffer, 0, n, ct).ConfigureAwait(false);
-                                readBytes += n;
-                                if (total > 0 && progress != null)
+                                int n;
+                                while ((n = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false)) > 0)
                                 {
-                                    progress.Report((double)readBytes / total * 100.0);
+                                    await dst.WriteAsync(buffer.AsMemory(0, n), ct).ConfigureAwait(false);
+                                    readBytes += n;
+                                    if (total > 0 && progress != null)
+                                    {
+                                        progress.Report((double)readBytes / total * 100.0);
+                                    }
                                 }
+                            }
+                            finally
+                            {
+                                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                             }
 
                             // Verify integrity of downloaded file

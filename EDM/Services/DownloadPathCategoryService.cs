@@ -201,6 +201,58 @@ namespace EDM.Services
         }
 
         /// <summary>
+        /// Standardized EDM local workspace folder layout definition for Windows File Explorer.
+        /// </summary>
+        public static readonly string[] StandardWorkspaceFolders = new[]
+        {
+            "Downloads",
+            "Files",
+            "Projects",
+            "Documents",
+            "Media",
+            "Uploads",
+            "Synced",
+            "Cache",
+            "Config"
+        };
+
+        /// <summary>
+        /// Gets the standard root EDM workspace folder (e.g. %UserProfile%\EDM).
+        /// </summary>
+        public static string GetWorkspaceRootPath()
+        {
+            try
+            {
+                string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                return Path.Combine(userProfile, "EDM");
+            }
+            catch
+            {
+                return Path.Combine(AppContext.BaseDirectory, "EDM");
+            }
+        }
+
+        /// <summary>
+        /// Ensures all standard workspace folders exist on the local file system.
+        /// </summary>
+        public static void EnsureWorkspaceStructure(string? customRoot = null)
+        {
+            try
+            {
+                string root = customRoot ?? GetWorkspaceRootPath();
+                Directory.CreateDirectory(root);
+                foreach (var folder in StandardWorkspaceFolders)
+                {
+                    Directory.CreateDirectory(Path.Combine(root, folder));
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[DownloadPathCategoryService] Failed to create workspace folder structure", ex);
+            }
+        }
+
+        /// <summary>
         /// Gets all category subfolder names
         /// </summary>
         public static IEnumerable<string> GetAllCategorySubfolders()

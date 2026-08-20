@@ -121,7 +121,7 @@ namespace EDM
                     }
 
                     var addUrlWindow = new AddUrlWindow();
-                    var vm = this.DataContext as ViewModels.DownloadManagerViewModel;
+                    var vm = MainDashboard.DataContext as ViewModels.DownloadManagerViewModel;
                     addUrlWindow.Initialize(vm, url);
                     addUrlWindow.Owner = this;
                     addUrlWindow.ShowDialog();
@@ -140,13 +140,16 @@ namespace EDM
         {
             try
             {
-                var queuedItems = Downloads.Where(d => d.Status == "Queued").ToList();
-                foreach (var item in queuedItems)
+                var vm = MainDashboard.DataContext as ViewModels.DownloadManagerViewModel;
+                if (vm != null)
                 {
-                    item.Status = "Downloading";
-                    // Note: Enqueue method may not exist on DownloadQueueManager
-                    // This is a placeholder for future implementation
-                    System.Diagnostics.Debug.WriteLine($"Marked item for download: {item.FileName}");
+                    var queuedItems = vm.AllDownloads.Where(d => d.Status != null && d.Status.Contains("Queued", StringComparison.OrdinalIgnoreCase)).ToList();
+                    foreach (var item in queuedItems)
+                    {
+                        item.Status = "Downloading";
+                        _ = vm.StartDownloadProcessAsync(item);
+                        System.Diagnostics.Debug.WriteLine($"Started scheduled download: {item.FileName}");
+                    }
                 }
             }
             catch (Exception ex)

@@ -100,4 +100,9 @@
 
 
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="EDM.Tests" />
+    <InternalsVisibleTo Include="AcceptanceTestRunner" />
+  </ItemGroup>
+
 </Project>

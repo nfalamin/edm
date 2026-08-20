@@ -42,12 +42,6 @@ namespace EDM.NativeMessaging
         public void Stop()
         {
             try { _cts.Cancel(); } catch { }
-            try
-            {
-                using var unblocker = new NamedPipeClientStream(".", TargetPipeName, PipeDirection.InOut);
-                unblocker.Connect(100);
-            }
-            catch { }
             try { _currentServerStream?.Dispose(); } catch { }
         }
 
@@ -104,7 +98,7 @@ namespace EDM.NativeMessaging
             }
         }
 
-        private async Task ProcessConnectionAsync(NamedPipeServerStream stream, CancellationToken ct)
+        internal async Task ProcessConnectionAsync(Stream stream, CancellationToken ct = default)
         {
             using (stream)
             {

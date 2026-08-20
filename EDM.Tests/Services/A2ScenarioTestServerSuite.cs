@@ -125,12 +125,25 @@ namespace EDM.Tests.Services
                 expectedSha256 = Convert.ToHexString(sha.ComputeHash(payload));
             }
 
-            int port = Random.Shared.Next(48500, 49999);
-            string prefix = $"http://127.0.0.1:{port}/scenario-g/";
-
-            using var listener = new HttpListener();
-            listener.Prefixes.Add(prefix);
-            listener.Start();
+            HttpListener? listener = null;
+            int port = 0;
+            string prefix = "";
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    port = Random.Shared.Next(48500, 59000);
+                    prefix = $"http://127.0.0.1:{port}/scenario-g/";
+                    var l = new HttpListener();
+                    l.Prefixes.Add(prefix);
+                    l.Start();
+                    listener = l;
+                    break;
+                }
+                catch (HttpListenerException) when (attempt < 9) { }
+            }
+            if (listener == null) throw new InvalidOperationException("Failed to bind HttpListener after retries");
+            using var cleanupListener = listener;
 
             // Server delays range start == 0 (Worker 0) by 200ms
             var serverTask = Task.Run(async () =>

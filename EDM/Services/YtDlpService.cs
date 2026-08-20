@@ -8,6 +8,106 @@ using System.Threading.Tasks;
 
 namespace EDM.Services
 {
+    public static class YtDlpOutputParser
+    {
+        private static readonly Regex DetailedProgressRegex = new Regex(
+            @"\[download\]\s+([\d\.]+)%\s+of\s+~?([\d\.]+)\s*([KMGTP]?i?B)(?:\s+at\s+(?:([\d\.]+)\s*([KMGTP]?i?B/s)|[^\s]+\s*B/s))?(?:\s+ETA\s+(\d+:\d+(?::\d+)?|[^\s]+))?",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex FinishedRegex = new Regex(
+            @"\[download\]\s+100%\s+of\s+~?([\d\.]+)\s*([KMGTP]?i?B)(?:\s+in\s+[^\s]+)?(?:\s+at\s+([\d\.]+)\s*([KMGTP]?i?B/s))?",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        public static bool TryParseProgress(string? line, out double percent, out long totalBytes, out long bytesReceived, out double speedBps, out double etaSec)
+        {
+            percent = 0;
+            totalBytes = 0;
+            bytesReceived = 0;
+            speedBps = 0;
+            etaSec = 0;
+
+            if (string.IsNullOrWhiteSpace(line)) return false;
+
+            // 1. Check detailed progress line
+            var m = DetailedProgressRegex.Match(line);
+            if (m.Success)
+            {
+                if (double.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var p))
+                {
+                    percent = Math.Clamp(p, 0.0, 100.0);
+                }
+
+                if (double.TryParse(m.Groups[2].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var sizeVal))
+                {
+                    string unit = m.Groups[3].Value.ToUpperInvariant();
+                    totalBytes = ParseByteUnit(sizeVal, unit);
+                    bytesReceived = (long)(totalBytes * (percent / 100.0));
+                }
+
+                if (m.Groups[4].Success && double.TryParse(m.Groups[4].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var spdVal))
+                {
+                    string spdUnit = m.Groups[5].Value.ToUpperInvariant().Replace("/S", "");
+                    speedBps = ParseByteUnit(spdVal, spdUnit);
+                }
+
+                if (m.Groups[6].Success)
+                {
+                    string etaStr = m.Groups[6].Value;
+                    var parts = etaStr.Split(':');
+                    if (parts.Length == 2 && double.TryParse(parts[0], out var mm) && double.TryParse(parts[1], out var ss))
+                    {
+                        etaSec = mm * 60 + ss;
+                    }
+                    else if (parts.Length == 3 && double.TryParse(parts[0], out var hh) && double.TryParse(parts[1], out var mm2) && double.TryParse(parts[2], out var ss2))
+                    {
+                        etaSec = hh * 3600 + mm2 * 60 + ss2;
+                    }
+                }
+
+                return true;
+            }
+
+            // 2. Check 100% finished format
+            var fm = FinishedRegex.Match(line);
+            if (fm.Success)
+            {
+                percent = 100.0;
+                if (double.TryParse(fm.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var fSizeVal))
+                {
+                    string unit = fm.Groups[2].Value.ToUpperInvariant();
+                    totalBytes = ParseByteUnit(fSizeVal, unit);
+                    bytesReceived = totalBytes;
+                }
+                if (fm.Groups[3].Success && double.TryParse(fm.Groups[3].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var fSpdVal))
+                {
+                    string spdUnit = fm.Groups[4].Value.ToUpperInvariant().Replace("/S", "");
+                    speedBps = ParseByteUnit(fSpdVal, spdUnit);
+                }
+                etaSec = 0;
+                return true;
+            }
+
+            // 3. Fallback for percentage only
+            var simpleMatch = Regex.Match(line, @"(\d{1,3}(?:\.\d+)?)%");
+            if (simpleMatch.Success && double.TryParse(simpleMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var sp))
+            {
+                percent = Math.Clamp(sp, 0.0, 100.0);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static long ParseByteUnit(double val, string unit)
+        {
+            if (unit.StartsWith("K")) return (long)(val * 1024);
+            if (unit.StartsWith("M")) return (long)(val * 1024 * 1024);
+            if (unit.StartsWith("G")) return (long)(val * 1024 * 1024 * 1024);
+            if (unit.StartsWith("T")) return (long)(val * 1024L * 1024L * 1024L * 1024L);
+            return (long)val;
+        }
+    }
+
     /// <summary>
     /// Lightweight wrapper to run yt-dlp (if available) and parse progress.
     /// This service executes yt-dlp as an external process and exposes progress via callback.
@@ -16,13 +116,52 @@ namespace EDM.Services
     {
         private readonly string _ytDlpPath;
         private readonly string _ffmpegPath;
+        private int _lastReportedProgressPercent = 0;
 
         public YtDlpService(Services.Interfaces.ISettingsService? settings = null, string? ytDlpPath = null, string? ffmpegPath = null)
         {
             // Resolve settings via DI fallback if not provided (maintain compatibility with tests/old callers)
             var s = settings ?? App.ServiceProvider?.GetService(typeof(Services.Interfaces.ISettingsService)) as Services.Interfaces.ISettingsService ?? new Services.SettingsService();
-            _ytDlpPath = !string.IsNullOrWhiteSpace(ytDlpPath) ? ytDlpPath : (string.IsNullOrWhiteSpace(s.GetYtDlpPath()) ? "yt-dlp" : s.GetYtDlpPath());
+            string rawYtDlp = !string.IsNullOrWhiteSpace(ytDlpPath) ? ytDlpPath : s.GetYtDlpPath();
+            _ytDlpPath = ResolveExecutablePath(rawYtDlp);
             _ffmpegPath = !string.IsNullOrWhiteSpace(ffmpegPath) ? ffmpegPath : s.GetFfmpegPath();
+        }
+
+        public static string ResolveExecutablePath(string? preferredPath = null)
+        {
+            if (!string.IsNullOrWhiteSpace(preferredPath) && File.Exists(preferredPath))
+                return preferredPath;
+
+            // Check %LOCALAPPDATA%\EDM\tools\yt-dlp.exe
+            string localAppDataCandidate = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EDM", "tools", "yt-dlp.exe");
+            if (File.Exists(localAppDataCandidate)) return localAppDataCandidate;
+
+            // Check next to EDM executable
+            string baseDirCandidate = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "yt-dlp.exe");
+            if (File.Exists(baseDirCandidate)) return baseDirCandidate;
+
+            string baseDirTools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "yt-dlp.exe");
+            if (File.Exists(baseDirTools)) return baseDirTools;
+
+            // Check in PATH
+            var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+            foreach (var dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir.Trim('"', ' '), "yt-dlp.exe");
+                    if (File.Exists(candidate)) return candidate;
+                }
+                catch { }
+            }
+
+            return !string.IsNullOrWhiteSpace(preferredPath) ? preferredPath : "yt-dlp";
+        }
+
+        public bool IsAvailable()
+        {
+            var resolved = ResolveExecutablePath(_ytDlpPath);
+            return File.Exists(resolved);
         }
 
         /// <summary>
@@ -31,9 +170,16 @@ namespace EDM.Services
         /// </summary>
         public async Task DownloadAsync(string url, string outputPath, string formatArg, Action<int, string> progress, CancellationToken ct)
         {
+            _lastReportedProgressPercent = 0;
+            string? execPath = await MediaDependencyManager.Instance.GetValidatedYtDlpPathAsync(_ytDlpPath, ct).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(execPath))
+            {
+                throw new FileNotFoundException($"yt-dlp executable was not found. Please install yt-dlp or place yt-dlp.exe in the EDM tools directory ({MediaDependencyManager.Instance.ToolsDirectory}).");
+            }
+
             var psi = new ProcessStartInfo
             {
-                FileName = _ytDlpPath,
+                FileName = execPath,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -41,6 +187,20 @@ namespace EDM.Services
             };
 
             psi.ArgumentList.Add("--newline");
+            psi.ArgumentList.Add("-N");
+            psi.ArgumentList.Add("16"); // 16 concurrent fragments for ultra-high speed
+            psi.ArgumentList.Add("--buffer-size");
+            psi.ArgumentList.Add("16M");
+            psi.ArgumentList.Add("--http-chunk-size");
+            psi.ArgumentList.Add("10M");
+            psi.ArgumentList.Add("--no-playlist");
+            psi.ArgumentList.Add("--no-check-certificates");
+            psi.ArgumentList.Add("--retries");
+            psi.ArgumentList.Add("10");
+            psi.ArgumentList.Add("--fragment-retries");
+            psi.ArgumentList.Add("10");
+            psi.ArgumentList.Add("--extractor-args");
+            psi.ArgumentList.Add("youtube:player_client=android,web");
             psi.ArgumentList.Add("-o");
             psi.ArgumentList.Add(outputPath);
 
@@ -83,7 +243,8 @@ namespace EDM.Services
 
                 try
                 {
-                    LoggingService.Log($"[YtDlpService] Starting yt-dlp: '{_ytDlpPath}' Args: {string.Join(" ", psi.ArgumentList)}");
+                    string safeArgs = ScrubArgumentListForLogs(psi.ArgumentList);
+                    LoggingService.Log($"[YtDlpService] Starting yt-dlp: '{_ytDlpPath}' Args: {safeArgs}");
                     proc.Start();
                     LoggingService.Log("[YtDlpService] Process started.");
                 }
@@ -133,19 +294,15 @@ namespace EDM.Services
 
         private void TryReportProgress(string line, Action<int, string> progress)
         {
-            // yt-dlp progress lines often look like: "[download]   5.2% of 3.14MiB at 123.45KiB/s ETA 00:12"
-            var m = Regex.Match(line, "(\\d{1,3}\\.\\d{1,2})%|(\\d{1,3})%");
-            if (m.Success)
+            if (YtDlpOutputParser.TryParseProgress(line, out var parsedPct, out _, out _, out _, out _))
             {
-                if (int.TryParse(Math.Floor(double.Parse(m.Value.TrimEnd('%'))).ToString(), out var p))
-                {
-                    progress?.Invoke(Math.Min(100, Math.Max(0, p)), line);
-                    return;
-                }
+                _lastReportedProgressPercent = (int)Math.Floor(parsedPct);
+                progress?.Invoke(_lastReportedProgressPercent, line);
+                return;
             }
 
-            // fallback: send 0 with the raw line
-            progress?.Invoke(0, line);
+            // Keep the last reported progress percent instead of resetting to 0
+            progress?.Invoke(_lastReportedProgressPercent, line);
         }
 
         /// <summary>
@@ -162,9 +319,16 @@ namespace EDM.Services
 
             try
             {
+                string? execPath = await MediaDependencyManager.Instance.GetValidatedYtDlpPathAsync(_ytDlpPath, ct).ConfigureAwait(false);
+                if (string.IsNullOrEmpty(execPath))
+                {
+                    LoggingService.LogWarning("[YtDlpService] yt-dlp executable could not be resolved or provisioned.");
+                    return null;
+                }
+
                 var psi = new ProcessStartInfo
                 {
-                    FileName = _ytDlpPath,
+                    FileName = execPath,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -173,6 +337,8 @@ namespace EDM.Services
 
                 psi.ArgumentList.Add("--dump-json");
                 psi.ArgumentList.Add("--no-download");
+                psi.ArgumentList.Add("--extractor-args");
+                psi.ArgumentList.Add("youtube:player_client=android,web");
                 psi.ArgumentList.Add(url);
 
                 using (var proc = new Process { StartInfo = psi, EnableRaisingEvents = true })
@@ -197,7 +363,8 @@ namespace EDM.Services
 
                     try
                     {
-                        LoggingService.Log($"[YtDlpService] Getting metadata for URL: {url}");
+                        string safeUrl = ProtocolDetector.SanitizeUrlForLogging(url);
+                        LoggingService.Log($"[YtDlpService] Getting metadata for URL: {safeUrl}");
                         proc.Start();
                         proc.BeginOutputReadLine();
                         proc.BeginErrorReadLine();
@@ -309,6 +476,45 @@ namespace EDM.Services
                 LoggingService.LogException("[YtDlpService.AutoUpdateEngineAsync] Update failed", ex);
             }
             return false;
+        }
+
+        private static string ScrubArgumentListForLogs(IEnumerable<string> args)
+        {
+            var scrubbed = new List<string>();
+            bool nextIsSensitive = false;
+
+            foreach (var arg in args)
+            {
+                if (nextIsSensitive)
+                {
+                    scrubbed.Add("***");
+                    nextIsSensitive = false;
+                    continue;
+                }
+
+                if (arg.Equals("--add-header", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("--cookies", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("-u", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("--username", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("-p", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("--password", StringComparison.OrdinalIgnoreCase))
+                {
+                    scrubbed.Add(arg);
+                    nextIsSensitive = true;
+                }
+                else if (arg.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                         arg.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                         arg.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase))
+                {
+                    scrubbed.Add(ProtocolDetector.SanitizeUrlForLogging(arg));
+                }
+                else
+                {
+                    scrubbed.Add(arg);
+                }
+            }
+
+            return string.Join(" ", scrubbed);
         }
     }
 }

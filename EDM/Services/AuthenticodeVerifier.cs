@@ -33,7 +33,7 @@ namespace EDM.Services
 
             try
             {
-                using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(filePath));
+                using var cert = new X509Certificate2(filePath);
                 bool chainValid = cert.Verify();
 
                 return new SignatureVerificationResult

@@ -9,9 +9,10 @@ using EDM.Services.Interfaces;
 namespace EDM.Services
 {
     /// <summary>
-    /// DownloadOrchestrator — Decoupled download orchestrator pattern.
-    /// Handles flow coordination: streaming video detection, HTTP probing with 206 range verification,
-    /// SQLite history recording, progress throttling, and routing to segmented vs single-threaded download engines.
+    /// DownloadOrchestrator — Central authoritative download coordinator.
+    /// Manages media download routing: dual-stream adaptive merging via MediaMergeService,
+    /// streaming video detection, HTTP probing with 206 range verification,
+    /// SQLite history recording, and segmented vs single-threaded download engine execution.
     /// </summary>
     public class DownloadOrchestrator
     {
@@ -21,6 +22,8 @@ namespace EDM.Services
         private readonly INetworkService _networkService;
         private readonly ISettingsService _settingsService;
         private readonly AdaptiveConnectionManager _adaptiveManager;
+        private readonly MediaMergeService _mediaMergeService;
+        private readonly MediaVariantResolver _mediaVariantResolver;
         private readonly ControlPlaneClient? _controlPlaneClient;
         private readonly ControlPlaneTelemetryService? _telemetryService;
 
@@ -30,8 +33,10 @@ namespace EDM.Services
             HttpProbeService? probeService = null,
             INetworkService? networkService = null,
             ISettingsService? settingsService = null,
+            MediaMergeService? mediaMergeService = null,
             ControlPlaneClient? controlPlaneClient = null,
-            ControlPlaneTelemetryService? telemetryService = null)
+            ControlPlaneTelemetryService? telemetryService = null,
+            MediaVariantResolver? mediaVariantResolver = null)
         {
             _httpClient = httpClient ?? SharedHttpClient.Instance;
             _ytDlp = ytDlp ?? new YtDlpService();
@@ -39,10 +44,80 @@ namespace EDM.Services
             _settingsService = settingsService ?? App.ServiceProvider?.GetService(typeof(ISettingsService)) as ISettingsService ?? new SettingsService();
             _networkService = networkService ?? new NetworkService(_settingsService);
             _adaptiveManager = new AdaptiveConnectionManager(_settingsService, _networkService);
+            _mediaMergeService = mediaMergeService ?? new MediaMergeService(_httpClient);
+            _mediaVariantResolver = mediaVariantResolver ?? new MediaVariantResolver(_ytDlp);
             _controlPlaneClient = controlPlaneClient ?? App.ServiceProvider?.GetService(typeof(ControlPlaneClient)) as ControlPlaneClient;
             _telemetryService = telemetryService ?? App.ServiceProvider?.GetService(typeof(ControlPlaneTelemetryService)) as ControlPlaneTelemetryService;
         }
 
+        public async Task StartDownloadAsync(
+            DownloadItem item,
+            IProgress<DownloadProgressInfo> progressReporter,
+            PauseTokenSource pauseToken,
+            Func<double> speedLimitProvider,
+            CancellationToken cancellationToken,
+            int? segmentCount = null,
+            Action<string>? diagnosticLogger = null)
+        {
+            if (item == null) throw new ArgumentNullException(nameof(item));
+
+            // Check if dual-stream adaptive merge is required
+            if (item.RequiresFfmpegMerge && !string.IsNullOrWhiteSpace(item.VideoUrl) && !string.IsNullOrWhiteSpace(item.AudioUrl))
+            {
+                LoggingService.Log($"[DownloadOrchestrator] Routing adaptive media item '{item.FileName}' ({item.Quality}) to MediaMergeService.");
+                
+                string ffmpegPath = _settingsService.GetFfmpegPath();
+                await _mediaMergeService.MergeAudioVideoAsync(
+                    item.VideoUrl,
+                    item.AudioUrl,
+                    item.SavePath,
+                    ffmpegPath,
+                    cancellationToken,
+                    progressReporter,
+                    pauseToken,
+                    speedLimitProvider,
+                    item.EstimatedSizeBytes > 0 ? (long)(item.EstimatedSizeBytes * 0.85) : -1,
+                    item.EstimatedSizeBytes > 0 ? (long)(item.EstimatedSizeBytes * 0.15) : -1
+                ).ConfigureAwait(false);
+
+                // Final file verification
+                if (!File.Exists(item.SavePath) || new FileInfo(item.SavePath).Length == 0)
+                {
+                    throw new InvalidOperationException($"Final output file '{item.SavePath}' was not created or is 0 bytes.");
+                }
+
+                var finalInfo = new DownloadProgressInfo
+                {
+                    Status = "Finished",
+                    ProgressPercentage = 100.0,
+                    BytesReceived = new FileInfo(item.SavePath).Length,
+                    TotalBytes = new FileInfo(item.SavePath).Length,
+                    IsCompleted = true,
+                    ServerSupportsResume = true
+                };
+                progressReporter.Report(finalInfo);
+                return;
+            }
+
+            // Normal single-stream or direct URL download
+            string effectiveUrl = !string.IsNullOrWhiteSpace(item.VideoUrl) ? item.VideoUrl : item.Url;
+            await StartDownloadAsync(
+                effectiveUrl,
+                item.SavePath,
+                progressReporter,
+                pauseToken,
+                speedLimitProvider,
+                cancellationToken,
+                segmentCount,
+                item.BuildCredentials(),
+                item.Cookies,
+                diagnosticLogger
+            ).ConfigureAwait(false);
+        }
+
+        // Start a download for the provided url. Supports automatic protocol classification,
+        // adaptive multi-segment range downloads, YouTube/streaming download via YtDlpService,
+        // BitTorrent/Magnet URIs, and FTP/FTPS endpoints.
         public async Task StartDownloadAsync(
             string url,
             string savePath,
@@ -55,7 +130,25 @@ namespace EDM.Services
             string? cookies = null,
             Action<string>? diagnosticLogger = null)
         {
-            LoggingService.Log($"[DownloadOrchestrator] Starting download: url={url}, savePath={savePath}");
+            if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("url is required", nameof(url));
+            if (string.IsNullOrWhiteSpace(savePath)) throw new ArgumentException("savePath is required", nameof(savePath));
+            if (progressReporter == null) throw new ArgumentNullException(nameof(progressReporter));
+            if (pauseToken == null) throw new ArgumentNullException(nameof(pauseToken));
+
+            string initialSanitizedUrl = ProtocolDetector.SanitizeUrlForLogging(url);
+            LoggingService.Log($"[DownloadOrchestrator] Starting download: url={initialSanitizedUrl}, savePath={savePath}");
+
+            // Pre-download Security & URL Validation Check
+            if (!DownloadSecurityPipeline.Instance.ValidateUrl(url, out var urlValidationError))
+            {
+                var blockedInfo = new DownloadProgressInfo
+                {
+                    Status = "Security Blocked",
+                    ErrorMessage = urlValidationError
+                };
+                progressReporter.Report(blockedInfo);
+                return;
+            }
 
             // Server-Authoritative Ban / Account Suspension Check
             if (_controlPlaneClient != null && _controlPlaneClient.CurrentSecurityState == AccountSecurityState.Suspended)
@@ -72,26 +165,15 @@ namespace EDM.Services
             var info = new DownloadProgressInfo { Status = "Connecting..." };
             progressReporter.Report(info);
 
-            // Speed provider
+            // Composite speed provider combining app throttle and user custom speed limit
             Func<double> combinedSpeedProvider = () =>
             {
-                try
-                {
-                    var user = speedLimitProvider?.Invoke() ?? -1;
-                    if (user > 0) return user;
-                    var kbps = _settingsService?.GetActiveBandwidthLimitKbps() ?? 0;
-                    if (kbps > 0) return kbps * 1024.0;
-                    if (_networkService != null && _networkService.IsMeteredNetwork() && _settingsService != null && _settingsService.GetReduceQualityOnMeteredNetworks())
-                    {
-                        return 512 * 1024.0;
-                    }
-                    return -1;
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Log($"[DownloadOrchestrator] Speed limit calculation failed: {ex.Message}");
-                    return -1;
-                }
+                var kbps = _settingsService?.GetActiveBandwidthLimitKbps() ?? 0;
+                double appLimit = kbps > 0 ? kbps * 1024.0 : -1;
+                double userLimit = speedLimitProvider != null ? speedLimitProvider() : -1;
+                if (appLimit <= 0 && userLimit <= 0) return -1;
+                if (appLimit > 0 && userLimit > 0) return Math.Min(appLimit, userLimit);
+                return appLimit > 0 ? appLimit : userLimit;
             };
 
             // Network monitoring adapter
@@ -112,11 +194,15 @@ namespace EDM.Services
             {
                 long historyId = -1;
 
+                var protocolResult = ProtocolDetector.Detect(url);
+                string sanitizedUrl = ProtocolDetector.SanitizeUrlForLogging(url);
+
                 // 0a. Check BitTorrent & Magnet Link URIs
-                if (BitTorrentService.IsBitTorrentUrl(url))
+                if (protocolResult.Protocol == DownloadProtocolType.Magnet || protocolResult.Protocol == DownloadProtocolType.BitTorrent)
                 {
-                    LoggingService.Log($"[DownloadOrchestrator] BitTorrent / Magnet URL detected. Routing to BitTorrentService: {url}");
+                    LoggingService.Log($"[DownloadOrchestrator] BitTorrent / Magnet URL detected. Routing to BitTorrentService: {sanitizedUrl}");
                     info.Status = "Initializing BitTorrent Service...";
+                    info.ServerSupportsResume = true;
                     progressReporter.Report(info);
 
                     var btService = new BitTorrentService();
@@ -125,80 +211,195 @@ namespace EDM.Services
                 }
 
                 // 0b. Check FTP / FTPS Protocol URIs
-                if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) && (parsedUri.Scheme.Equals("ftp", StringComparison.OrdinalIgnoreCase) || parsedUri.Scheme.Equals("ftps", StringComparison.OrdinalIgnoreCase)))
+                if (protocolResult.Protocol == DownloadProtocolType.Ftp || protocolResult.Protocol == DownloadProtocolType.Ftps)
                 {
-                    LoggingService.Log($"[DownloadOrchestrator] FTP/FTPS Protocol URL detected. Routing to FtpDownloadService: {url}");
+                    LoggingService.Log($"[DownloadOrchestrator] FTP/FTPS Protocol URL detected. Routing to FtpDownloadService: {sanitizedUrl}");
                     info.Status = "Connecting to FTP Server...";
+                    info.ServerSupportsResume = true;
                     progressReporter.Report(info);
 
                     var ftpService = new FtpDownloadService();
-                    System.Net.NetworkCredential? netCred = credentials != null ? new System.Net.NetworkCredential(credentials.Username, credentials.Password) : null;
+                    System.Net.NetworkCredential? netCred = credentials != null 
+                        ? new System.Net.NetworkCredential(credentials.Username, credentials.Password) 
+                        : null;
+
+                    if (netCred == null && ProtocolDetector.TryExtractCredentials(url, out string cleanFtpUrl, out var extractedCred))
+                    {
+                        netCred = extractedCred;
+                        url = cleanFtpUrl;
+                    }
+
                     await ftpService.DownloadFtpAsync(url, savePath, segmentCount ?? 4, progressReporter, pauseToken, combinedSpeedProvider, cancellationToken, netCred).ConfigureAwait(false);
                     return;
                 }
 
-                // 1. Detect streaming / video site URL (yt-dlp)
-                if (_ytDlp != null && DownloadService.IsVideoStreamingUrl(url))
+                // 0c. Check SFTP Protocol URIs
+                if (protocolResult.Protocol == DownloadProtocolType.Sftp)
                 {
-                    LoggingService.Log($"[DownloadOrchestrator] Video streaming site detected. Routing to YtDlpService.");
-                    info.Status = "Connecting to streaming video service...";
+                    LoggingService.Log($"[DownloadOrchestrator] SFTP Protocol URL detected: {sanitizedUrl}");
+                    throw new NotSupportedException("SFTP (SSH File Transfer Protocol) requires SSH public key authentication configuration. Please configure SSH credentials in EDM Settings.");
+                }
+
+                // 0d. Check HLS (.m3u8) / DASH (.mpd) manifest streams
+                if (protocolResult.Protocol == DownloadProtocolType.Hls || protocolResult.Protocol == DownloadProtocolType.Dash)
+                {
+                    bool isHls = protocolResult.Protocol == DownloadProtocolType.Hls;
+                    LoggingService.Log($"[DownloadOrchestrator] {(isHls ? "HLS" : "DASH")} manifest URL detected. Routing to HlsDashDownloadService: {sanitizedUrl}");
+                    info.Status = isHls ? "Downloading HLS Stream..." : "Downloading DASH Stream...";
+                    info.ServerSupportsResume = true;
+                    progressReporter.Report(info);
+
+                    var hlsDash = new HlsDashDownloadService();
+
+                    if (isHls)
+                    {
+                        await hlsDash.DownloadHlsStreamAsync(url, savePath, null, cookies, progressReporter, pauseToken, cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await hlsDash.DownloadDashStreamAsync(url, savePath, null, cookies, progressReporter, pauseToken, cancellationToken).ConfigureAwait(false);
+                    }
+                    return;
+                }
+
+                // 1. Detect streaming / video site URL
+                if (DownloadService.IsVideoStreamingUrl(url))
+                {
+                    LoggingService.Log($"[DownloadOrchestrator] Video streaming site detected: {sanitizedUrl}");
+                    info.Status = "Resolving video stream...";
                     progressReporter.Report(info);
 
                     try { historyId = Services.History.DownloadHistoryRecorder.CreateEntry(url, savePath, -1); } catch { }
 
-                    using var throttledYt = new DownloadService.ThrottledProgress(progressReporter, TimeSpan.FromMilliseconds(400));
-                    using var smoothYt = new SmoothProgressReporter(throttledYt.AsProgress());
-                    IProgress<DownloadProgressInfo> effectiveProgressYt = smoothYt;
+                    Exception? streamError = null;
 
+                    // A. Attempt Native Stream Resolution via MediaVariantResolver
                     try
                     {
-                        await _ytDlp.DownloadAsync(
-                            url,
-                            savePath,
-                            formatArg: "",
-                            progress: (percent, statusLine) =>
+                        var variantResult = await _mediaVariantResolver.ResolveVariantsAsync(url, cookies: cookies, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        if (variantResult.Success && variantResult.Variants.Any())
+                        {
+                            var best = variantResult.Variants.OrderByDescending(v => v.Height).ThenByDescending(v => v.Bitrate).First();
+
+                            if (best.RequiresFfmpegMerge && !string.IsNullOrWhiteSpace(best.DirectUrl) && !string.IsNullOrWhiteSpace(best.AudioStreamUrl))
                             {
-                                var dlInfo = new DownloadProgressInfo
-                                {
-                                    ProgressPercentage = percent,
-                                    Status = string.IsNullOrWhiteSpace(statusLine) ? $"Downloading ({percent}%)..." : statusLine,
-                                    IsCompleted = percent >= 100
-                                };
-                                effectiveProgressYt.Report(dlInfo);
+                                LoggingService.Log($"[DownloadOrchestrator] Resolved dual-stream adaptive media ({best.QualityLabel}). Routing to MediaMergeService.");
+                                string ffmpegPath = _settingsService.GetFfmpegPath();
+                                await _mediaMergeService.MergeAudioVideoAsync(
+                                    best.DirectUrl,
+                                    best.AudioStreamUrl,
+                                    savePath,
+                                    ffmpegPath,
+                                    cancellationToken,
+                                    progressReporter,
+                                    pauseToken,
+                                    combinedSpeedProvider,
+                                    best.EstimatedSizeBytes > 0 ? (long)(best.EstimatedSizeBytes * 0.85) : -1,
+                                    best.EstimatedSizeBytes > 0 ? (long)(best.EstimatedSizeBytes * 0.15) : -1
+                                ).ConfigureAwait(false);
 
-                                if (historyId > 0)
+                                if (File.Exists(savePath) && new FileInfo(savePath).Length > 0)
                                 {
-                                    BackgroundTaskManager.FireAndForget("HistoryUpdateYtDlp", async () =>
-                                    {
-                                        try
-                                        {
-                                            Services.History.DownloadHistoryRecorder.UpdateProgress(historyId, 0, 0, 0);
-                                            if (percent >= 100) Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
-                                            await Task.CompletedTask;
-                                        }
-                                        catch { }
-                                    });
+                                    info.ProgressPercentage = 100.0;
+                                    info.Status = "Finished";
+                                    info.IsCompleted = true;
+                                    progressReporter.Report(info);
+                                    if (historyId > 0) Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
+                                    return;
                                 }
-                            },
-                            cancellationToken
-                        ).ConfigureAwait(false);
-
-                        info.ProgressPercentage = 100;
-                        info.Status = "Finished";
-                        info.IsCompleted = true;
-                        effectiveProgressYt.Report(info);
-                        if (historyId > 0) Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
-                        return;
+                            }
+                            else if (!string.IsNullOrWhiteSpace(best.DirectUrl))
+                            {
+                                LoggingService.Log($"[DownloadOrchestrator] Resolved direct stream URL ({best.QualityLabel}). Routing to progressive download.");
+                                url = best.DirectUrl;
+                            }
+                        }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        info.Status = "Canceled";
-                        progressReporter.Report(info);
-                        throw;
-                    }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
                     {
-                        LoggingService.LogException($"[DownloadOrchestrator] yt-dlp download failed, falling back to HTTP probe", ex);
+                        streamError = ex;
+                        LoggingService.LogWarning($"[DownloadOrchestrator] Native stream resolution failed: {ex.Message}");
+                    }
+
+                    // B. Fallback to YtDlpService if native stream did not provide direct stream URL
+                    if (_ytDlp != null && DownloadService.IsVideoStreamingUrl(url))
+                    {
+                        using var throttledYt = new DownloadService.ThrottledProgress(progressReporter, TimeSpan.FromMilliseconds(200));
+                        IProgress<DownloadProgressInfo> effectiveProgressYt = throttledYt.AsProgress();
+
+                        try
+                        {
+                            await _ytDlp.DownloadAsync(
+                                url,
+                                savePath,
+                                formatArg: "",
+                                progress: (percent, statusLine) =>
+                                {
+                                    var dlInfo = new DownloadProgressInfo
+                                    {
+                                        ProgressPercentage = Math.Clamp(percent, 0.0, 100.0),
+                                        Status = string.IsNullOrWhiteSpace(statusLine) ? $"Downloading ({percent}%)..." : statusLine,
+                                        IsCompleted = percent >= 100,
+                                        ServerSupportsResume = true
+                                    };
+
+                                    if (YtDlpOutputParser.TryParseProgress(statusLine, out var parsedPct, out var totalBytes, out var bytesReceived, out var speedBps, out var etaSec))
+                                    {
+                                        if (parsedPct > 0) dlInfo.ProgressPercentage = Math.Clamp(parsedPct, 0.0, 100.0);
+                                        if (totalBytes > 0) dlInfo.TotalBytes = totalBytes;
+                                        if (bytesReceived > 0) dlInfo.BytesReceived = bytesReceived;
+                                        if (speedBps > 0) dlInfo.SpeedBytesPerSecond = speedBps;
+                                        if (etaSec > 0) dlInfo.RemainingSeconds = etaSec;
+                                    }
+
+                                    effectiveProgressYt.Report(dlInfo);
+
+                                    if (historyId > 0)
+                                    {
+                                        BackgroundTaskManager.FireAndForget("HistoryUpdateYtDlp", async () =>
+                                        {
+                                            try
+                                            {
+                                                Services.History.DownloadHistoryRecorder.UpdateProgress(historyId, dlInfo.BytesReceived, dlInfo.TotalBytes ?? -1, dlInfo.SpeedBytesPerSecond);
+                                                if (percent >= 100) Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
+                                                await Task.CompletedTask;
+                                            }
+                                            catch { }
+                                        });
+                                    }
+                                },
+                                cancellationToken
+                            ).ConfigureAwait(false);
+
+                            if (File.Exists(savePath) && new FileInfo(savePath).Length > 0)
+                            {
+                                info.ProgressPercentage = 100;
+                                info.Status = "Finished";
+                                info.IsCompleted = true;
+                                effectiveProgressYt.Report(info);
+                                if (historyId > 0) Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
+                                return;
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            info.Status = "Canceled";
+                            progressReporter.Report(info);
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            streamError = ex;
+                            LoggingService.LogException($"[DownloadOrchestrator] yt-dlp download failed", ex);
+                        }
+                    }
+
+                    // If still streaming URL (e.g. YouTube watch URL) and both native and yt-dlp failed, fail cleanly
+                    if (DownloadService.IsVideoStreamingUrl(url))
+                    {
+                        string msg = streamError != null ? streamError.Message : "Could not resolve playable media stream from the provided URL.";
+                        throw new InvalidOperationException($"Streaming media download failed: {msg}. Please check external tools configuration (yt-dlp/ffmpeg).");
                     }
                 }
 
@@ -211,9 +412,8 @@ namespace EDM.Services
 
                 try { historyId = Services.History.DownloadHistoryRecorder.CreateEntry(url, savePath, probeResult.TotalBytes ?? -1); } catch { }
 
-                using var throttled = new DownloadService.ThrottledProgress(progressReporter, TimeSpan.FromMilliseconds(400));
-                using var smooth = new SmoothProgressReporter(throttled.AsProgress());
-                IProgress<DownloadProgressInfo> effectiveProgress = smooth;
+                using var throttled = new DownloadService.ThrottledProgress(progressReporter, TimeSpan.FromMilliseconds(200));
+                IProgress<DownloadProgressInfo> effectiveProgress = throttled.AsProgress();
 
                 // 3. Route to Segmented Download vs Single-Threaded Download based on 206 confirmation
                 if (probeResult.TotalBytes.HasValue && probeResult.TotalBytes.Value > 0 && probeResult.ServerSupportsResume)
@@ -238,12 +438,35 @@ namespace EDM.Services
                         }
                     }
 
-                    LoggingService.Log($"[DownloadOrchestrator] Launching segmented download: segments={segmentsToUse}, 206Confirmed=True");
+                    string downloadId = Guid.NewGuid().ToString("N");
+                    string host = Uri.TryCreate(url, UriKind.Absolute, out var parsedHost) ? parsedHost.Host : "localhost";
+                    int allocatedBudget = GlobalConnectionGovernor.Instance.AcquireConnectionBudget(downloadId, host, segmentsToUse);
+                    segmentsToUse = Math.Max(1, Math.Min(segmentsToUse, allocatedBudget));
+
+                    LoggingService.Log($"[DownloadOrchestrator] Launching segmented download: segments={segmentsToUse} (GlobalBudget={allocatedBudget}), 206Confirmed=True");
                     _telemetryService?.TrackDownloadStarted(url, probeResult.TotalBytes, segmentsToUse);
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                    await MultiPartAdapter.DownloadWithMultiPartAsync(url, savePath, segmentsToUse, effectiveProgress, pauseToken, combinedSpeedProvider, cancellationToken, credentials, cookies).ConfigureAwait(false);
-                    stopwatch.Stop();
-                    _telemetryService?.TrackDownloadCompleted(url, probeResult.TotalBytes ?? 0, stopwatch.Elapsed.TotalSeconds, (probeResult.TotalBytes ?? 0) / Math.Max(0.01, stopwatch.Elapsed.TotalSeconds));
+                    try
+                    {
+                        await MultiPartAdapter.DownloadWithMultiPartAsync(url, savePath, segmentsToUse, effectiveProgress, pauseToken, combinedSpeedProvider, cancellationToken, credentials, cookies).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        GlobalConnectionGovernor.Instance.ReleaseConnectionBudget(downloadId);
+                    }
+
+                    double duration = Math.Max(0.01, stopwatch.Elapsed.TotalSeconds);
+                    double measuredSpeed = (probeResult.TotalBytes ?? 0) / duration;
+                    _telemetryService?.TrackDownloadCompleted(url, probeResult.TotalBytes ?? 0, duration, measuredSpeed);
+
+                    // Final validation
+                    if (!File.Exists(savePath) || new FileInfo(savePath).Length == 0)
+                    {
+                        throw new InvalidOperationException($"Segmented download failed to produce non-empty output file at '{savePath}'.");
+                    }
+                    
+                    // Trigger Next-Gen Post Download Pipeline (Subtitles, Smart Organizer, Cloud Handoff, Analytics)
+                    await TriggerPostDownloadNextGenPipelineAsync(savePath, url, measuredSpeed).ConfigureAwait(false);
                 }
                 else
                 {
@@ -255,17 +478,27 @@ namespace EDM.Services
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                     await DownloadService.RunSingleThreadedDownloadInternalAsync(_httpClient, url, savePath, probeResult.TotalBytes, effectiveProgress, pauseToken, combinedSpeedProvider, cancellationToken, credentials).ConfigureAwait(false);
                     stopwatch.Stop();
-                    _telemetryService?.TrackDownloadCompleted(url, probeResult.TotalBytes ?? 0, stopwatch.Elapsed.TotalSeconds, (probeResult.TotalBytes ?? 0) / Math.Max(0.01, stopwatch.Elapsed.TotalSeconds));
-                }
 
-                // Trigger Next-Gen Post Download Pipeline (Subtitles, Smart Organizer, Cloud Handoff)
-                await TriggerPostDownloadNextGenPipelineAsync(savePath, url).ConfigureAwait(false);
+                    double duration = Math.Max(0.01, stopwatch.Elapsed.TotalSeconds);
+                    double measuredSpeed = (probeResult.TotalBytes ?? 0) / duration;
+                    _telemetryService?.TrackDownloadCompleted(url, probeResult.TotalBytes ?? 0, duration, measuredSpeed);
+
+                    // Final validation
+                    if (!File.Exists(savePath) || new FileInfo(savePath).Length == 0)
+                    {
+                        throw new InvalidOperationException($"Single-threaded download failed to produce non-empty output file at '{savePath}'.");
+                    }
+                    
+                    // Trigger Next-Gen Post Download Pipeline (Subtitles, Smart Organizer, Cloud Handoff, Analytics)
+                    await TriggerPostDownloadNextGenPipelineAsync(savePath, url, measuredSpeed).ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {
                 info.Status = "Canceled";
                 _telemetryService?.TrackDownloadPaused(url);
                 progressReporter.Report(info);
+                throw;
             }
             catch (Exception ex)
             {
@@ -273,6 +506,7 @@ namespace EDM.Services
                 info.ErrorMessage = ex.Message;
                 _telemetryService?.TrackDownloadFailed(url, ex.Message, isRetriable: true);
                 progressReporter.Report(info);
+                throw;
             }
             finally
             {
@@ -280,11 +514,26 @@ namespace EDM.Services
             }
         }
 
-        private async Task TriggerPostDownloadNextGenPipelineAsync(string savePath, string url)
+        private async Task TriggerPostDownloadNextGenPipelineAsync(string savePath, string url, double measuredSpeedBytesPerSec = 0)
         {
             try
             {
                 if (!File.Exists(savePath)) return;
+
+                // 0. Deterministic Security & Integrity Pipeline (Hash, Authenticode, Defender Scan, Quarantine)
+                var secContext = new DownloadSecurityContext
+                {
+                    Url = url,
+                    FilePath = savePath
+                };
+                var secResult = await DownloadSecurityPipeline.Instance.ProcessPostDownloadSecurityAsync(secContext, CancellationToken.None).ConfigureAwait(false);
+                LoggingService.Log($"[SecurityPipeline] Security evaluation for '{Path.GetFileName(savePath)}': {secResult.Decision} ({secResult.Message})");
+
+                if (secResult.Decision == SecurityDecision.SecurityQuarantined || !File.Exists(savePath))
+                {
+                    LoggingService.LogWarning($"[SecurityPipeline] File '{Path.GetFileName(savePath)}' was quarantined. Aborting downstream post-processing.");
+                    return;
+                }
 
                 // 1. Smart File Organizer
                 var organizer = new SmartFileOrganizerService();
@@ -336,8 +585,9 @@ namespace EDM.Services
                 {
                     var fi = new FileInfo(savePath);
                     var analyticsEngine = new DownloadAnalyticsEngine();
-                    analyticsEngine.RecordDownloadSample(url, fi.Length, 15_000_000); // 15 MB/s sample
-                    LoggingService.Log($"[Analytics] Recorded {fi.Length} bytes for {url}");
+                    analyticsEngine.RecordDownloadSample(url, fi.Length, measuredSpeedBytesPerSec);
+                    string sanitizedAnalyticsUrl = ProtocolDetector.SanitizeUrlForLogging(url);
+                    LoggingService.Log($"[Analytics] Recorded {fi.Length} bytes at {measuredSpeedBytesPerSec:F0} B/s for {sanitizedAnalyticsUrl}");
                 }
             }
             catch (Exception ex)

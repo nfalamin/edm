@@ -3,9 +3,10 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "=== EDM Production Release Artifact Hashing & Audit ===" -ForegroundColor Cyan
 
-$workspaceRoot = "D:\Project 2\10 AUG - 2.07AM\5 AUG\EDM"
+$workspaceRoot = Split-Path -Parent $PSScriptRoot
 $releaseBinDir = Join-Path $workspaceRoot "EDM\bin\Release\net10.0-windows"
-$manifestPath  = Join-Path $workspaceRoot "release-manifest.json"
+$manifestPath  = Join-Path $workspaceRoot "Output\release-manifest.json"
+
 
 $nativeHostDir = Join-Path $env:APPDATA "EDM\NativeHost"
 if (-not (Test-Path $nativeHostDir)) { New-Item -ItemType Directory -Path $nativeHostDir -Force | Out-Null }
@@ -34,9 +35,11 @@ $targets = @(
     @{ Name = "EDM.exe"; Path = Join-Path $releaseBinDir "EDM.exe" },
     @{ Name = "EDMSetup.iss"; Path = Join-Path $workspaceRoot "EDMSetup.iss" },
     @{ Name = "com.edm.downloader.json"; Path = $manifestPathFile },
-    @{ Name = "EDM_Chrome_Extension_v1.0.0.zip"; Path = Join-Path $workspaceRoot "Output\EDM_Chrome_Extension_v1.0.0.zip" },
-    @{ Name = "EDM_Firefox_Extension_v1.0.0.zip"; Path = Join-Path $workspaceRoot "Output\EDM_Firefox_Extension_v1.0.0.zip" }
+    @{ Name = "EDM-Chrome-Extension-v1.0.0.zip"; Path = Join-Path $workspaceRoot "Output\EDM-Chrome-Extension-v1.0.0.zip" },
+    @{ Name = "EDM-Edge-Extension-v1.0.0.zip"; Path = Join-Path $workspaceRoot "Output\EDM-Edge-Extension-v1.0.0.zip" },
+    @{ Name = "EDM-Firefox-Extension-v1.0.0.zip"; Path = Join-Path $workspaceRoot "Output\EDM-Firefox-Extension-v1.0.0.zip" }
 )
+
 
 $artifactList = @()
 

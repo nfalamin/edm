@@ -50,6 +50,8 @@
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceLight}"/>
     <SolidColorBrush x:Key="CardBrush" Color="{StaticResource GlassmorphicCard}"/>
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource CardBorder}"/>
+    <SolidColorBrush x:Key="CardInputBg" Color="#0B132B"/>
+    <SolidColorBrush x:Key="NavHoverBg" Color="#162345"/>
 
     <!-- Accent and semantic brushes -->
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentBlue}"/>

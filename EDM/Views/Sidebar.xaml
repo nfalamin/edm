@@ -294,6 +294,30 @@
                     </Button.Template>
                 </Button>
 
+                <!-- AI Assistant -->
+                <Button Click="NavCategory_Click" Tag="AiChat" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#06B6D4"/>
+                                    <TextBlock x:Name="LabelText" Grid.Column="1" Text="AI Assistant" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                    <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
                 <!-- Settings -->
                 <Button Click="NavCategory_Click" Tag="Settings" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
@@ -306,6 +330,78 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#A78BFA"/>
                                     <TextBlock x:Name="LabelText" Grid.Column="1" Text="Settings" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                    <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- Support & Help -->
+                <Button Click="NavCategory_Click" Tag="Support" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xE897;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#38BDF8"/>
+                                    <TextBlock x:Name="LabelText" Grid.Column="1" Text="Support &amp; Help" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                    <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- About EDM -->
+                <Button Click="NavCategory_Click" Tag="About" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#8B5CF6"/>
+                                    <TextBlock x:Name="LabelText" Grid.Column="1" Text="About EDM" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                    <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- Privacy & Policy -->
+                <Button Click="NavCategory_Click" Tag="Privacy" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#10B981"/>
+                                    <TextBlock x:Name="LabelText" Grid.Column="1" Text="Privacy &amp; Policy" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
