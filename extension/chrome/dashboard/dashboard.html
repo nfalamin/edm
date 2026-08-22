@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDM Download Manager Dashboard</title>
+    <link rel="stylesheet" href="../src/ui/theme.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="edm-dash-container">
+        <!-- Top App Navigation -->
+        <header class="edm-dash-header">
+            <div class="edm-dash-brand">
+                <img src="../icons/icon-48.png" alt="EDM Logo" class="edm-dash-logo">
+                <div class="edm-dash-brand-title">Exclusive Download Manager</div>
+            </div>
+
+            <div class="edm-dash-search-wrap">
+                <input type="text" id="dashSearchInput" class="edm-dash-search" placeholder="Search downloads by filename or URL...">
+            </div>
+
+            <div class="edm-dash-header-actions">
+                <a href="../settings/settings.html" class="edm-btn-secondary">⚙️ Settings</a>
+                <button class="edm-btn-primary" id="refreshDashBtn">↻ Refresh</button>
+            </div>
+        </header>
+
+        <!-- Stats Overview Cards -->
+        <section class="edm-dash-stats">
+            <div class="edm-glass-card edm-stat-card">
+                <div class="edm-stat-icon">📥</div>
+                <div class="edm-stat-info">
+                    <div class="edm-stat-label">Total Downloads</div>
+                    <div class="edm-stat-val" id="statTotalDownloads">0</div>
+                </div>
+            </div>
+
+            <div class="edm-glass-card edm-stat-card">
+                <div class="edm-stat-icon">⚡</div>
+                <div class="edm-stat-info">
+                    <div class="edm-stat-label">Active Downloads</div>
+                    <div class="edm-stat-val" id="statActiveDownloads">0</div>
+                </div>
+            </div>
+
+            <div class="edm-glass-card edm-stat-card">
+                <div class="edm-stat-icon">💾</div>
+                <div class="edm-stat-info">
+                    <div class="edm-stat-label">Total Data Downloaded</div>
+                    <div class="edm-stat-val" id="statTotalData">0 MB</div>
+                </div>
+            </div>
+
+            <div class="edm-glass-card edm-stat-card">
+                <div class="edm-stat-icon">🟢</div>
+                <div class="edm-stat-info">
+                    <div class="edm-stat-label">EDM Desktop Engine</div>
+                    <div class="edm-stat-val" id="statEngineStatus">Ready</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Category Filter Tabs -->
+        <nav class="edm-dash-tabs">
+            <button class="edm-dash-tab-btn active" data-category="ALL">All Items</button>
+            <button class="edm-dash-tab-btn" data-category="VIDEO">🎬 Videos</button>
+            <button class="edm-dash-tab-btn" data-category="AUDIO">🎵 Audio</button>
+            <button class="edm-dash-tab-btn" data-category="COMPRESSED">📦 Compressed</button>
+            <button class="edm-dash-tab-btn" data-category="PROGRAMS">💾 Programs</button>
+            <button class="edm-dash-tab-btn" data-category="DOCS">📄 Documents</button>
+        </nav>
+
+        <!-- Main Downloads Table -->
+        <main class="edm-dash-content">
+            <div class="edm-glass-card edm-table-card">
+                <table class="edm-dash-table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Category</th>
+                            <th>Size</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashTableBody">
+                        <!-- Populated dynamically via dashboard.js -->
+                    </tbody>
+                </table>
+
+                <div class="edm-dash-empty-table" id="dashTableEmpty">
+                    <p>No downloads found matching this category.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="dashboard.js"></script>
+</body>
+</html>

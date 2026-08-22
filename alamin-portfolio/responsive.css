@@ -1,0 +1,70 @@
+/* =========================================
+   5. Mobile Responsive & Desktop Full Display Overrides
+   ========================================= */
+
+/* Global Resets for Fluidity & Preventing Horizontal Scroll */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* ─────────────────────────────────────────
+   DESKTOP FULL DISPLAY MODE (WIDE SCREEN)
+   ───────────────────────────────────────── */
+@media (min-width: 1024px) {
+    .max-w-7xl {
+        max-width: 95% !important;
+        width: 95% !important;
+    }
+    
+    .site-header .max-w-7xl {
+        max-width: 96% !important;
+        width: 96% !important;
+    }
+    
+    .container {
+        max-width: 95% !important;
+        width: 95% !important;
+    }
+    
+    /* Full display grid spacing */
+    .grid {
+        width: 100%;
+    }
+}
+
+@media (min-width: 1536px) {
+    .max-w-7xl,
+    .site-header .max-w-7xl,
+    .container {
+        max-width: 96% !important;
+        width: 96% !important;
+    }
+}
+
+/* ─────────────────────────────────────────
+   MOBILE COMPACT MODE (PRESERVED)
+   ───────────────────────────────────────── */
+@media (max-width: 639px) {
+    .hero-photo {
+        max-width: 130%; /* Let the image scale inside the fluid container */
+    }
+    
+    .glass-panel {
+        padding: 1rem !important; /* Tight padding on mobile */
+    }
+}
+
+/* Flexible container spacing */
+.max-w-7xl {
+    width: 100%;
+}
+
+/* Medium devices (tablets, 768px and down) */
+@media (max-width: 767px) {
+    h1.font-display {
+        font-size: 2.5rem; /* Better title scaling */
+        line-height: 1.1;
+    }
+}

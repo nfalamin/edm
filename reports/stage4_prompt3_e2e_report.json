@@ -1,0 +1,49 @@
+﻿{
+    "suite":  "EDM Stage 4 Prompt 3 - Real End-to-End Certification",
+    "timestamp":  "2026-08-17T15:18:01.4055596Z",
+    "machine":  "DESKTOP-LKS7EPS",
+    "os":  "Microsoft Windows NT 10.0.19045.0",
+    "dotnet_version":  "10.0.400",
+    "suites":  [
+                   {
+                       "name":  "Native Messaging Binary Framing \u0026 IPC",
+                       "category":  "NativeMessaging",
+                       "passed":  true,
+                       "duration_sec":  5.33
+                   },
+                   {
+                       "name":  "Browser Integration \u0026 Manifest Packaging",
+                       "category":  "BrowserIntegration",
+                       "passed":  true,
+                       "duration_sec":  2.53
+                   },
+                   {
+                       "name":  "Add-URL Download Pipeline \u0026 Checksums",
+                       "category":  "AddUrlPipeline",
+                       "passed":  true,
+                       "duration_sec":  3.4
+                   },
+                   {
+                       "name":  "Floating Video Media Variant Resolver",
+                       "category":  "MediaVariants",
+                       "passed":  true,
+                       "duration_sec":  2.35
+                   },
+                   {
+                       "name":  "Installer \u0026 Native Host Registration",
+                       "category":  "InstallerRegistry",
+                       "passed":  true,
+                       "duration_sec":  2.48
+                   },
+                   {
+                       "name":  "Real E2E Multi-Segment Download Pipeline (xUnit 9/9 Tests)",
+                       "category":  "DownloadEngine",
+                       "passed":  true,
+                       "duration_sec":  19.28
+                   }
+               ],
+    "total_passed":  6,
+    "total_failed":  0,
+    "status":  "CERTIFIED_REAL_E2E_VERIFIED",
+    "duration_total_sec":  35.74
+}

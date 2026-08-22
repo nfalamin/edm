@@ -1,0 +1,57 @@
+# Build outputs & Intermediate artifacts
+[Bb]in/
+[Oo]bj/
+[Lg]ogs/
+**/logs/
+*.log
+publish/
+Output/publish/
+*_wpftmp.csproj
+*.wpftmp.*
+
+# IDE & Editor files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# Package & archive files
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# Temporary download files & metadata
+*.tmp
+*.tmpdl
+*.part*
+*.edm.json
+
+# SQLite databases & WAL logs
+*.db
+*.db-shm
+*.db-wal
+edm_history.db
+
+# Test results & coverage
+TestResults/
+*.dotCover
+bin/ 
+obj/ 
+.vs/ 
+node_modules/ 
+Dist/ 
+tools/ 
+*.exe 
+*.zip 
+tools/ 
+Dist/ 
+*.exe 
+tools/ 
+Dist/ 
+bin/ 
+obj/ 
+.vs/ 
+*.exe 

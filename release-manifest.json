@@ -1,0 +1,57 @@
+{
+    "security":  {
+                     "authenticodeStatus":  "EXTERNAL_BLOCKER_COMMERCIAL_CERT_PENDING",
+                     "authenticodeSigned":  false,
+                     "secretsScanClean":  true,
+                     "sha256Verified":  true,
+                     "smartScreenReputation":  "EXTERNAL_REPUTATION_PENDING"
+                 },
+    "channel":  "stable",
+    "artifacts":  {
+                      "EDM.exe":  {
+                                      "sizeBytes":  166400,
+                                      "sha256":  "2729eeb75d639ee29f51a0bb70ee033e72771230caff21bafae00cb01039670f",
+                                      "path":  "EDM.exe"
+                                  },
+                      "EDM.dll":  {
+                                      "sizeBytes":  1754624,
+                                      "sha256":  "2eb14e36418ca079dc057f726707ea5042ef7882ec2f2db18baa4e0eec43147b",
+                                      "path":  "EDM.dll"
+                                  },
+                      "EDM-Chrome-Extension-v1.0.0.zip":  {
+                                                              "sizeBytes":  158984,
+                                                              "sha256":  "765f87309e3c9e26b8cde4191035c65f157c0aafd37a5e17855ab3533460efa4",
+                                                              "path":  "EDM-Chrome-Extension-v1.0.0.zip"
+                                                          },
+                      "EDMSetup.exe":  {
+                                           "sizeBytes":  34264221,
+                                           "sha256":  "e94ca3ea2bbe14de4a4c5b86d11023a105dc5350d4d0cdec5033f2967eeae7d0",
+                                           "path":  "EDMSetup.exe"
+                                       },
+                      "EDM-v1.0.0-Portable.zip":  {
+                                                      "sizeBytes":  66791036,
+                                                      "sha256":  "7721d2ccf42ac8a66f7d204a294142c771f8fab0a01b925bba48cea871a46f3b",
+                                                      "path":  "EDM-v1.0.0-Portable.zip"
+                                                  },
+                      "EDM.NativeHost.exe":  {
+                                                 "sizeBytes":  162304,
+                                                 "sha256":  "f686115d99358cfc6338ae620386dde2c100043cf26a1d19ed8993a2dbc7d52a",
+                                                 "path":  "EDM.NativeHost.exe"
+                                             },
+                      "EDM-Firefox-Extension-v1.0.0.zip":  {
+                                                               "sizeBytes":  159033,
+                                                               "sha256":  "83c7fa9fecdc08eefa2dc7cf7d93612b71a923ef43ed295074bd8b21a1b5cbf8",
+                                                               "path":  "EDM-Firefox-Extension-v1.0.0.zip"
+                                                           },
+                      "EDM_Setup.exe":  {
+                                            "sizeBytes":  34264221,
+                                            "sha256":  "e94ca3ea2bbe14de4a4c5b86d11023a105dc5350d4d0cdec5033f2967eeae7d0",
+                                            "path":  "EDM_Setup.exe"
+                                        }
+                  },
+    "minimumWindowsVersion":  "10.0.17763.0",
+    "architecture":  "x64",
+    "releaseDate":  "2026-08-18T17:24:59Z",
+    "version":  "1.0.0",
+    "product":  "Exclusive Download Manager (EDM)"
+}

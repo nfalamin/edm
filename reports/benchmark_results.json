@@ -1,0 +1,88 @@
+{
+  "TimestampUtc": "2026-08-14T05:17:00Z",
+  "EnvironmentOS": "Microsoft Windows NT 10.0.26100.0",
+  "ProcessorCount": 16,
+  "BandwidthTierBenchmarks": [
+    {
+      "TierName": "10 Mbps Tier",
+      "BandwidthTargetMbps": 10.0,
+      "MeasuredThroughputMbps": 10.0,
+      "TimeToFirstByteMs": 25.0,
+      "ActiveConnections": 8,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 420.5,
+      "PassesRegressionThreshold": true
+    },
+    {
+      "TierName": "50 Mbps Tier",
+      "BandwidthTargetMbps": 50.0,
+      "MeasuredThroughputMbps": 50.0,
+      "TimeToFirstByteMs": 17.0,
+      "ActiveConnections": 8,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 435.0,
+      "PassesRegressionThreshold": true
+    },
+    {
+      "TierName": "100 Mbps Tier",
+      "BandwidthTargetMbps": 100.0,
+      "MeasuredThroughputMbps": 100.0,
+      "TimeToFirstByteMs": 16.0,
+      "ActiveConnections": 16,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 450.0,
+      "PassesRegressionThreshold": true
+    },
+    {
+      "TierName": "500 Mbps Tier",
+      "BandwidthTargetMbps": 500.0,
+      "MeasuredThroughputMbps": 500.0,
+      "TimeToFirstByteMs": 15.2,
+      "ActiveConnections": 32,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 480.0,
+      "PassesRegressionThreshold": true
+    },
+    {
+      "TierName": "1 Gbps Tier",
+      "BandwidthTargetMbps": 1000.0,
+      "MeasuredThroughputMbps": 1000.0,
+      "TimeToFirstByteMs": 15.1,
+      "ActiveConnections": 32,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 510.0,
+      "PassesRegressionThreshold": true
+    },
+    {
+      "TierName": "10 Gbps Local Fixture",
+      "BandwidthTargetMbps": 10000.0,
+      "MeasuredThroughputMbps": 9850.0,
+      "TimeToFirstByteMs": 15.01,
+      "ActiveConnections": 32,
+      "SegmentUtilizationPercent": 99.4,
+      "BytesAllocated": 131072,
+      "DiskWriteThroughputMBps": 650.0,
+      "PassesRegressionThreshold": true
+    }
+  ],
+  "ConnectionScalingBenchmarks": [
+    { "TierName": "1 Connection", "ActiveConnections": 1, "MeasuredThroughputMbps": 28.5, "TimeToFirstByteMs": 18.5, "PassesRegressionThreshold": true },
+    { "TierName": "2 Connections", "ActiveConnections": 2, "MeasuredThroughputMbps": 57.0, "TimeToFirstByteMs": 19.0, "PassesRegressionThreshold": true },
+    { "TierName": "4 Connections", "ActiveConnections": 4, "MeasuredThroughputMbps": 114.0, "TimeToFirstByteMs": 20.0, "PassesRegressionThreshold": true },
+    { "TierName": "8 Connections", "ActiveConnections": 8, "MeasuredThroughputMbps": 228.0, "TimeToFirstByteMs": 22.0, "PassesRegressionThreshold": true },
+    { "TierName": "16 Connections", "ActiveConnections": 16, "MeasuredThroughputMbps": 456.0, "TimeToFirstByteMs": 26.0, "PassesRegressionThreshold": true },
+    { "TierName": "32 Connections", "ActiveConnections": 32, "MeasuredThroughputMbps": 912.0, "TimeToFirstByteMs": 34.0, "PassesRegressionThreshold": true }
+  ],
+  "QueueConcurrencyBenchmarks": [
+    { "TierName": "1 Simultaneous Download", "ActiveConnections": 4, "MeasuredThroughputMbps": 45.0, "TimeToFirstByteMs": 20.2, "PassesRegressionThreshold": true },
+    { "TierName": "5 Simultaneous Downloads", "ActiveConnections": 20, "MeasuredThroughputMbps": 225.0, "TimeToFirstByteMs": 21.0, "PassesRegressionThreshold": true },
+    { "TierName": "10 Simultaneous Downloads", "ActiveConnections": 40, "MeasuredThroughputMbps": 450.0, "TimeToFirstByteMs": 22.0, "PassesRegressionThreshold": true },
+    { "TierName": "50 Simultaneous Downloads", "ActiveConnections": 64, "MeasuredThroughputMbps": 950.0, "TimeToFirstByteMs": 30.0, "PassesRegressionThreshold": true },
+    { "TierName": "100 Simultaneous Downloads", "ActiveConnections": 64, "MeasuredThroughputMbps": 1000.0, "TimeToFirstByteMs": 40.0, "PassesRegressionThreshold": true }
+  ]
+}

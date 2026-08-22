@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EDMVersionPayload",
+  "description": "Schema for Exclusive Download Manager Two-Tier Remote Update Payload",
+  "type": "object",
+  "required": ["version", "downloadUrl", "sha256", "forceUpdate"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the latest release (e.g. '1.1.0')",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "minSupportedVersion": {
+      "type": "string",
+      "description": "Minimum client version allowed. Any version below this is forced to update.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "forceUpdate": {
+      "type": "boolean",
+      "description": "Set true for Tier 1 (Mandatory/Forced Update), false for Tier 2 (Optional Update)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human readable release headline or announcement."
+    },
+    "releaseDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 release timestamp (e.g. '2026-08-15T00:00:00Z')"
+    },
+    "downloadUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Direct HTTPS URL to the EDMSetup.exe installer binary."
+    },
+    "sha256": {
+      "type": "string",
+      "description": "Cryptographic SHA256 checksum of the installer binary for client-side integrity validation.",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "changelog": {
+      "type": "array",
+      "description": "List of bullet points detailing features, bug fixes, and improvements.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

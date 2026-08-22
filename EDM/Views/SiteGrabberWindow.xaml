@@ -1,0 +1,62 @@
+<Window x:Class="EDM.Views.SiteGrabberWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Site Grabber and Web Crawler — EDM" Height="580" Width="780"
+        WindowStartupLocation="CenterScreen" Background="#0F1523" Foreground="#E2E8F0">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="🕷️ Visual Site Grabber &amp; Web Crawler Wizard" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF"/>
+            <TextBlock Text="Crawl websites to automatically extract videos, audio, images, documents, and archives." FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="UrlInputTextBox" Grid.Column="0" Height="36" FontSize="13" 
+                     Text="https://example.com/gallery" Padding="8,4"/>
+            <ComboBox x:Name="DepthComboBox" Grid.Column="1" Margin="10,0,0,0" Height="36" Width="110" SelectedIndex="0">
+                <ComboBoxItem Content="Depth 1"/>
+                <ComboBoxItem Content="Depth 2"/>
+                <ComboBoxItem Content="Depth 3"/>
+            </ComboBox>
+            <Button x:Name="StartCrawlButton" Grid.Column="2" Margin="10,0,0,0" Height="36" Padding="16,0"
+                    Content="Start Grabber" Click="StartCrawlButton_Click" Background="#7C3AED" Foreground="#FFFFFF" FontWeight="SemiBold"/>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#131B2E" BorderBrush="#222F48" BorderThickness="1" CornerRadius="8" Padding="12">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" x:Name="StatusTextBlock" Text="Ready to crawl. Enter website URL." FontSize="12" Foreground="#A855F7" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                <DataGrid x:Name="AssetsDataGrid" AutoGenerateColumns="False" IsReadOnly="True" Background="Transparent" 
+                          BorderThickness="0" RowBackground="#182238" AlternatingRowBackground="#1E2B47" GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="File Name" Binding="{Binding Name}" Width="200"/>
+                        <DataGridTextColumn Header="Type" Binding="{Binding Category}" Width="100"/>
+                        <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="3" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="CountSummaryTextBlock" Grid.Column="0" Text="0 Assets Discovered" VerticalAlignment="Center" FontSize="12" Foreground="#94A3B8"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Close" Click="CloseButton_Click" Width="90" Height="34"/>
+                <Button x:Name="DownloadAllButton" Content="Download Discovered Assets" Click="DownloadAllButton_Click" Background="#10B981" Foreground="#FFFFFF" FontWeight="Bold" Width="200" Height="34" Margin="10,0,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,84 @@
+<Window x:Class="EDM.Views.DownloadAllLinksWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Download All Links with EDM"
+        Height="520" Width="720"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0"
+                   Text="Download All Links"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   Margin="0,0,0,12" />
+
+        <!-- Filters Bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SecondaryBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10"
+                Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Filter by Extension: "
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           Margin="0,0,8,0" />
+                <Button Content="All" Click="OnFilterAll" Padding="8,4" Margin="2,0" />
+                <Button Content="Videos (.mp4, .mkv)" Click="OnFilterVideos" Padding="8,4" Margin="2,0" />
+                <Button Content="Archives (.zip, .rar)" Click="OnFilterArchives" Padding="8,4" Margin="2,0" />
+                <Button Content="Documents (.pdf, .doc)" Click="OnFilterDocs" Padding="8,4" Margin="2,0" />
+                <Button Content="Images (.png, .jpg)" Click="OnFilterImages" Padding="8,4" Margin="2,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Links Grid -->
+        <DataGrid Grid.Row="2"
+                  x:Name="LinksGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  Background="{DynamicResource SecondaryBackgroundBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  Foreground="{DynamicResource PrimaryTextBrush}">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="Select" Binding="{Binding IsSelected}" Width="60" />
+                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="200" />
+                <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="*" />
+                <DataGridTextColumn Header="Ext" Binding="{Binding Extension}" Width="60" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Save Path Options -->
+        <Grid Grid.Row="3" Margin="0,12,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Save Folder: " VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,8,0" />
+            <TextBox Grid.Column="1" x:Name="SaveFolderBox" VerticalAlignment="Center" Padding="4" Background="{DynamicResource CardBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrush}" />
+            <Button Grid.Column="2" Content="Browse..." Click="OnBrowseFolder" Margin="8,0,0,0" Padding="10,4" />
+        </Grid>
+
+        <!-- Footer Action Buttons -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Select All" Click="OnSelectAll" Padding="12,6" Margin="0,0,8,0" />
+            <Button Content="Deselect All" Click="OnDeselectAll" Padding="12,6" Margin="0,0,8,0" />
+            <Button Content="Add to Queue" Click="OnAddToQueue" Padding="14,6" Margin="0,0,8,0" />
+            <Button Content="Start Download Now" Click="OnStartDownload" Background="{DynamicResource AccentColorBrush}" Foreground="White" FontWeight="SemiBold" Padding="16,6" />
+        </StackPanel>
+    </Grid>
+</Window>

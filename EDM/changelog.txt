@@ -1,0 +1,9 @@
+EDM v1.0.0 - Release Notes
+
+- Initial release with adaptive multi-part downloads
+- Smooth progress UI and Explorer-like animations
+- SQLite-based history and resume
+- Dark theme with Fluent-inspired visuals
+- Improved reliability and retry logic
+
+Thank you for using EDM!

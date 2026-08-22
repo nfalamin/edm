@@ -1,0 +1,128 @@
+/*
+Theme Name: EDM — Exclusive Download Manager
+Theme URI: https://edm-download.org/
+Author: nfalamin & EDM Core Engineering
+Author URI: https://edm-download.org/
+Description: Ultra-Premium WordPress Theme & SaaS Control Plane for Exclusive Download Manager (EDM). Features 32x socket download simulator, 4K stream ripper showcase, live Control Plane Dashboard, and unified responsive design system.
+Version: 2.1.0
+Requires at least: 6.0
+Tested up to: 6.7
+Requires PHP: 7.4
+License: Proprietary / Commercial
+Text Domain: edm-theme
+Tags: software, saas, dashboard, dark-mode, responsive, translation-ready, accessibility-ready
+*/
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL EDM DESIGN SYSTEM TOKENS
+   ══════════════════════════════════════════════════════════════ */
+:root {
+    /* ── 1. COLOR TOKENS (DARK PREMIER THEME) ── */
+    --edm-bg-base: #070B14;
+    --edm-bg-surface: #0A0F1D;
+    --edm-bg-card: #0E1528;
+    --edm-bg-card-elevated: #131C35;
+    --edm-bg-card-hover: #172342;
+    --edm-bg-subtle: #121A30;
+    --edm-bg-input: #0A0F1D;
+    --edm-bg-header: rgba(10, 15, 29, 0.92);
+    --edm-bg-modal: #0E1528;
+    --edm-bg-dropdown: #11182D;
+
+    /* ── 2. BRAND & ACCENT COLOR FAMILY ── */
+    --edm-primary: #5D5FEF;
+    --edm-primary-hover: #4F46E5;
+    --edm-primary-light: #8183FF;
+    --edm-primary-soft: rgba(93, 95, 239, 0.16);
+    --edm-primary-glow: rgba(93, 95, 239, 0.42);
+
+    --edm-blue: #38BDF8;
+    --edm-blue-hover: #0284C7;
+    --edm-blue-soft: rgba(56, 189, 248, 0.15);
+    --edm-blue-glow: rgba(56, 189, 248, 0.35);
+
+    --edm-cyan: #06B6D4;
+    --edm-cyan-soft: rgba(6, 182, 212, 0.15);
+
+    --edm-green: #10B981;
+    --edm-green-soft: rgba(16, 185, 129, 0.16);
+    --edm-green-glow: rgba(16, 185, 129, 0.35);
+
+    --edm-amber: #F59E0B;
+    --edm-amber-soft: rgba(245, 158, 11, 0.16);
+
+    --edm-pink: #EC4899;
+    --edm-pink-soft: rgba(236, 72, 153, 0.16);
+
+    --edm-danger: #EF4444;
+    --edm-danger-soft: rgba(239, 68, 68, 0.16);
+
+    /* ── 3. BORDERS & STROKES ── */
+    --edm-border: rgba(255, 255, 255, 0.08);
+    --edm-border-hover: rgba(255, 255, 255, 0.18);
+    --edm-border-accent: rgba(93, 95, 239, 0.40);
+    --edm-border-blue: rgba(56, 189, 248, 0.40);
+
+    /* ── 4. TYPOGRAPHY SYSTEM ── */
+    --edm-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --edm-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    
+    --edm-text-main: #F8FAFC;
+    --edm-text-secondary: #94A3B8;
+    --edm-text-muted: #64748B;
+    --edm-text-dim: #475569;
+
+    /* ── 5. ELEVATIONS & SHADOWS ── */
+    --edm-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --edm-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+    --edm-shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.65);
+    --edm-shadow-xl: 0 22px 55px rgba(0, 0, 0, 0.80);
+    --edm-shadow-glow: 0 0 32px rgba(93, 95, 239, 0.35);
+
+    /* ── 6. RADII ── */
+    --edm-radius-sm: 6px;
+    --edm-radius-md: 10px;
+    --edm-radius-lg: 16px;
+    --edm-radius-xl: 24px;
+    --edm-radius-full: 9999px;
+
+    /* ── 7. DIMENSIONS & TRANSITIONS ── */
+    --edm-container-max: 1280px;
+    --edm-header-height: 72px;
+    --edm-transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    --edm-transition-normal: 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHT THEME DESIGN TOKENS (ICE-BLUE ROYAL PALETTE)
+   ══════════════════════════════════════════════════════════════ */
+body.light-theme {
+    --edm-bg-base: #E8F2FD;
+    --edm-bg-surface: #F0F6FE;
+    --edm-bg-card: #FFFFFF;
+    --edm-bg-card-elevated: #FFFFFF;
+    --edm-bg-card-hover: #F8FAFC;
+    --edm-bg-subtle: #E2EDF9;
+    --edm-bg-input: #FFFFFF;
+    --edm-bg-header: rgba(232, 242, 253, 0.94);
+    --edm-bg-modal: #FFFFFF;
+    --edm-bg-dropdown: #FFFFFF;
+
+    --edm-text-main: #0B192C;
+    --edm-text-secondary: #334155;
+    --edm-text-muted: #64748B;
+    --edm-text-dim: #94A3B8;
+
+    --edm-border: rgba(15, 23, 42, 0.12);
+    --edm-border-hover: rgba(15, 23, 42, 0.24);
+    --edm-border-accent: rgba(93, 95, 239, 0.60);
+    --edm-border-blue: rgba(2, 132, 199, 0.50);
+
+    --edm-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --edm-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+    --edm-shadow-md: 0 6px 18px rgba(15, 23, 42, 0.12);
+    --edm-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+    --edm-shadow-xl: 0 20px 48px rgba(15, 23, 42, 0.20);
+    --edm-shadow-glow: 0 0 28px rgba(93, 95, 239, 0.25);
+}

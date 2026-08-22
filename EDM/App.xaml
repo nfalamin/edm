@@ -1,0 +1,31 @@
+﻿<Application x:Class="EDM.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:EDM.Converters">
+
+    <!-- 
+      এই ফাইলে আমরা আমাদের তৈরি করা ডার্ক থিম এবং কাস্টম স্টাইলগুলোকে রেজিস্টার বা মার্চ করছি। 
+      এর ফলে পুরো অ্যাপের সব উইন্ডো ডার্ক থিম ও আমাদের কাস্টম ডিজাইনগুলো স্বয়ংক্রিয়ভাবে পেয়ে যাবে।
+    -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- ModernWpf resources for Fluent controls and system theme awareness -->
+                <ResourceDictionary Source="pack://application:,,,/ModernWpf;component/Themes/Generic.xaml" />
+                <!-- App theme colors -->
+                <ResourceDictionary Source="Themes/ThemeResources.xaml"/>
+                <ResourceDictionary Source="Themes/DarkTheme.xaml"/>
+                <!-- Custom styles for controls and Fluent effects -->
+                <ResourceDictionary Source="Themes/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Global Converters Registration -->
+            <converters:FileTypeIconConverter x:Key="FileTypeIconConverter"/>
+            <converters:FileTypeIconCharConverter x:Key="FileTypeIconCharConverter"/>
+            <converters:FileTypeIconColorConverter x:Key="FileTypeIconColorConverter"/>
+            <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+            <converters:BoolToColorConverter x:Key="BoolToBackgroundConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

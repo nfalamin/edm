@@ -1,0 +1,92 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <!-- Suppress only legitimate warnings from XAML code-generation and platform advisories.
+         Nullable warnings (CS8601, CS8600, etc.) are fixed in code via proper null handling. -->
+    <NoWarn>CS0067;CS0649;CS0414;NETSDK1206;NU1701</NoWarn>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Use the ICO placed under Models as the application icon -->
+    <ApplicationIcon>Models\edm logo.ico</ApplicationIcon>
+    <Platforms>AnyCPU;x64</Platforms>
+    <!-- Ensure nuget.org is included as a restore source (explicit) to avoid NU1101 in restricted environments -->
+    <RestoreSources>https://api.nuget.org/v3/index.json;$(RestoreSources)</RestoreSources>
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <ProductVersion>1.0.0.0</ProductVersion>
+    <Company>Exclusive Download Manager</Company>
+    <Product>Exclusive Download Manager</Product>
+    <Copyright>Copyright © 2026 EDM</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Dependency Injection & MVVM -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+
+    <!-- Database -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.4" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+
+    <!-- Content Processing & APIs -->
+    <PackageReference Include="YoutubeExplode" Version="6.6.0" />
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.56" />
+
+    <!-- UI & Theming -->
+    <PackageReference Include="ModernWpf" Version="1.4.6" />
+    <PackageReference Include="FluentWPF" Version="0.10.2" />
+
+    <!-- Logging -->
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
+  </ItemGroup>
+
+  <!-- Default SDK implicit Page items are used for XAML files. No explicit Page includes to avoid duplicates. -->
+
+  <!-- Ensure the icon file is embedded as a resource so WPF windows can reference it via pack URI -->
+  <ItemGroup>
+    <Resource Include="Models\edm logo.ico" />
+    <None Include="Tools\ThrottleTest\ThrottleTest.csproj" />
+    <!-- Include update manifest produced by installer (best-effort) -->
+    <None Include="update.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EDM.Tests" />
+    <InternalsVisibleTo Include="AcceptanceTestRunner" />
+  </ItemGroup>
+
+</Project>

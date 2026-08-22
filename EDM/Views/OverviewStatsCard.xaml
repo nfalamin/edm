@@ -1,0 +1,82 @@
+<UserControl x:Class="EDM.Views.OverviewStatsCard" 
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border CornerRadius="12" 
+            BorderThickness="1" 
+            BorderBrush="#3A4454"
+            Opacity="0.92"
+            Effect="{StaticResource CardShadow}">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#1E2640" Offset="0"/>
+                <GradientStop Color="#232B47" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+
+        <!-- Content Container Grid -->
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Icon Section (Top Circle) -->
+            <Border Grid.Row="0" 
+                    Width="48" 
+                    Height="48" 
+                    CornerRadius="24" 
+                    HorizontalAlignment="Left"
+                    Margin="0,0,0,12">
+                <Border.Background>
+                    <LinearGradientBrush x:Name="IconGradient" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#8B5CF6" Offset="0"/>
+                        <GradientStop Color="#6D28D9" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <!-- Icon Symbol inside circle -->
+                <TextBlock x:Name="CardIcon" 
+                           Text="☁" 
+                           FontSize="28" 
+                           Foreground="White" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           FontWeight="Bold"/>
+            </Border>
+
+            <!-- Value (Large Bold Number) -->
+            <TextBlock Grid.Row="1" 
+                       x:Name="CardValue" 
+                       Text="0" 
+                       FontSize="32" 
+                       FontWeight="Bold" 
+                       Foreground="#E0E6ED" 
+                       Margin="0,8,0,4"/>
+
+            <!-- Subtitle -->
+            <TextBlock Grid.Row="2" 
+                       x:Name="CardSubtitle" 
+                       Text="{Binding CardSubtitleText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                       FontSize="12" 
+                       Foreground="#8892A4" 
+                       Margin="0,0,0,12"/>
+
+            <!-- Visual Indicator at Bottom (Sparkline/Progress/Pulse) -->
+            <Border Grid.Row="4" 
+                    Height="2" 
+                    Background="#26303D" 
+                    CornerRadius="1"
+                    Margin="0,8,0,0">
+                <Border x:Name="IndicatorBar" 
+                        Background="{StaticResource AccentBrush}" 
+                        Width="40" 
+                        Height="2" 
+                        HorizontalAlignment="Left"
+                        CornerRadius="1"/>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

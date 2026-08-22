@@ -1,0 +1,17 @@
+{
+  "name": "portfolio-ai-telegram-chatbot",
+  "version": "1.0.0",
+  "description": "Stealth Live Chat & AI bridge for Portfolio",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.64.0",
+    "socket.io": "^4.7.2"
+  }
+}

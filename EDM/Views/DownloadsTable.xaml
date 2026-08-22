@@ -1,0 +1,380 @@
+<UserControl x:Class="EDM.Views.DownloadsTable"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:EDM.Views"
+             xmlns:converters="clr-namespace:EDM.Converters"
+             Background="Transparent"
+             Foreground="{DynamicResource PrimaryTextBrush}">
+
+    <UserControl.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToBackgroundConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converters:FileTypeIconCharConverter x:Key="FileTypeIconCharConverter"/>
+        <converters:FileTypeIconColorConverter x:Key="FileTypeIconColorConverter"/>
+        <converters:BytesToHumanSizeConverter x:Key="BytesToHumanSizeConverter"/>
+        <converters:EmptyCountToVisibilityConverter x:Key="EmptyCountToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="34"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== ROW 0: Table header (title + filter + view toggle) ===== -->
+        <Grid Grid.Row="0" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="72"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="All Downloads" FontSize="16" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+
+            <!-- Status Filter ComboBox -->
+            <ComboBox Grid.Column="2" x:Name="StatusFilterCombo"
+                      Width="130" Height="34" Margin="0,0,8,0"
+                      Background="{DynamicResource SecondaryBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                      SelectionChanged="StatusFilter_SelectionChanged"
+                      FontSize="12" VerticalContentAlignment="Center">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox">
+                        <Setter Property="Background" Value="{DynamicResource SecondaryBackgroundBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBox">
+                                    <Grid>
+                                        <Border x:Name="Border"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="26"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0" Margin="10,0,0,0"
+                                                                  VerticalAlignment="Center"
+                                                                  Content="{TemplateBinding SelectionBoxItem}"/>
+                                                <TextBlock Grid.Column="1" Text="▾" FontSize="10"
+                                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"
+                                                           HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ToggleButton Opacity="0"
+                                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                        <Popup x:Name="PART_Popup"
+                                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                                               AllowsTransparency="True"
+                                               Placement="Bottom">
+                                            <Border Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="1" CornerRadius="8"
+                                                    MinWidth="{TemplateBinding ActualWidth}">
+                                                <ItemsPresenter/>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ComboBox.Style>
+                <ComboBoxItem Content="All Status" IsSelected="True"/>
+                <ComboBoxItem Content="Downloading"/>
+                <ComboBoxItem Content="Paused"/>
+                <ComboBoxItem Content="Queued"/>
+                <ComboBoxItem Content="Completed"/>
+            </ComboBox>
+
+            <!-- View Toggle Buttons -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button x:Name="ListViewBtn" Tag="List" Click="ViewToggle_Click"
+                        Width="36" Height="34" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource AccentBrush}" FontFamily="Segoe MDL2 Assets" Content="&#xE71D;"
+                        FontSize="15" Cursor="Hand" ToolTip="List View">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6,0,0,6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="GridViewBtn" Tag="Grid" Click="ViewToggle_Click"
+                        Width="36" Height="34" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource SecondaryTextBrush}" FontFamily="Segoe MDL2 Assets" Content="&#xE71C;"
+                        FontSize="15" Cursor="Hand" ToolTip="Grid View">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="0,6,6,0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== ROW 1: Column Headers ===== -->
+        <Border Grid.Row="1" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="52"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="50"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1" Text="File Name" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                <TextBlock Grid.Column="2" Text="Size / Done" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="Status" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="4" Text="Speed" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="5" Text="Progress" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="7" Text="Time Left" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Column="8" Text="Action" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ===== ROW 2: Downloads List (Virtualizing ListBox) ===== -->
+        <ListBox x:Name="DownloadsItemsControl" Grid.Row="2"
+                 ItemsSource="{Binding FilteredDownloads}"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.ScrollUnit="Pixel"
+                 HorizontalContentAlignment="Stretch"
+                 KeyDown="DownloadsItemsControl_KeyDown">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <ContentPresenter/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="RowBorder"
+                                Tag="{Binding}"
+                                MouseEnter="Row_MouseEnter"
+                                MouseLeave="Row_MouseLeave"
+                                MouseLeftButtonDown="Row_MouseLeftButtonDown"
+                                Background="{DynamicResource BackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="0,11">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+
+                            <Border.ContextMenu>
+                                <ContextMenu Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource PrimaryTextBrush}">
+                                    <MenuItem Header="▶ Resume / Start" Click="MenuItem_Resume"/>
+                                    <MenuItem Header="⏸ Pause" Click="MenuItem_Pause"/>
+                                    <MenuItem Header="🔄 Retry / Redownload" Click="MenuItem_Redownload"/>
+                                    <MenuItem Header="⏹ Cancel / Stop" Click="MenuItem_Cancel"/>
+                                    <MenuItem Header="🗑 Delete" Click="MenuItem_Delete"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
+                                    <MenuItem Header="📂 Open File" Click="MenuItem_OpenFile"/>
+                                    <MenuItem Header="📁 Open Folder" Click="MenuItem_OpenFolder"/>
+                                    <MenuItem Header="📄 Download Properties" Click="MenuItem_Properties"/>
+                                    <Separator Background="{DynamicResource BorderBrush}"/>
+                                    <MenuItem Header="⚡ Force Start" Click="MenuItem_ForceStart"/>
+                                    <MenuItem Header="⚡ Show Turbo Progress Window" Click="MenuItem_ShowProgressWindow"/>
+                                    <MenuItem Header="📋 Copy URL" Click="MenuItem_CopyUrl"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="100"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- File Icon -->
+                                <Grid Grid.Column="0" Width="34" Height="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Background="{Binding FileName, Converter={StaticResource FileTypeIconColorConverter}}" CornerRadius="8" Width="34" Height="34">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.35"/>
+                                        </Border.Effect>
+                                    </Border>
+                                    <TextBlock Text="{Binding FileName, Converter={StaticResource FileTypeIconCharConverter}}"
+                                               FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <!-- File Name & Category -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,8,0">
+                                    <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"
+                                               FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Category, StringFormat='Category: {0}'}"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <!-- Size & Downloaded -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Size}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding DownloadedBytes, Converter={StaticResource BytesToHumanSizeConverter}}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <!-- Status -->
+                                <TextBlock Grid.Column="3" Text="{Binding Status}"
+                                           Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                                           FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+
+                                <!-- Speed -->
+                                <TextBlock Grid.Column="4" Text="{Binding TransferRate}"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center"/>
+
+                                <!-- Progress Bar -->
+                                <Border Grid.Column="5" Background="{DynamicResource NavHoverBg}" CornerRadius="4" Height="7"
+                                        VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="100"
+                                                 Height="7" Background="Transparent" BorderThickness="0"
+                                                 Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"/>
+                                </Border>
+
+                                <!-- % -->
+                                <TextBlock Grid.Column="6" Text="{Binding Progress, StringFormat='\{0:F0\}%'}"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                                <!-- Time Left -->
+                                <TextBlock Grid.Column="7" Text="{Binding TimeLeft}"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                                <!-- Action Buttons -->
+                                <StackPanel Grid.Column="8" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                                    <Button DataContext="{Binding}" Click="PauseResumeBtn_Click"
+                                            Width="26" Height="26" Background="Transparent" BorderThickness="0"
+                                            Content="⏸" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" Cursor="Hand" Margin="2,0"
+                                            ToolTip="Pause/Resume">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="Transparent" CornerRadius="4" Width="26" Height="26">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+
+                                    <Button DataContext="{Binding}" Click="DeleteBtn_Click"
+                                            Width="26" Height="26" Background="Transparent" BorderThickness="0"
+                                            Content="✕" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Cursor="Hand" Margin="2,0"
+                                            ToolTip="Delete">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="Transparent" CornerRadius="4" Width="26" Height="26">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+
+                                    <Button DataContext="{Binding}" Click="MoreOptionsBtn_Click"
+                                            Width="26" Height="26" Background="Transparent" BorderThickness="0"
+                                            Content="⋮" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16" Cursor="Hand" Margin="2,0"
+                                            ToolTip="More Options">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="Transparent" CornerRadius="4" Width="26" Height="26">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Empty State (Shown when no items match current filter/list) -->
+        <Border x:Name="EmptyStateBorder" Grid.Row="2" Background="Transparent" 
+                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,40"
+                Visibility="{Binding FilteredDownloads.Count, Converter={StaticResource EmptyCountToVisibilityConverter}}"
+                IsHitTestVisible="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border Width="60" Height="60" CornerRadius="30" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,14" HorizontalAlignment="Center">
+                    <TextBlock Text="📥" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="No downloads found in this view" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Click '+ Add URL' above or paste a link to start downloading" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</UserControl>

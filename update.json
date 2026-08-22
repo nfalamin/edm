@@ -1,0 +1,7 @@
+{
+    "mandatory":  false,
+    "sha256":  "e94ca3ea2bbe14de4a4c5b86d11023a105dc5350d4d0cdec5033f2967eeae7d0",
+    "releaseNotes":  "EDM v1.0.0 Production Release: IDM-class high-speed multi-threaded engine, live transfer graph, adaptive speed governor, browser extensions for Chrome/Edge/Firefox, and comprehensive recovery architecture.",
+    "version":  "1.0.0",
+    "downloadUrl":  "https://github.com/exclusive-apps/edm/releases/download/v1.0.0/EDMSetup.exe"
+}

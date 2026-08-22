@@ -1,0 +1,38 @@
+/* =========================================
+   3. Hero Circle & Profile Image Rules
+   ========================================= */
+.portrait-circle {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: visible;
+}
+.portrait-circle::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    z-index: 0;
+}
+.portrait-overflow-wrapper {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.portrait-img {
+    position: absolute;
+    top: -18%;
+    left: 50%;
+    width: 150%;
+    max-width: none;
+    transform: translateX(-50%);
+    object-fit: cover;
+}

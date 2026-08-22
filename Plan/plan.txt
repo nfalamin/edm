@@ -1,0 +1,755 @@
+হ্যাঁ। এবার আমি বিষয়টাকে **“EDM কী কী করেছে, IDM-এর কোন কোন ক্ষমতা এখনো বাকি, কত % আছে, এবং পরের ধাপে কী করলে EDM বাস্তবে IDM-কে ছাড়াতে পারে”**—এইভাবে সাজাচ্ছি।
+
+আমি `v2.0.0`-কেই baseline ধরছি। এটি সত্যিই GitHub-এর latest `v2.0.0` release, commit `55c34f9`; releaseটি ২০ আগস্ট ২০২৬ প্রকাশিত। ([GitHub][1])
+
+IDM-এর বর্তমান official feature set-ও মিলিয়ে দেখেছি—dynamic segmentation, browser integration, scheduler/queues, Site Grabber, categories, clipboard monitoring, advanced browser integration, proxy/authentication, download limits, antivirus integration ইত্যাদি। ([Internet Download Manager][2])
+
+---
+
+# 🏆 প্রথমে Overall Score
+
+আমার বর্তমান হিসাব:
+
+|                           |        EDM v2.0.0 |              IDM |
+| ------------------------- | ----------------: | ---------------: |
+| Core Download Engine      |           **85%** |          **95%** |
+| Download Reliability      |           **84%** |          **96%** |
+| Browser Integration       |           **80%** |          **95%** |
+| Site Grabber              |           **78%** |          **95%** |
+| Scheduler/Queue           |           **70%** |          **95%** |
+| Security                  |           **82%** |          **90%** |
+| File Management           |           **70%** |          **90%** |
+| Protocol Support          |           **55%** |         **90%+** |
+| Media Download            |           **45%** |         **90%+** |
+| Cloud/Remote Architecture | **75% potential** |          **30%** |
+| Dashboard/API             | **75% potential** |          **20%** |
+| Modern extensibility      |           **85%** |          **60%** |
+| Testing/engineering       |           **82%** | **95% maturity** |
+| Release maturity          |           **75%** |          **95%** |
+
+### Overall
+
+# **EDM v2.0.0 ≈ 80–84%**
+
+# **IDM ≈ 92–95%**
+
+কিন্তু একটা গুরুত্বপূর্ণ কথা:
+
+**এই শতাংশ “কত feature আছে” তার আনুমানিক engineering assessment; কোনো official benchmark score নয়।**
+
+---
+
+# 🔴 এখন আসল প্রশ্ন: IDM-এর কী কী আছে যা EDM-এ এখনও পুরোপুরি নেই?
+
+আমি এগুলো priority অনুযায়ী দিচ্ছি।
+
+---
+
+## 1. 🔴 Advanced Browser Integration
+
+### IDM
+
+IDM browser-এর download click, right-click, selected links, clipboard ইত্যাদি intercept করতে পারে। Advanced integration দিয়ে আরও গভীরভাবে browser downloads ধরতে পারে। ([Internet Download Manager][3])
+
+### EDM
+
+Chrome/Edge/Firefox extension আছে, session-cookie capture আছে এবং NativeHost architecture আছে। v2.0 changelog-এ এগুলো স্পষ্টভাবে আছে। ([GitHub][4])
+
+### অবস্থা
+
+**EDM: ~80%**
+
+### বাকি
+
+* advanced interception
+* clipboard URL monitoring
+* right-click selected-link capture
+* browser download fallback
+* browser failure recovery
+* সব browser-এর deep integration test
+
+### Winner
+
+🏆 **IDM**
+
+---
+
+# 2. 🔴 Video Download / Streaming Capture
+
+এটা EDM-এর বড় gap।
+
+IDM browser-এ video playback detect করে Download panel দেখাতে পারে এবং available video formats/qualities ধরতে পারে। ([Internet Download Manager][5])
+
+### EDM
+
+বর্তমান v2.0 README/changelog-এ browser integration আছে, কিন্তু IDM-এর মতো **full video-sniffing/stream extraction system** আমি release evidence-এ পাইনি। ([GitHub][4])
+
+### EDM
+
+**~40–50%**
+
+### বাকি
+
+* media sniffing
+* HLS
+* DASH
+* M3U8
+* MPD
+* adaptive streams
+* video quality selection
+* audio-only extraction
+* encrypted/DRM boundary handling
+
+### Winner
+
+🏆 **IDM**
+
+---
+
+# 3. 🔴 Site Grabber
+
+এখানে EDM ইতিমধ্যে ভালো অবস্থায়।
+
+EDM v2.0:
+
+* configurable depth
+* same-domain restriction
+* extension filtering
+* regex filtering
+* minimum file size
+* HEAD metadata discovery
+
+করতে পারে। ([GitHub][4])
+
+IDM Site Grabber:
+
+* complete sites
+* subsets
+* filters
+* saved projects
+* scheduled projects
+* periodic synchronization
+
+করতে পারে। ([Internet Download Manager][6])
+
+### EDM
+
+**~78%**
+
+### বাকি
+
+* saved grabber projects
+* visual project wizard
+* scheduled grabber
+* periodic synchronization
+* offline website mirroring
+* richer crawl rules
+
+### Winner
+
+🏆 IDM, কিন্তু gap ছোট।
+
+---
+
+# 4. 🔴 Scheduler + Queue System
+
+এখানে EDM এখনো পিছিয়ে।
+
+IDM-এর:
+
+* Download Queue
+* Synchronization Queue
+* unlimited additional queues
+* per-queue concurrent file count
+* start time
+* stop time
+* periodic synchronization
+* automatic retry
+* queue priority
+
+আছে। ([Internet Download Manager][7])
+
+### EDM
+
+Bandwidth scheduling profile আছে—যেমন Work Hours/Night/Weekend। ([GitHub][8])
+
+কিন্তু **IDM-এর full queue ecosystem** এখনো একই maturity-তে নেই।
+
+### EDM
+
+**~70%**
+
+### Winner
+
+🏆 **IDM**
+
+---
+
+# 5. 🔴 Clipboard Monitoring
+
+IDM system clipboard monitor করে URL detect করতে পারে। ([Internet Download Manager][9])
+
+EDM-এর v2.0 feature list-এ এটা prominent implemented feature হিসেবে নেই।
+
+### EDM
+
+**~20–30%**
+
+### এটা অবশ্যই যোগ করা উচিত।
+
+---
+
+# 6. 🔴 Download Categories
+
+IDM:
+
+* Music
+* Video
+* Programs
+* Documents
+* custom categories
+* extension association
+* automatic folder assignment
+
+দেয়। ([Internet Download Manager][10])
+
+EDM UI-তে categories আছে এবং README-তে All/Music/Videos/Compressed ইত্যাদি দেখানো হয়েছে। ([GitHub][8])
+
+কিন্তু IDM-এর মতো **fully configurable category engine** আরও শক্ত করতে হবে।
+
+### EDM
+
+**~70–75%**
+
+---
+
+# 7. 🔴 Proxy / Authentication
+
+IDM:
+
+* HTTP
+* HTTPS
+* FTP
+* proxy
+* SOCKS
+* Basic
+* Negotiate
+* NTLM
+* Kerberos
+
+support করে। ([Internet Download Manager][2])
+
+EDM-এর current v2.0 HTTP pipeline খুব ভালো হয়েছে, কিন্তু IDM-এর protocol/authentication breadth এখনো নেই।
+
+### EDM
+
+**~55%**
+
+---
+
+# 8. 🔴 FTP
+
+IDM-এর FTP support আছে। ([Internet Download Manager][11])
+
+EDM-এর current v2.0 primary architecture HTTP range downloading-কেন্দ্রিক।
+
+### EDM
+
+**~20–30%**
+
+এটা future protocol phase-এ করা উচিত।
+
+---
+
+# 9. 🔴 Advanced Authentication
+
+IDM বিভিন্ন server authentication scheme handle করে। ([Internet Download Manager][2])
+
+EDM browser cookies/session capture-এর ক্ষেত্রে ভালো foundation করেছে এবং DPAPI encryption আছে। ([GitHub][4])
+
+কিন্তু general HTTP authentication breadth আরও দরকার।
+
+### EDM
+
+**~55–60%**
+
+---
+
+# 10. 🟠 Download Limits / Quotas
+
+IDM নির্দিষ্ট সময়ের মধ্যে MB quota/limit দিতে পারে। ([Internet Download Manager][2])
+
+EDM-এর named bandwidth profiles আছে। ([GitHub][8])
+
+### EDM
+
+**~70%**
+
+বাকি:
+
+* hourly quota
+* daily quota
+* monthly quota
+* per-download quota
+* per-domain quota
+
+---
+
+# 11. 🟠 Antivirus / Malware Protection
+
+এখানে EDM বরং খুব ভালো অবস্থায়।
+
+EDM:
+
+**Google Safe Browsing → Download → Windows Defender → Quarantine**
+
+architecture করেছে। ([GitHub][8])
+
+IDM automatic antivirus checking-ও support করে। ([Internet Download Manager][2])
+
+### EDM
+
+**~90%**
+
+এখানে আমি প্রায় সমান বলব।
+
+---
+
+# 12. 🟠 Dynamic Segmentation
+
+এখানে সবচেয়ে মজার বিষয়।
+
+IDM-এর core selling point-ই dynamic file segmentation। IDM বলে download চলার সময় dynamically segments করে এবং available connections reuse করে। ([Internet Download Manager][12])
+
+EDM v2.0-তে এখন:
+
+* dynamic work stealing
+* largest active segment split
+* idle worker reuse
+* byte coverage validation
+* zero overlap validation
+
+আছে। ([GitHub][4])
+
+### EDM
+
+**~85–90%**
+
+এখানে EDM এখন **খুব কাছাকাছি**।
+
+কিন্তু real-world speed benchmark ছাড়া আমি IDM-এর ওপরে বলব না।
+
+### Winner
+
+🏆 IDM সামান্য।
+
+---
+
+# 13. 🟠 Adaptive Connection Control
+
+EDM v2.0-তে:
+
+* throughput
+* RTT
+* connection latency
+* 429/503
+* hysteresis
+* cooldown
+
+ব্যবহার করে connection count adjust করছে। ([GitHub][4])
+
+এটা খুব শক্তিশালী architecture।
+
+### EDM
+
+**~85%**
+
+এখানে EDM ভবিষ্যতে IDM-এর সমান বা ভালো হতে পারে।
+
+---
+
+# 14. 🟢 Crash Recovery
+
+EDM v2.0:
+
+* schema-versioned metadata
+* atomic writes
+* flush
+* partial-file reconciliation
+* ETag
+* Last-Modified
+* stale-state invalidation
+* temp cleanup
+
+করছে। ([GitHub][4])
+
+### EDM
+
+**~85%**
+
+এখানে gap অনেক কম।
+
+---
+
+# 15. 🟢 Cloud + Dashboard
+
+এখানেই আপনার সবচেয়ে বড় সুযোগ।
+
+EDM repository-তে:
+
+* `EDM.ControlPlane.Api`
+* `EDM.ControlPlane.Dashboard`
+* `website`
+
+আলাদা component হিসেবে আছে। ([GitHub][8])
+
+IDM-এর traditional product architecture এই জায়গায় EDM-এর মতো cloud-control platform নয়।
+
+### EDM
+
+**বর্তমান verified capability: ~60–75%**
+
+### Future potential
+
+# **100%+**
+
+যদি আপনি করেন:
+
+```text
+Firebase Auth
+       ↓
+Firebase Database
+       ↓
+Control Plane API
+       ↓
+Dashboard
+       ↓
+EDM Desktop
+       ↓
+Local HDD
+```
+
+তাহলে EDM-এর একটা **সম্পূর্ণ নতুন category advantage** তৈরি হবে।
+
+---
+
+# 16. 🟢 Remote Download Control
+
+এটা আমি EDM-এর জন্য future killer feature হিসেবে দেখছি।
+
+ধরুন আপনি বাইরে আছেন।
+
+ফোনে website খুললেন:
+
+> “এই URL PC-তে download করো।”
+
+PC-তে EDM চালু।
+
+Cloud command গেল:
+
+**Website → Firebase/API → PC → EDM → Download**
+
+এটা হলে IDM-এর traditional workflow-এর চেয়ে EDM অনেক বেশি powerful হবে।
+
+---
+
+# 17. 🟢 Multi-device
+
+ভবিষ্যতে:
+
+**PC-1**
+
+**PC-2**
+
+**Laptop**
+
+**Server**
+
+এক account-এর অধীনে রাখতে পারবেন।
+
+Dashboard-এ:
+
+```text
+My Devices
+
+🖥 Main PC       Online
+💻 Laptop        Offline
+🖥 Server        Online
+```
+
+তারপর কোন device-এ download হবে সেটা নির্বাচন।
+
+এটা IDM-এর traditional desktop model-এর বড় gap হতে পারে।
+
+---
+
+# 18. 🟢 Cloud File Management
+
+আপনার আগের পরিকল্পনা অনুযায়ী:
+
+```text
+Website
+   ↓
+Dashboard
+   ↓
+File Explorer
+   ↓
+Local HDD
+```
+
+এবং চাইলে:
+
+```text
+Local HDD
+↕
+Cloud Metadata
+↕
+Firebase Storage
+```
+
+করতে পারবেন।
+
+**এটা IDM-এর তুলনায় EDM-এর strategic advantage হতে পারে।**
+
+---
+
+# তাহলে EDM-এর জন্য আমার Priority List
+
+আমি এখন **সব feature একসাথে করার পরামর্শ দেব না।**
+
+## 🔴 Phase 19 — IDM Parity
+
+### 19.1
+
+**Clipboard Monitor**
+
+### 19.2
+
+**Advanced Browser Capture**
+
+### 19.3
+
+**Complete Queue Engine**
+
+### 19.4
+
+**Advanced Scheduler**
+
+### 19.5
+
+**Download Categories 2.0**
+
+### 19.6
+
+**Proxy + Authentication**
+
+### 19.7
+
+**FTP**
+
+### 19.8
+
+**Download Quotas/Limits**
+
+### 19.9
+
+**Site Grabber 2.0**
+
+### 19.10
+
+**Video/Media Detection**
+
+---
+
+# 🟠 Phase 20 — IDM-এর সমান করার পর
+
+তারপর:
+
+### 20.1
+
+HLS/M3U8
+
+### 20.2
+
+DASH/MPD
+
+### 20.3
+
+Media quality selector
+
+### 20.4
+
+Audio extraction
+
+### 20.5
+
+Better retry/recovery
+
+### 20.6
+
+Advanced connection optimization
+
+### 20.7
+
+Benchmark engine
+
+### 20.8
+
+Automated IDM comparison tests
+
+---
+
+# 🟢 Phase 21 — IDM-কে ছাড়ানোর জন্য
+
+এখানে আমি EDM-কে অন্য level-এ নিতে চাই।
+
+### 21.1 — Firebase Authentication
+
+### 21.2 — Cloud user profile
+
+### 21.3 — Device management
+
+### 21.4 — Remote download
+
+### 21.5 — Dashboard
+
+### 21.6 — Web File Explorer
+
+### 21.7 — Local HDD management
+
+### 21.8 — Cloud metadata synchronization
+
+### 21.9 — Download history sync
+
+### 21.10 — Remote queue control
+
+### 21.11 — Remote pause/resume
+
+### 21.12 — Remote delete
+
+### 21.13 — Remote open-folder
+
+### 21.14 — Multi-PC management
+
+---
+
+# 🧠 এরপর EDM-এর সবচেয়ে বড় USP
+
+আমি হলে EDM-এর marketing এমন করতাম না:
+
+> “Another IDM alternative.”
+
+বরং:
+
+# **EDM — Download Manager + Cloud Control Center**
+
+অর্থাৎ:
+
+**IDM-এর download engine**
+
+*
+
+**Cloud**
+
+*
+
+**Dashboard**
+
+*
+
+**Remote control**
+
+*
+
+**Multi-device**
+
+*
+
+**Web File Explorer**
+
+এটাই আপনার বড় differentiation।
+
+---
+
+# 📊 আমার ভবিষ্যৎ prediction
+
+সৎভাবে বলছি:
+
+### এখন
+
+**EDM ≈ 80–84**
+
+**IDM ≈ 92–95**
+
+### Phase 19 শেষ হলে
+
+**EDM ≈ 88–91**
+
+### Phase 20 শেষ হলে
+
+**EDM ≈ 92–95**
+
+### Phase 21 শেষ হলে
+
+Core capability-তে:
+
+# **EDM ≈ 95–98**
+
+এবং overall product capability-তে:
+
+# **EDM IDM-এর চেয়েও এগিয়ে যেতে পারে।**
+
+কারণ তখন দুটির nature আলাদা হয়ে যাবে।
+
+---
+
+# 🚀 EDM কি সত্যিই IDM-কে ছাড়তে পারবে?
+
+## আমার উত্তর: **হ্যাঁ, পারার বাস্তব সম্ভাবনা আছে।**
+
+কিন্তু **শুধু download speed দিয়ে নয়।**
+
+IDM-এর প্রায় ২৫+ বছরের maturity আছে; IDM নিজেও বলে তারা ১৯৯৯ সাল থেকে download engine উন্নত করছে। ([Internet Download Manager][13])
+
+তাই speed/reliability-তে IDM-কে beat করা কঠিন।
+
+কিন্তু আপনার advantage:
+
+> **Modern architecture + Cloud + Dashboard + Website + Remote Control + Multi-device**
+
+এই combination।
+
+---
+
+# ⭐ আমার Final Score
+
+### আজকের `EDM v2.0.0`
+
+# **83/100**
+
+### IDM
+
+# **94/100**
+
+### কিন্তু ভবিষ্যৎ সম্ভাবনা
+
+**EDM Core:** 96–98
+**EDM Ecosystem:** **98–100**
+
+এবং সবচেয়ে গুরুত্বপূর্ণ—v2.0-তে আপনার foundation এখন আর “সাধারণ hobby download manager” পর্যায়ে নেই। Dynamic segmentation, HTTP validation/retry, durable recovery, adaptive connections, browser extensions, security scanning, installer/update infrastructure—এসব ইতিমধ্যে বাস্তব release-এর অংশ। ([GitHub][4])
+
+**আমার মতে পরের কাজ হবে নতুন করে এলোমেলো feature যোগ করা নয়; আমরা চাইলে পরবর্তী ধাপগুলোকে `19 → 20 → 21` হিসেবে সাজিয়ে একেবারে IDM Parity → IDM+ → Cloud/Remote Platform roadmap করতে পারি।** এতে পরের প্রতিটি AI prompt সরাসরি আগেরটির ওপর কাজ করবে, ফলে আপনার project-এ duplicate/ভাঙা architecture ঢোকার ঝুঁকি অনেক কমবে।
+
+[1]: https://github.com/nfalamin/edm/releases/tag/v2.0.0 "Release EDM Version 2.0 · nfalamin/edm · GitHub"
+[2]: https://www.internetdownloadmanager.com/features2.html?utm_source=chatgpt.com "Internet Download Manager is a reliable, high-speed download accelerator"
+[3]: https://www.internetdownloadmanager.com/support/options.html?utm_source=chatgpt.com "Internet Download Manager: Options Dialog"
+[4]: https://github.com/nfalamin/edm/blob/v2.0.0/CHANGELOG.md "edm/CHANGELOG.md at v2.0.0 · nfalamin/edm · GitHub"
+[5]: https://www.internetdownloadmanager.com/welcome.html?utm_source=chatgpt.com "Internet Download Manager: Welcome to our Start Page!"
+[6]: https://www.internetdownloadmanager.com/support/idm-grabber/idm_grabber.html?utm_source=chatgpt.com "How to use Internet Download Manager Grabber: Introduction"
+[7]: https://www.internetdownloadmanager.com/support/idm-scheduler/idm_queues.html?utm_source=chatgpt.com "How to use Internet Download Manager: IDM Queues"
+[8]: https://github.com/nfalamin/edm/tree/v2.0.0 "GitHub - nfalamin/edm at v2.0.0 · GitHub"
+[9]: https://www.internetdownloadmanager.com/support/using_idm/starting.html?utm_source=chatgpt.com "How to use Internet Download Manager: Starting Downloads with IDM"
+[10]: https://www.internetdownloadmanager.com/support/using_idm/using_idm.html?utm_source=chatgpt.com "How to use Internet Download Manager: Main Dialog"
+[11]: https://www.internetdownloadmanager.com/support/about.html?utm_source=chatgpt.com "About Internet Download Manager"
+[12]: https://e.internetdownloadmanager.com/?utm_source=chatgpt.com "Internet Download Manager is a powerful download accelerator"
+[13]: https://www.internetdownloadmanager.com/?utm_source=chatgpt.com "Internet Download Manager is a powerful download accelerator"

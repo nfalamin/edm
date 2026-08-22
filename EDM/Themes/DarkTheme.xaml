@@ -1,0 +1,113 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 
+      Deep Midnight Indigo & Vibrant Neon Glow Theme (Exact Reference Matching)
+      Primary Surface: #030A17 (#070D1E)
+      Secondary Surface: #061327 (#0D162E)
+      Main Card: #0B1424
+      Card Border: #172B4A
+      Active Gradient: linear-gradient(90deg, #2E86FF, #8B4DFF / #7C3AED)
+    -->
+
+    <!-- Solid Colors -->
+    <Color x:Key="BackgroundColor">#030A17</Color>
+    <Color x:Key="SecondaryBackgroundColor">#0B1424</Color>
+    <Color x:Key="HeaderBackgroundColor">#061327</Color>
+    <Color x:Key="BorderColor">#172B4A</Color>
+    <Color x:Key="AccentColor">#2E86FF</Color>
+    <Color x:Key="AccentHoverColor">#3B9BFF</Color>
+    <Color x:Key="TextColor">#F4F7FF</Color>
+    <Color x:Key="MutedTextColor">#A9B7CC</Color>
+    <Color x:Key="SelectionColor">#111F36</Color>
+
+    <!-- Solid Color Brushes -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor}"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="{StaticResource HeaderBackgroundColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}"/>
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource MutedTextColor}"/>
+    <SolidColorBrush x:Key="SecondaryText" Color="{StaticResource MutedTextColor}"/>
+    <SolidColorBrush x:Key="PrimaryAccent" Color="#8B4DFF"/>
+    <SolidColorBrush x:Key="AccentColorBrush" Color="#2E86FF"/>
+    <SolidColorBrush x:Key="CardBrush" Color="#0B1424"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#0B1424"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#0F1B30"/>
+    <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#0F1B30"/>
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#71819A"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource SelectionColor}"/>
+    <SolidColorBrush x:Key="ElevatedSurfaceBrush" Color="#111F36"/>
+
+    <!-- Category badge brushes -->
+    <SolidColorBrush x:Key="CategoryBackgroundBrush" Color="#8B4DFF" />
+    <SolidColorBrush x:Key="CategoryTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PurpleBrush" Color="#8B4DFF"/>
+    <SolidColorBrush x:Key="BorderHighlightBrush" Color="#2E86FF"/>
+
+    <!-- Sidebar / Nav specific brushes -->
+    <SolidColorBrush x:Key="SidebarBg" Color="#030A17"/>
+    <SolidColorBrush x:Key="SidebarTextBrush" Color="#A9B7CC"/>
+    <SolidColorBrush x:Key="NavHoverBg" Color="#0F1B30"/>
+    <SolidColorBrush x:Key="NavActiveBg" Color="#2E86FF"/>
+    <SolidColorBrush x:Key="NavActiveTextBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F4F7FF"/>
+    <SolidColorBrush x:Key="SearchBoxBg" Color="#061327"/>
+    <SolidColorBrush x:Key="CardInputBg" Color="#111D31"/>
+    <SolidColorBrush x:Key="DeepBackgroundBrush" Color="#030A17"/>
+
+    <!-- Dynamic Vibrant Gradient Brushes -->
+    <LinearGradientBrush x:Key="PrimaryPillGradient" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#2E86FF" Offset="0.0"/>
+        <GradientStop Color="#8B4DFF" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="AddUrlGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#6366F1" Offset="0.0"/>
+        <GradientStop Color="#8B5CF6" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="ResumeGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#10B981" Offset="0.0"/>
+        <GradientStop Color="#22C55E" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="PauseGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#F59E0B" Offset="0.0"/>
+        <GradientStop Color="#F97316" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="StopGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#EF4444" Offset="0.0"/>
+        <GradientStop Color="#DC2626" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="DeleteGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#EC4899" Offset="0.0"/>
+        <GradientStop Color="#D946EF" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="SchedulerGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#06B6D4" Offset="0.0"/>
+        <GradientStop Color="#3B82F6" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="SettingsGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#8B5CF6" Offset="0.0"/>
+        <GradientStop Color="#6366F1" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- Colored Glow Shadows matching reference photo -->
+    <DropShadowEffect x:Key="PurpleGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#8B5CF6" Opacity="0.65"/>
+    <DropShadowEffect x:Key="GreenGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#10B981" Opacity="0.65"/>
+    <DropShadowEffect x:Key="AmberGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#F59E0B" Opacity="0.65"/>
+    <DropShadowEffect x:Key="RedGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#EF4444" Opacity="0.65"/>
+    <DropShadowEffect x:Key="PinkGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#EC4899" Opacity="0.65"/>
+    <DropShadowEffect x:Key="CyanGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#06B6D4" Opacity="0.65"/>
+    <DropShadowEffect x:Key="BlueGlowShadow" BlurRadius="18" ShadowDepth="2" Color="#3B82F6" Opacity="0.65"/>
+
+    <DropShadowEffect x:Key="ControlShadow" BlurRadius="14" ShadowDepth="3" Color="#000000" Opacity="0.35"/>
+
+</ResourceDictionary>
