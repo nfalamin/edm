@@ -94,6 +94,10 @@ namespace EDM
                 services.AddSingleton<EDM.Services.Interfaces.IClipboardMonitorService, EDM.Services.ClipboardMonitorService>();
                 services.AddSingleton<EDM.Services.ClipboardMonitorService>(sp => (EDM.Services.ClipboardMonitorService)sp.GetRequiredService<EDM.Services.Interfaces.IClipboardMonitorService>());
 
+                // Register Pending Download Confirmation Queue Service
+                services.AddSingleton<EDM.Services.Interfaces.IPendingConfirmationQueueService, EDM.Services.PendingConfirmationQueueService>();
+                services.AddSingleton<EDM.Services.PendingConfirmationQueueService>(sp => (EDM.Services.PendingConfirmationQueueService)sp.GetRequiredService<EDM.Services.Interfaces.IPendingConfirmationQueueService>());
+
                 // Register Unified Download Request Gateway
                 services.AddSingleton<EDM.Services.Interfaces.IDownloadRequestGateway, EDM.Services.DownloadRequestGateway>();
 
@@ -427,9 +431,24 @@ namespace EDM
         {
             if (payload == null || string.IsNullOrWhiteSpace(payload.Url)) return false;
 
-            var gateway = _serviceProvider?.GetService(typeof(EDM.Services.Interfaces.IDownloadRequestGateway)) as EDM.Services.Interfaces.IDownloadRequestGateway
-                ?? new EDM.Services.DownloadRequestGateway();
+            var settingsService = _serviceProvider?.GetService(typeof(EDM.Services.Interfaces.ISettingsService)) as EDM.Services.Interfaces.ISettingsService
+                ?? new EDM.Services.SettingsService();
 
+            // 1. Security Gate: Validate URL Scheme
+            if (!SecuritySanitizer.IsAllowedUrlScheme(payload.Url))
+            {
+                LoggingService.LogWarning($"[App.HandleIpcHandoffAsync] Security rejection: Disallowed or unsafe scheme for '{ProtocolDetector.SanitizeUrlForLogging(payload.Url)}'");
+                return false;
+            }
+
+            // 2. Setting Guard: Verify browser integration is enabled
+            if (!settingsService.GetEnableBrowserIntegration() || !settingsService.GetBrowserCaptureDownloads())
+            {
+                LoggingService.Log("[App.HandleIpcHandoffAsync] Browser integration is disabled in settings; rejecting handoff.");
+                return false;
+            }
+
+            // 3. Resolve metadata and safe filename
             string effectiveFileName = payload.Filename ?? string.Empty;
             if ((string.IsNullOrWhiteSpace(effectiveFileName) || effectiveFileName.StartsWith("YouTube_Video_", StringComparison.OrdinalIgnoreCase) || effectiveFileName == "download" || effectiveFileName == "download.mp4") && !string.IsNullOrWhiteSpace(payload.Title))
             {
@@ -457,87 +476,142 @@ namespace EDM
                 catch { }
             }
 
-            var req = new EDM.Services.DownloadRequest
-            {
-                Source = EDM.Services.IngestionSource.BrowserExtension,
-                Url = payload.Url,
-                SuggestedFileName = !string.IsNullOrWhiteSpace(effectiveFileName) ? effectiveFileName : payload.Filename,
-                Referrer = payload.Referer ?? payload.PageUrl,
-                Cookies = payload.Cookies
-            };
+            // 4. Enqueue into Pending Confirmation Queue
+            var pendingQueue = _serviceProvider?.GetService(typeof(EDM.Services.Interfaces.IPendingConfirmationQueueService)) as EDM.Services.Interfaces.IPendingConfirmationQueueService
+                ?? EDM.Services.PendingConfirmationQueueService.Instance;
 
-            if (!string.IsNullOrWhiteSpace(payload.AuthHeader)) req.CustomHeaders["Authorization"] = payload.AuthHeader;
-            if (!string.IsNullOrWhiteSpace(payload.UserAgent)) req.CustomHeaders["User-Agent"] = payload.UserAgent;
+            var pendingReq = pendingQueue.EnqueueRequest(
+                url: payload.Url,
+                source: IngestionSource.BrowserExtension,
+                suggestedFileName: !string.IsNullOrWhiteSpace(effectiveFileName) ? effectiveFileName : payload.Filename,
+                title: payload.Title,
+                referrer: payload.Referer ?? payload.PageUrl,
+                cookies: payload.Cookies,
+                userAgent: payload.UserAgent,
+                authHeader: payload.AuthHeader,
+                quality: payload.Quality,
+                format: payload.Format,
+                videoUrl: payload.VideoUrl,
+                audioUrl: payload.AudioUrl,
+                estimatedSizeBytes: payload.EstimatedSizeBytes,
+                requiresFfmpegMerge: payload.RequiresFfmpegMerge);
 
-            var result = await gateway.SubmitRequestAsync(req).ConfigureAwait(false);
-            if (!result.IsSuccess)
-            {
-                EDM.Services.LoggingService.Log($"[App.HandleIpcHandoffAsync] Gateway rejected request: {result.Status} - {result.Message}");
-                return false;
-            }
+            // 5. Zero-Trust Confirmation Policy Check
+            bool requireConfirmation = settingsService.GetBrowserShowConfirmation();
 
-            if (result.Item != null)
+            if (requireConfirmation)
             {
+                // Dispatch confirmation UI on the Dispatcher
                 await Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {
-                        var item = result.Item;
-                        string safeFileName = item.FileName;
-                        string downloadIdentity = !string.IsNullOrWhiteSpace(payload.DownloadIdentity)
-                            ? payload.DownloadIdentity
-                            : $"{item.Url}|{payload.Quality}|{payload.VideoUrl}|{safeFileName}";
+                        PendingApprovalWindow.ShowOrUpdate(pendingQueue);
 
-                        item.DownloadIdentity = downloadIdentity;
-
-                        if (_activeIpcWindows.TryGetValue(downloadIdentity, out var existingWin) && existingWin != null && existingWin.IsLoaded)
+                        if (settingsService.GetBrowserShowNotification())
                         {
-                            if (existingWin.WindowState == WindowState.Minimized) existingWin.WindowState = WindowState.Normal;
-                            existingWin.Activate();
-                            existingWin.Focus();
-                            LoggingService.Log($"[App.HandleIpcHandoffAsync] Duplicate download window focused for '{safeFileName}'.");
-                            return;
+                            NotificationService.Instance.Notify(
+                                "Download Request Captured",
+                                $"Reviewing: {(string.IsNullOrWhiteSpace(effectiveFileName) ? payload.Url : effectiveFileName)}",
+                                NotificationSeverity.Info,
+                                NotificationCategory.System);
                         }
-
-                        if (!string.IsNullOrWhiteSpace(payload.VideoUrl)) item.VideoUrl = payload.VideoUrl;
-                        if (!string.IsNullOrWhiteSpace(payload.AudioUrl)) item.AudioUrl = payload.AudioUrl;
-                        if (!string.IsNullOrWhiteSpace(payload.Quality)) item.Quality = payload.Quality;
-                        if (!string.IsNullOrWhiteSpace(payload.Format)) item.DesiredFormat = payload.Format;
-                        if (!string.IsNullOrWhiteSpace(payload.Title)) item.Title = payload.Title;
-                        if (payload.RequiresFfmpegMerge) item.RequiresFfmpegMerge = true;
-                        if (payload.EstimatedSizeBytes.HasValue && payload.EstimatedSizeBytes.Value > 0)
-                        {
-                            item.EstimatedSizeBytes = payload.EstimatedSizeBytes.Value;
-                            item.Size = $"≈ {payload.EstimatedSizeBytes.Value / (1024.0 * 1024.0):F1} MB";
-                        }
-
-                        var progressWin = new DownloadProgressWindow(item);
-                        _activeIpcWindows[downloadIdentity] = progressWin;
-                        progressWin.Closed += (s, e) => _activeIpcWindows.TryRemove(downloadIdentity, out _);
-
-                        progressWin.Topmost = true;
-                        progressWin.Show();
-                        progressWin.Activate();
-                        progressWin.Focus();
-                        progressWin.Topmost = false;
-
-                        BackgroundTaskManager.FireAndForget("IpcDownloadTask", async () =>
-                        {
-                            try
-                            {
-                                await progressWin.StartDownloadForItemAsync(item).ConfigureAwait(false);
-                            }
-                            catch (Exception ex)
-                            {
-                                EDM.Services.LoggingService.LogBackgroundTaskFailure("IpcDownloadTask", ex);
-                            }
-                        });
                     }
                     catch (Exception ex)
                     {
-                        EDM.Services.LoggingService.LogException("[App.HandleIpcHandoffAsync] UI dispatch failed", ex);
+                        LoggingService.LogException("[App.HandleIpcHandoffAsync] Failed to display PendingApprovalWindow", ex);
                     }
                 });
+
+                return true;
+            }
+
+            // 6. Direct / Silent Mode Fallback (Only if confirmation explicitly disabled by user)
+            if (pendingQueue.TryApprove(pendingReq.PendingRequestId, out var approvedReq) && approvedReq != null)
+            {
+                var gateway = _serviceProvider?.GetService(typeof(EDM.Services.Interfaces.IDownloadRequestGateway)) as EDM.Services.Interfaces.IDownloadRequestGateway
+                    ?? new EDM.Services.DownloadRequestGateway(settingsService);
+
+                var req = new EDM.Services.DownloadRequest
+                {
+                    Source = EDM.Services.IngestionSource.BrowserExtension,
+                    Url = payload.Url,
+                    SuggestedFileName = approvedReq.SuggestedFileName,
+                    Referrer = approvedReq.Referrer,
+                    Cookies = approvedReq.Cookies,
+                    SilentMode = false
+                };
+
+                if (!string.IsNullOrWhiteSpace(payload.AuthHeader)) req.CustomHeaders["Authorization"] = payload.AuthHeader;
+                if (!string.IsNullOrWhiteSpace(payload.UserAgent)) req.CustomHeaders["User-Agent"] = payload.UserAgent;
+
+                var result = await gateway.SubmitRequestAsync(req).ConfigureAwait(false);
+                if (!result.IsSuccess)
+                {
+                    LoggingService.Log($"[App.HandleIpcHandoffAsync] Gateway rejected direct request: {result.Status} - {result.Message}");
+                    return false;
+                }
+
+                if (result.Item != null)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            var item = result.Item;
+                            string safeFileName = item.FileName;
+                            string downloadIdentity = !string.IsNullOrWhiteSpace(payload.DownloadIdentity)
+                                ? payload.DownloadIdentity
+                                : $"{item.Url}|{payload.Quality}|{payload.VideoUrl}|{safeFileName}";
+
+                            item.DownloadIdentity = downloadIdentity;
+
+                            if (_activeIpcWindows.TryGetValue(downloadIdentity, out var existingWin) && existingWin != null && existingWin.IsLoaded)
+                            {
+                                if (existingWin.WindowState == WindowState.Minimized) existingWin.WindowState = WindowState.Normal;
+                                existingWin.Activate();
+                                existingWin.Focus();
+                                return;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(payload.VideoUrl)) item.VideoUrl = payload.VideoUrl;
+                            if (!string.IsNullOrWhiteSpace(payload.AudioUrl)) item.AudioUrl = payload.AudioUrl;
+                            if (!string.IsNullOrWhiteSpace(payload.Quality)) item.Quality = payload.Quality;
+                            if (!string.IsNullOrWhiteSpace(payload.Format)) item.DesiredFormat = payload.Format;
+                            if (!string.IsNullOrWhiteSpace(payload.Title)) item.Title = payload.Title;
+                            if (payload.RequiresFfmpegMerge) item.RequiresFfmpegMerge = true;
+                            if (payload.EstimatedSizeBytes.HasValue && payload.EstimatedSizeBytes.Value > 0)
+                            {
+                                item.EstimatedSizeBytes = payload.EstimatedSizeBytes.Value;
+                                item.Size = $"≈ {payload.EstimatedSizeBytes.Value / (1024.0 * 1024.0):F1} MB";
+                            }
+
+                            var progressWin = new DownloadProgressWindow(item);
+                            _activeIpcWindows[downloadIdentity] = progressWin;
+                            progressWin.Closed += (s, e) => _activeIpcWindows.TryRemove(downloadIdentity, out _);
+
+                            progressWin.Show();
+                            progressWin.Activate();
+                            progressWin.Focus();
+
+                            BackgroundTaskManager.FireAndForget("IpcDownloadTask", async () =>
+                            {
+                                try
+                                {
+                                    await progressWin.StartDownloadForItemAsync(item).ConfigureAwait(false);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LoggingService.LogBackgroundTaskFailure("IpcDownloadTask", ex);
+                                }
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogException("[App.HandleIpcHandoffAsync] Direct UI dispatch failed", ex);
+                        }
+                    });
+                }
             }
 
             return true;

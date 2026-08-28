@@ -170,6 +170,12 @@ namespace EDM.Models
         public CancellationToken CancellationToken => _cts.Token;
 
         /// <summary>
+        /// Authoritative lifecycle state controller for this download item.
+        /// </summary>
+        [JsonIgnore]
+        public DownloadStateController StateController { get; } = new DownloadStateController();
+
+        /// <summary>
         /// Active background execution Task (if running).
         /// </summary>
         [JsonIgnore]

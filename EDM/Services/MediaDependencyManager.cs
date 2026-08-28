@@ -46,10 +46,14 @@ namespace EDM.Services
             await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (!string.IsNullOrWhiteSpace(customPath) && await ValidateExecutableAsync(customPath, "--version", cancellationToken).ConfigureAwait(false))
+                if (!string.IsNullOrWhiteSpace(customPath))
                 {
-                    _cachedYtDlpPath = Path.GetFullPath(customPath);
-                    return _cachedYtDlpPath;
+                    if (await ValidateExecutableAsync(customPath, "--version", cancellationToken).ConfigureAwait(false))
+                    {
+                        _cachedYtDlpPath = Path.GetFullPath(customPath);
+                        return _cachedYtDlpPath;
+                    }
+                    return null;
                 }
 
                 if (!string.IsNullOrWhiteSpace(_cachedYtDlpPath) && File.Exists(_cachedYtDlpPath))
@@ -92,10 +96,14 @@ namespace EDM.Services
             await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (!string.IsNullOrWhiteSpace(customPath) && await ValidateExecutableAsync(customPath, "-version", cancellationToken).ConfigureAwait(false))
+                if (!string.IsNullOrWhiteSpace(customPath))
                 {
-                    _cachedFfmpegPath = Path.GetFullPath(customPath);
-                    return _cachedFfmpegPath;
+                    if (await ValidateExecutableAsync(customPath, "-version", cancellationToken).ConfigureAwait(false))
+                    {
+                        _cachedFfmpegPath = Path.GetFullPath(customPath);
+                        return _cachedFfmpegPath;
+                    }
+                    return null;
                 }
 
                 if (!string.IsNullOrWhiteSpace(_cachedFfmpegPath) && File.Exists(_cachedFfmpegPath))

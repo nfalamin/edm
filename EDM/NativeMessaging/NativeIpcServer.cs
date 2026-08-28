@@ -119,7 +119,15 @@ namespace EDM.NativeMessaging
 
                     if (payload == null || string.IsNullOrWhiteSpace(payload.Url))
                     {
-                        await writer.WriteLineAsync(JsonSerializer.Serialize(new { success = false, error = "Invalid URL payload" })).ConfigureAwait(false);
+                        await writer.WriteLineAsync(JsonSerializer.Serialize(new { success = false, status = "rejected", error = "Invalid URL payload" })).ConfigureAwait(false);
+                        return;
+                    }
+
+                    // Scheme and Protocol Security Verification
+                    if (!SecuritySanitizer.IsAllowedUrlScheme(payload.Url))
+                    {
+                        LoggingService.LogWarning($"[NativeIpcServer] Security rejection: Disallowed or unsafe scheme '{ProtocolDetector.SanitizeUrlForLogging(payload.Url)}'");
+                        await writer.WriteLineAsync(JsonSerializer.Serialize(new { success = false, status = "rejected", error = "Security rejection: Disallowed or unsafe URL scheme" })).ConfigureAwait(false);
                         return;
                     }
 

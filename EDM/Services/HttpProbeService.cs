@@ -189,6 +189,41 @@ namespace EDM.Services
                         break;
                     }
 
+                    // 416 RequestedRangeNotSatisfiable fallback (tiny file or non-range server)
+                    if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+                    {
+                        response.Dispose();
+                        response = null;
+
+                        // Fallback to standard HEAD/GET probe without Range header
+                        using var headReq = new HttpRequestMessage(HttpMethod.Head, requestUri);
+                        ApplyProbeHeaders(headReq);
+                        try
+                        {
+                            var headResp = await _httpClient.SendAsync(headReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                            if (headResp.IsSuccessStatusCode)
+                            {
+                                response = headResp;
+                                serverSupportsResume = false;
+                                break;
+                            }
+                            headResp.Dispose();
+                        }
+                        catch { }
+
+                        // If HEAD failed or wasn't supported, try standard GET with headers read only
+                        using var getReq = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                        ApplyProbeHeaders(getReq);
+                        var getResp = await _httpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                        if (getResp.IsSuccessStatusCode)
+                        {
+                            response = getResp;
+                            serverSupportsResume = false;
+                            break;
+                        }
+                        response = getResp;
+                    }
+
                     int code = (int)response.StatusCode;
                     if (code == 500 || code == 502 || code == 503 || code == 504 || code == 408 || code == 429)
                     {

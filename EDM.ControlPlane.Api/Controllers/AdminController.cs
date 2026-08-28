@@ -44,7 +44,7 @@ namespace EDM.ControlPlane.Api.Controllers
         string? ReleaseNotes = null,
         bool? IsMandatory = null,
         ReleaseSeverity? Severity = null);
-    public record PermissionChangeDto(string PermissionCode);
+    
     public record CreateAnnouncementDto(
         string Title,
         string Message,
@@ -1141,8 +1141,74 @@ namespace EDM.ControlPlane.Api.Controllers
             bool ok = await _geoPricingService.DeletePricingRuleAsync(id, adminName);
             return Ok(new { success = ok, message = "Pricing rule deleted." });
         }
+    
+        // ==========================================
+        // 15. PROMOTIONS & COUPONS MANAGEMENT
+        // ==========================================
+        [Authorize]
+        [RequirePermission(Permissions.PricingManage)]
+        [HttpGet("promotions")]
+        public async Task<IActionResult> GetPromotionsAsync()
+        {
+            var list = await _dbContext.Promotions
+                .OrderByDescending(p => p.CreatedAtUtc)
+                .ToListAsync();
+            return Ok(new { count = list.Count, promotions = list });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.PricingManage)]
+        [HttpPost("promotions")]
+        public async Task<IActionResult> UpsertPromotionAsync([FromBody] PromotionRecord record)
+        {
+            if (record == null || string.IsNullOrWhiteSpace(record.PromoCode))
+            {
+                return BadRequest(new { error = "INVALID_INPUT", message = "PromoCode is required." });
+            }
+
+            record.PromoCode = record.PromoCode.Trim().ToUpperInvariant();
+            var existing = await _dbContext.Promotions.FirstOrDefaultAsync(p => p.PromoCode == record.PromoCode);
+
+            if (existing != null)
+            {
+                existing.DiscountPercent = record.DiscountPercent;
+                existing.DiscountAmount = record.DiscountAmount;
+                existing.TargetCountryCode = record.TargetCountryCode;
+                existing.TargetRegion = record.TargetRegion;
+                existing.TargetPlanCode = record.TargetPlanCode;
+                existing.MaxUses = record.MaxUses;
+                existing.StartsAtUtc = record.StartsAtUtc;
+                existing.EndsAtUtc = record.EndsAtUtc;
+                existing.IsEnabled = record.IsEnabled;
+                            }
+            else
+            {
+                record.Id = Guid.NewGuid();
+                record.CreatedAtUtc = DateTime.UtcNow;
+                _dbContext.Promotions.Add(record);
+            }
+
+            await _dbContext.SaveChangesAsync();
+            return Ok(new { success = true, promoCode = record.PromoCode });
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.PricingManage)]
+        [HttpDelete("promotions/{id}")]
+        public async Task<IActionResult> DeletePromotionAsync(Guid id)
+        {
+            var promo = await _dbContext.Promotions.FindAsync(id);
+            if (promo != null)
+            {
+                _dbContext.Promotions.Remove(promo);
+                await _dbContext.SaveChangesAsync();
+            }
+            return Ok(new { success = true });
+        }
+
     }
 
-    public record ExtendDaysDto(int AdditionalDays, string Reason);
     public record BlockRequestDto(string Reason);
+    public record ExtendDaysDto(int AdditionalDays, string Reason);
+    public record PermissionChangeDto(string PermissionCode);
 }

@@ -651,7 +651,7 @@ namespace EDM.Domain.Protocols
                     chunk.AddDownloadedBytes(bytesRead);
                     chunk.UpdateSpeed();
                     governor.RecordBytes(bytesRead);
-                    governor.ApplyRateLimiting(bytesRead);
+                    await governor.ApplyRateLimitingAsync(bytesRead, ct).ConfigureAwait(false);
                 }
 
                 if (chunk.IsComplete)

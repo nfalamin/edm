@@ -46,6 +46,8 @@ namespace EDM.Services
         public long? InitByteRangeLength { get; set; }
         public string Title { get; set; } = string.Empty;
         public bool IsDiscontinuity { get; set; }
+        public long DiscontinuitySequence { get; set; }
+        public string? ProgramDateTime { get; set; }
     }
 
     public class HlsVariant
@@ -61,18 +63,23 @@ namespace EDM.Services
         public string AudioGroupId { get; set; } = string.Empty;
         public string SubtitlesGroupId { get; set; } = string.Empty;
         public bool HasAudio { get; set; } = true;
+        public bool IsIFrameOnly { get; set; }
     }
 
     public class HlsMasterPlaylist
     {
         public bool IsMaster { get; set; }
         public bool IsLive { get; set; }
+        public int Version { get; set; } = 3;
+        public string PlaylistType { get; set; } = string.Empty; // VOD, EVENT, LIVE
         public bool IsDrmProtected { get; set; }
         public string DrmSystem { get; set; } = string.Empty;
         public double TargetDurationSeconds { get; set; }
         public long MediaSequence { get; set; }
+        public long DiscontinuitySequence { get; set; }
         public double TotalDurationSeconds { get; set; }
         public List<HlsVariant> Variants { get; set; } = new List<HlsVariant>();
+        public List<HlsVariant> IFrameVariants { get; set; } = new List<HlsVariant>();
         public List<HlsAudioTrack> AudioTracks { get; set; } = new List<HlsAudioTrack>();
         public List<HlsSubtitleTrack> SubtitleTracks { get; set; } = new List<HlsSubtitleTrack>();
         public List<HlsSegment> Segments { get; set; } = new List<HlsSegment>();
@@ -95,11 +102,34 @@ namespace EDM.Services
 
             if (!lines.Any() || !lines[0].StartsWith("#EXTM3U")) return playlist;
 
+            // 0. Parse Global Manifest Tags
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("#EXT-X-VERSION:"))
+                {
+                    if (int.TryParse(line.Substring("#EXT-X-VERSION:".Length).Trim(), out int ver))
+                    {
+                        playlist.Version = ver;
+                    }
+                }
+                else if (line.StartsWith("#EXT-X-PLAYLIST-TYPE:"))
+                {
+                    playlist.PlaylistType = line.Substring("#EXT-X-PLAYLIST-TYPE:".Length).Trim().ToUpperInvariant();
+                }
+                else if (line.StartsWith("#EXT-X-DISCONTINUITY-SEQUENCE:"))
+                {
+                    if (long.TryParse(line.Substring("#EXT-X-DISCONTINUITY-SEQUENCE:".Length).Trim(), out long discSeq))
+                    {
+                        playlist.DiscontinuitySequence = discSeq;
+                    }
+                }
+            }
+
             // 1. Check DRM vs Standard AES-128 Encryption
             foreach (var line in lines.Where(l => l.StartsWith("#EXT-X-KEY:")))
             {
                 var methodMatch = Regex.Match(line, @"METHOD=([^,\s]+)");
-                string method = methodMatch.Success ? methodMatch.Groups[1].Value : "NONE";
+                string method = methodMatch.Success ? methodMatch.Groups[1].Value.ToUpperInvariant() : "NONE";
 
                 var keyFormatMatch = Regex.Match(line, @"KEYFORMAT=""([^""]+)""");
                 string keyFormat = keyFormatMatch.Success ? keyFormatMatch.Groups[1].Value : "identity";
@@ -122,10 +152,11 @@ namespace EDM.Services
                     playlist.IsDrmProtected = true;
                     playlist.DrmSystem = "FairPlay";
                 }
-                else if (method.Equals("SAMPLE-AES", StringComparison.OrdinalIgnoreCase))
+                else if (method.Equals("SAMPLE-AES", StringComparison.OrdinalIgnoreCase) ||
+                         method.Equals("SAMPLE-AES-CTR", StringComparison.OrdinalIgnoreCase))
                 {
                     playlist.IsDrmProtected = true;
-                    playlist.DrmSystem = "SAMPLE-AES (DRM)";
+                    playlist.DrmSystem = $"{method} (DRM)";
                 }
             }
 
@@ -140,6 +171,9 @@ namespace EDM.Services
                 var nMatch = Regex.Match(attrLine, @"NAME=""([^""]+)""");
                 var lMatch = Regex.Match(attrLine, @"LANGUAGE=""([^""]+)""");
                 var uMatch = Regex.Match(attrLine, @"URI=""([^""]+)""");
+                var cMatch = Regex.Match(attrLine, @"CHANNELS=""?(\d+)""?");
+
+                int channels = cMatch.Success && int.TryParse(cMatch.Groups[1].Value, out int ch) ? ch : 2;
 
                 if (type == "AUDIO")
                 {
@@ -151,7 +185,8 @@ namespace EDM.Services
                         Uri = uMatch.Success ? MakeAbsoluteUri(uMatch.Groups[1].Value, baseUri) : "",
                         IsDefault = attrLine.Contains("DEFAULT=YES"),
                         IsAutoSelect = attrLine.Contains("AUTOSELECT=YES"),
-                        IsForced = attrLine.Contains("FORCED=YES")
+                        IsForced = attrLine.Contains("FORCED=YES"),
+                        Channels = channels
                     };
                     playlist.AudioTracks.Add(track);
                 }
@@ -171,7 +206,23 @@ namespace EDM.Services
                 }
             }
 
-            // 3. Check if Master Playlist (#EXT-X-STREAM-INF)
+            // 3. Extract I-Frame Only Streams (#EXT-X-I-FRAME-STREAM-INF)
+            foreach (var line in lines.Where(l => l.StartsWith("#EXT-X-I-FRAME-STREAM-INF:")))
+            {
+                string attrLine = line.Substring("#EXT-X-I-FRAME-STREAM-INF:".Length);
+                var iframeVariant = ParseVariantAttributes(attrLine, baseUri);
+                iframeVariant.IsIFrameOnly = true;
+
+                var uMatch = Regex.Match(attrLine, @"URI=""([^""]+)""");
+                if (uMatch.Success)
+                {
+                    iframeVariant.Uri = MakeAbsoluteUri(uMatch.Groups[1].Value, baseUri);
+                }
+
+                playlist.IFrameVariants.Add(iframeVariant);
+            }
+
+            // 4. Check if Master Playlist (#EXT-X-STREAM-INF)
             if (lines.Any(l => l.StartsWith("#EXT-X-STREAM-INF")))
             {
                 playlist.IsMaster = true;
@@ -181,51 +232,8 @@ namespace EDM.Services
                 {
                     if (line.StartsWith("#EXT-X-STREAM-INF:"))
                     {
-                        currentVariant = new HlsVariant();
                         string attrLine = line.Substring("#EXT-X-STREAM-INF:".Length);
-
-                        var bwMatch = Regex.Match(attrLine, @"BANDWIDTH=(\d+)");
-                        if (bwMatch.Success && int.TryParse(bwMatch.Groups[1].Value, out int bw))
-                        {
-                            currentVariant.Bandwidth = bw;
-                        }
-
-                        var avgBwMatch = Regex.Match(attrLine, @"AVERAGE-BANDWIDTH=(\d+)");
-                        if (avgBwMatch.Success && int.TryParse(avgBwMatch.Groups[1].Value, out int avgBw))
-                        {
-                            currentVariant.AverageBandwidth = avgBw;
-                        }
-
-                        var resMatch = Regex.Match(attrLine, @"RESOLUTION=(\d+)x(\d+)");
-                        if (resMatch.Success)
-                        {
-                            if (int.TryParse(resMatch.Groups[1].Value, out int w)) currentVariant.Width = w;
-                            if (int.TryParse(resMatch.Groups[2].Value, out int h)) currentVariant.Height = h;
-                        }
-
-                        var fpsMatch = Regex.Match(attrLine, @"FRAME-RATE=([\d\.]+)");
-                        if (fpsMatch.Success && double.TryParse(fpsMatch.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double fps))
-                        {
-                            currentVariant.FrameRate = fps;
-                        }
-
-                        var codecMatch = Regex.Match(attrLine, @"CODECS=""([^""]+)""");
-                        if (codecMatch.Success)
-                        {
-                            currentVariant.Codecs = codecMatch.Groups[1].Value;
-                        }
-
-                        var audioGroupMatch = Regex.Match(attrLine, @"AUDIO=""([^""]+)""");
-                        if (audioGroupMatch.Success)
-                        {
-                            currentVariant.AudioGroupId = audioGroupMatch.Groups[1].Value;
-                        }
-
-                        var subGroupMatch = Regex.Match(attrLine, @"SUBTITLES=""([^""]+)""");
-                        if (subGroupMatch.Success)
-                        {
-                            currentVariant.SubtitlesGroupId = subGroupMatch.Groups[1].Value;
-                        }
+                        currentVariant = ParseVariantAttributes(attrLine, baseUri);
                     }
                     else if (!line.StartsWith("#") && currentVariant != null)
                     {
@@ -237,9 +245,10 @@ namespace EDM.Services
             }
             else
             {
-                // 4. Media Playlist Parsing
+                // 5. Media Playlist Parsing
                 playlist.IsMaster = false;
-                playlist.IsLive = !lines.Any(l => l.StartsWith("#EXT-X-ENDLIST"));
+                bool hasEndList = lines.Any(l => l.StartsWith("#EXT-X-ENDLIST"));
+                playlist.IsLive = !hasEndList && !playlist.PlaylistType.Equals("VOD", StringComparison.OrdinalIgnoreCase);
 
                 // Target Duration
                 var targetDurLine = lines.FirstOrDefault(l => l.StartsWith("#EXT-X-TARGETDURATION:"));
@@ -267,6 +276,7 @@ namespace EDM.Services
 
                 double currentDuration = 0;
                 string currentTitle = string.Empty;
+                string? currentProgramDateTime = null;
                 long? currentByteRangeOffset = null;
                 long? currentByteRangeLength = null;
                 long lastByteRangeEnd = 0;
@@ -281,6 +291,7 @@ namespace EDM.Services
                 long? currentInitLength = null;
 
                 bool isDiscontinuity = false;
+                long runningDiscontinuitySeq = playlist.DiscontinuitySequence;
                 double totalDuration = 0;
 
                 foreach (var line in lines)
@@ -288,10 +299,18 @@ namespace EDM.Services
                     if (line.StartsWith("#EXT-X-TARGETDURATION:")) continue;
                     if (line.StartsWith("#EXT-X-MEDIA-SEQUENCE:")) continue;
                     if (line.StartsWith("#EXT-X-ENDLIST")) continue;
+                    if (line.StartsWith("#EXT-X-VERSION:")) continue;
+                    if (line.StartsWith("#EXT-X-PLAYLIST-TYPE:")) continue;
+                    if (line.StartsWith("#EXT-X-DISCONTINUITY-SEQUENCE:")) continue;
 
                     if (line.StartsWith("#EXT-X-DISCONTINUITY"))
                     {
                         isDiscontinuity = true;
+                        runningDiscontinuitySeq++;
+                    }
+                    else if (line.StartsWith("#EXT-X-PROGRAM-DATE-TIME:"))
+                    {
+                        currentProgramDateTime = line.Substring("#EXT-X-PROGRAM-DATE-TIME:".Length).Trim();
                     }
                     else if (line.StartsWith("#EXT-X-KEY:"))
                     {
@@ -380,7 +399,9 @@ namespace EDM.Services
                             InitByteRangeOffset = currentInitOffset,
                             InitByteRangeLength = currentInitLength,
                             Title = currentTitle,
-                            IsDiscontinuity = isDiscontinuity
+                            IsDiscontinuity = isDiscontinuity,
+                            DiscontinuitySequence = runningDiscontinuitySeq,
+                            ProgramDateTime = currentProgramDateTime
                         };
 
                         playlist.Segments.Add(segment);
@@ -392,6 +413,7 @@ namespace EDM.Services
                         // Reset per-segment flags
                         currentDuration = 0;
                         currentTitle = string.Empty;
+                        currentProgramDateTime = null;
                         currentByteRangeOffset = null;
                         currentByteRangeLength = null;
                         isDiscontinuity = false;
@@ -402,6 +424,56 @@ namespace EDM.Services
             }
 
             return playlist;
+        }
+
+        private static HlsVariant ParseVariantAttributes(string attrLine, Uri baseUri)
+        {
+            var variant = new HlsVariant();
+
+            var bwMatch = Regex.Match(attrLine, @"BANDWIDTH=(\d+)");
+            if (bwMatch.Success && int.TryParse(bwMatch.Groups[1].Value, out int bw))
+            {
+                variant.Bandwidth = bw;
+            }
+
+            var avgBwMatch = Regex.Match(attrLine, @"AVERAGE-BANDWIDTH=(\d+)");
+            if (avgBwMatch.Success && int.TryParse(avgBwMatch.Groups[1].Value, out int avgBw))
+            {
+                variant.AverageBandwidth = avgBw;
+            }
+
+            var resMatch = Regex.Match(attrLine, @"RESOLUTION=(\d+)x(\d+)");
+            if (resMatch.Success)
+            {
+                if (int.TryParse(resMatch.Groups[1].Value, out int w)) variant.Width = w;
+                if (int.TryParse(resMatch.Groups[2].Value, out int h)) variant.Height = h;
+            }
+
+            var fpsMatch = Regex.Match(attrLine, @"FRAME-RATE=([\d\.]+)");
+            if (fpsMatch.Success && double.TryParse(fpsMatch.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double fps))
+            {
+                variant.FrameRate = fps;
+            }
+
+            var codecMatch = Regex.Match(attrLine, @"CODECS=""([^""]+)""");
+            if (codecMatch.Success)
+            {
+                variant.Codecs = codecMatch.Groups[1].Value;
+            }
+
+            var audioGroupMatch = Regex.Match(attrLine, @"AUDIO=""([^""]+)""");
+            if (audioGroupMatch.Success)
+            {
+                variant.AudioGroupId = audioGroupMatch.Groups[1].Value;
+            }
+
+            var subGroupMatch = Regex.Match(attrLine, @"SUBTITLES=""([^""]+)""");
+            if (subGroupMatch.Success)
+            {
+                variant.SubtitlesGroupId = subGroupMatch.Groups[1].Value;
+            }
+
+            return variant;
         }
 
         private static byte[] ParseHexStringToBytes(string hex)
@@ -430,4 +502,3 @@ namespace EDM.Services
         }
     }
 }
-

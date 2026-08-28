@@ -212,6 +212,42 @@ using (var scope = app.Services.CreateScope())
     var permService = scope.ServiceProvider.GetRequiredService<IPermissionService>();
     db.Database.EnsureCreated();
 
+    // Automated schema evolution for Promotions & CouponUsages
+    try
+    {
+        db.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""CouponUsages"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_CouponUsages"" PRIMARY KEY,
+                ""PromotionId"" TEXT NOT NULL,
+                ""PromoCode"" TEXT NOT NULL,
+                ""UserId"" TEXT NULL,
+                ""InstallationId"" TEXT NOT NULL,
+                ""DiscountAmount"" TEXT NOT NULL,
+                ""Currency"" TEXT NOT NULL,
+                ""UsedAtUtc"" TEXT NOT NULL
+            );
+        ");
+
+        var columnsToAdd = new (string col, string type)[]
+        {
+            ("TargetUserId", "TEXT NULL"),
+            ("TargetEmail", "TEXT NULL"),
+            ("TargetCommunity", "TEXT NULL"),
+            ("MaxUsesPerUser", "INTEGER NOT NULL DEFAULT 1"),
+            ("Description", "TEXT NULL")
+        };
+
+        foreach (var (col, type) in columnsToAdd)
+        {
+            try
+            {
+                db.Database.ExecuteSqlRaw($@"ALTER TABLE ""Promotions"" ADD COLUMN ""{col}"" {type};");
+            }
+            catch { }
+        }
+    }
+    catch { }
+
     // 1. Ensure Default Role Permissions
     permService.EnsureDefaultRolePermissionsAsync().GetAwaiter().GetResult();
 

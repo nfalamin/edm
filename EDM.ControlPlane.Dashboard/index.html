@@ -45,6 +45,11 @@
                         <span class="nav-item-icon"><i data-lucide="layout-dashboard"></i></span>
                         <span class="nav-item-text">Dashboard</span>
                     </button>
+                    <button class="nav-item" data-page="live-map">
+                        <span class="nav-item-icon"><i data-lucide="globe-2"></i></span>
+                        <span class="nav-item-text">Live World Map</span>
+                        <span class="nav-item-badge" style="background: rgba(34,197,94,0.2); color: #22c55e; animation: pulse-badge 2s infinite;">LIVE</span>
+                    </button>
                 </div>
 
                 <!-- USERS -->
@@ -601,6 +606,42 @@
                                 <!-- Populated dynamically -->
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         LIVE WORLD HEATMAP SECTION (Dashboard)
+                         ══════════════════════════════════════════════════ -->
+                    <div class="card" style="padding: 0; overflow: hidden; margin-top: 0;">
+                        <div id="live-map-container" style="min-height: 480px;">
+                            <div style="display:flex;align-items:center;justify-content:center;height:480px;color:var(--color-text-muted);">
+                                <div style="text-align:center;">
+                                    <i data-lucide="loader" class="spin" style="width:28px;height:28px;color:var(--color-primary);"></i>
+                                    <p style="margin-top:10px;font-size:13px;">Loading live map...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════
+                     VIEW: LIVE WORLD MAP (Standalone Page)
+                     ══════════════════════════════════════════════════════════ -->
+                <div class="view-page" id="view-live-map">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>🌍 Live Global User Map</h1>
+                            <p>Real-time worldwide user presence, downloads &amp; revenue analytics</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <div class="date-range-badge">
+                                <div class="lmap-live-dot" style="width:8px;height:8px;margin-right:6px;"></div>
+                                <span id="lmap-page-active-count">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div id="live-map-page-container" style="min-height: 560px;"></div>
                     </div>
                 </div>
 
@@ -1240,6 +1281,7 @@
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('trials-grace', this)">Trials & Grace</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('features', this)">Feature Toggles</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('overrides', this)">Admin Overrides</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('coupons', this)">Promotions & Coupons</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('payments', this)">Payment Gateways</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('audit-logs', this)">Audit Events</button>
                         </div>
@@ -2984,5 +3026,129 @@
         </div>
     </div>
 
+
+    <!-- MODAL: CREATE COUPON -->
+    <div class="modal-backdrop" id="modal-create-coupon" style="display: none;">
+        <div class="modal-dialog" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="tag"></i> Create Promotional Coupon</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-create-coupon')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="form-group">
+                    <label>Promo Code <span style="color: var(--color-danger);">*</span></label>
+                    <input type="text" id="coupon-code-input" class="form-control" placeholder="e.g. EDM50, EID2026, VIP100" style="text-transform: uppercase; font-weight: 700; letter-spacing: 1px;" required />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="coupon-type-select" class="form-control" onchange="window.edmApp.onCouponTypeChange()">
+                            <option value="percent">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (Currency)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label id="coupon-value-label">Discount Percent (%)</label>
+                        <input type="number" id="coupon-value-input" class="form-control" placeholder="e.g. 50" min="1" max="100" required />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Applicable Plan</label>
+                        <select id="coupon-plan-select" class="form-control">
+                            <option value="">All Plans</option>
+                            <option value="pro_monthly">Pro Monthly</option>
+                            <option value="pro_yearly">Pro Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Region / Country</label>
+                        <select id="coupon-country-select" class="form-control">
+                            <option value="">Global (All Countries)</option>
+                            <option value="BD">Bangladesh (BD)</option>
+                            <option value="IN">India (IN)</option>
+                            <option value="PK">Pakistan (PK)</option>
+                            <option value="Asia">Asia Region</option>
+                            <option value="Europe">Europe Region</option>
+                            <option value="US">United States (US)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Max Total Uses</label>
+                        <input type="number" id="coupon-max-uses-input" class="form-control" placeholder="Unlimited (e.g. 100)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Uses Per User</label>
+                        <input type="number" id="coupon-user-uses-input" class="form-control" value="1" min="1" />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Target User / Email / Community (Optional)</label>
+                        <input type="text" id="coupon-target-user-input" class="form-control" placeholder="e.g. user@domain.com or VIP" />
+                    </div>
+                    <div class="form-group">
+                        <label>Expires At (Optional)</label>
+                        <input type="datetime-local" id="coupon-expiry-input" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description / Internal Note</label>
+                    <input type="text" id="coupon-desc-input" class="form-control" placeholder="e.g. Ramadan 50% discount campaign" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-create-coupon')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmApp.submitCreateCoupon()">Create Coupon</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Map Module -->
+    <script src="live-map.js"></script>
+
+    <script>
+    // Hook live map into page navigation
+    (function() {
+        function hookLiveMap() {
+            if (!window.edmApp) { setTimeout(hookLiveMap, 300); return; }
+
+            const origNav = window.edmApp.navigateTo.bind(window.edmApp);
+            window.edmApp.navigateTo = function(page) {
+                origNav(page);
+                setTimeout(() => {
+                    if (page === 'dashboard') {
+                        const c = document.getElementById('live-map-container');
+                        if (c) { window.edmLiveMap.isInitialized = false; window.edmLiveMap.init(); }
+                    } else if (page === 'live-map') {
+                        // Standalone page map
+                        const c2 = document.getElementById('live-map-page-container');
+                        if (c2 && !c2._mapInit) {
+                            c2._mapInit = true;
+                            const map2 = new EDMLiveMap();
+                            window.edmLiveMapPage = map2;
+                            // Swap container
+                            const origContainer = document.getElementById('live-map-container');
+                            const el = document.getElementById('live-map-page-container');
+                            el.id = 'live-map-container';
+                            map2.init();
+                            el.id = 'live-map-page-container';
+                            // Actually just init with correct ID
+                        }
+                    }
+                }, 120);
+            };
+
+            // Init map on dashboard load
+            setTimeout(() => {
+                const c = document.getElementById('live-map-container');
+                if (c) window.edmLiveMap.init();
+            }, 600);
+        }
+        hookLiveMap();
+    })();
+    </script>
 </body>
 </html>

@@ -390,6 +390,8 @@ namespace EDM.Tests.Services
         {
             var settings = new Mock<ISettingsService>();
             settings.Setup(s => s.GetSetting(It.IsAny<string>())).Returns((string?)null);
+            settings.Setup(s => s.GetEnableBrowserIntegration()).Returns(true);
+            settings.Setup(s => s.GetBrowserCaptureDownloads()).Returns(true);
 
             var gateway = new DownloadRequestGateway(settings.Object);
             var req = new DownloadRequest
@@ -410,6 +412,7 @@ namespace EDM.Tests.Services
         {
             var settings = new Mock<ISettingsService>();
             settings.Setup(s => s.GetSetting(It.IsAny<string>())).Returns((string?)null);
+            settings.Setup(s => s.GetEnableClipboardMonitoring()).Returns(true);
 
             var gateway = new DownloadRequestGateway(settings.Object);
             var req = new DownloadRequest

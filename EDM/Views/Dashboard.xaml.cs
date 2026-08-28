@@ -199,11 +199,6 @@ namespace EDM.Views
             return null;
         }
 
-        private void TopSettingsBtn_Click(object sender, System.Windows.RoutedEventArgs e)
-        {
-            OnSettingsClicked();
-        }
-
         private void ThemeToggle_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             _isDarkMode = !_isDarkMode;
@@ -491,6 +486,7 @@ namespace EDM.Views
                     case "Delete":    OnDeleteClicked();    break;
                     case "DeleteAll": OnDeleteAllClicked(); break;
                     case "Scheduler": OnSchedulerClicked(); break;
+                    case "Approvals": OnApprovalsClicked(); break;
                     case "Settings":  OnSettingsClicked();  break;
                 }
             }
@@ -560,6 +556,18 @@ namespace EDM.Views
                 win.ShowDialog();
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+        }
+
+        private void OnApprovalsClicked()
+        {
+            try
+            {
+                PendingApprovalWindow.ShowOrUpdate();
+            }
+            catch (Exception ex)
+            {
+                EDM.Services.LoggingService.LogException("[Dashboard] Failed to open PendingApprovalWindow", ex);
+            }
         }
 
         private void OnSettingsClicked()

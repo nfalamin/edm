@@ -49,6 +49,9 @@ namespace EDM.ControlPlane.Api.Data
         public DbSet<GlobalSubscriptionConfigRecord> GlobalSubscriptionConfigs => Set<GlobalSubscriptionConfigRecord>();
         public DbSet<RegionPolicyRecord> RegionPolicies => Set<RegionPolicyRecord>();
         public DbSet<PromotionRecord> Promotions => Set<PromotionRecord>();
+        public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
+        public DbSet<WebhookEventRecord> WebhookEvents => Set<WebhookEventRecord>();
+        public DbSet<CouponUsageRecord> CouponUsages => Set<CouponUsageRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

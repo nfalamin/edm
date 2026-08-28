@@ -10,6 +10,29 @@ namespace EDM.ControlPlane.Api.Models
         public const string UsersRead = "users.read";
         public const string UsersManage = "users.manage";
 
+        // Subscription & Regional Policy Management
+        public const string SubscriptionsRead = "subscriptions.read";
+        public const string SubscriptionsManage = "subscriptions.manage";
+        public const string SubscriptionGlobalSwitch = "subscriptions.globalswitch";
+        public const string SubscriptionRegionalSwitch = "subscriptions.regionalswitch";
+        public const string EntitlementsManage = "entitlements.manage";
+
+        // Payments, Refunds & Reconciliation
+        public const string PaymentsRead = "payments.read";
+        public const string PaymentsManage = "payments.manage";
+        public const string PaymentsRefund = "payments.refund";
+        public const string PaymentsReconcile = "payments.reconcile";
+
+        // System Settings & Security
+        public const string SystemSettingsRead = "settings.read";
+        public const string SystemSettingsWrite = "settings.write";
+        public const string SettingsManage = "settings.manage";
+        public const string SecurityManage = "security.manage";
+        public const string AdminSecurityManage = "admin.security.manage";
+
+        // Audit Logs
+        public const string AuditLogsRead = "auditlogs.read";
+
         // Release Management & Rollback
         public const string ReleasesRead = "releases.read";
         public const string ReleasesCreate = "releases.create";
@@ -29,22 +52,21 @@ namespace EDM.ControlPlane.Api.Models
         // Analytics & Telemetry
         public const string AnalyticsRead = "analytics.read";
 
-        // Settings & Security
-        public const string SettingsManage = "settings.manage";
-        public const string SecurityManage = "security.manage";
-
         // System Health & Diagnostics
         public const string SystemHealthRead = "system.health.read";
 
         public static readonly IReadOnlyList<string> AllPermissions = new[]
         {
             UsersRead, UsersManage,
+            SubscriptionsRead, SubscriptionsManage, SubscriptionGlobalSwitch, SubscriptionRegionalSwitch, EntitlementsManage,
+            PaymentsRead, PaymentsManage, PaymentsRefund, PaymentsReconcile,
+            SystemSettingsRead, SystemSettingsWrite, SettingsManage, SecurityManage, AdminSecurityManage,
+            AuditLogsRead,
             ReleasesRead, ReleasesCreate, ReleasesPublish, ReleasesRollback,
             WebsiteManage, PricingManage,
             LicensesManage,
             SupportManage,
             AnalyticsRead,
-            SettingsManage, SecurityManage,
             SystemHealthRead
         };
     }

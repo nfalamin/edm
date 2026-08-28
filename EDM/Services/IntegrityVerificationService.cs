@@ -20,6 +20,17 @@ namespace EDM.Services
             _integrity = integrity ?? new FileIntegrityService();
         }
 
+        public async Task<FileVerificationResult> VerifyFileAsync(string filePath, long expectedSize, string expectedSha256, CancellationToken ct = default)
+        {
+            var res = await VerifyAsync(filePath, null, expectedSha256, expectedSize, ct).ConfigureAwait(false);
+            return new FileVerificationResult
+            {
+                IsValid = res.State == VerificationState.Verified,
+                ActualHash = res.ComputedHashHex ?? string.Empty,
+                MismatchReason = res.Message ?? string.Empty
+            };
+        }
+
         public async Task<VerificationResult> VerifyAsync(string finalFilePath, DurableDownloadState? metaState = null, string? expectedHashHex = null, long? expectedSize = null, CancellationToken ct = default)
         {
             var result = new VerificationResult
@@ -180,5 +191,12 @@ namespace EDM.Services
                 return result;
             }
         }
+    }
+
+    public class FileVerificationResult
+    {
+        public bool IsValid { get; set; }
+        public string ActualHash { get; set; } = string.Empty;
+        public string MismatchReason { get; set; } = string.Empty;
     }
 }

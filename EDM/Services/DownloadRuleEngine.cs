@@ -92,8 +92,8 @@ namespace EDM.Services
                         RuleId = "rule_video",
                         Name = "Video Files",
                         Order = 10,
-                        Extensions = new List<string> { ".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".ts", ".m4v" },
-                        MimeTypes = new List<string> { "video/*" },
+                        Extensions = new List<string> { ".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".ts", ".m4v", ".m3u8" },
+                        MimeTypes = new List<string> { "video/*", "application/vnd.apple.mpegurl", "application/x-mpegurl" },
                         TargetCategory = "Video",
                         TargetSubFolder = "Videos",
                         TargetQueueId = "default",
@@ -214,8 +214,8 @@ namespace EDM.Services
                 {
                     foreach (var rule in activeRules)
                     {
-                        if (rule.Domains.Any(d => IsDomainMatch(host, d)) ||
-                            rule.UrlPatterns.Any(p => IsUrlMatch(url, p)))
+                        if ((rule.Domains != null && rule.Domains.Any(d => IsDomainMatch(host, d))) ||
+                            (rule.UrlPatterns != null && rule.UrlPatterns.Any(p => IsUrlMatch(url, p))))
                         {
                             return BuildResultFromRule(rule, safeFileName, defaultDownloadDir);
                         }
@@ -227,19 +227,21 @@ namespace EDM.Services
                 {
                     foreach (var rule in activeRules)
                     {
-                        if (rule.MimeTypes.Any(m => IsMimeMatch(cleanMime, m)))
+                        if (rule.MimeTypes != null && rule.MimeTypes.Any(m => IsMimeMatch(cleanMime, m)))
                         {
                             return BuildResultFromRule(rule, safeFileName, defaultDownloadDir);
                         }
                     }
                 }
 
-                // 3. Check Extension Match
+                // 3. Check Extension Match (supports compound extensions like .tar.gz)
                 if (!string.IsNullOrEmpty(cleanExt))
                 {
                     foreach (var rule in activeRules)
                     {
-                        if (rule.Extensions.Any(e => string.Equals(NormalizeExtension(e), cleanExt, StringComparison.OrdinalIgnoreCase)))
+                        if (rule.Extensions != null && rule.Extensions.Any(e =>
+                            string.Equals(NormalizeExtension(e), cleanExt, StringComparison.OrdinalIgnoreCase) ||
+                            safeFileName.EndsWith(NormalizeExtension(e), StringComparison.OrdinalIgnoreCase)))
                         {
                             return BuildResultFromRule(rule, safeFileName, defaultDownloadDir);
                         }
@@ -389,10 +391,10 @@ namespace EDM.Services
                     Name = r.Name,
                     IsEnabled = r.IsEnabled,
                     Order = r.Order,
-                    Extensions = r.Extensions.ToList(),
-                    MimeTypes = r.MimeTypes.ToList(),
-                    Domains = r.Domains.ToList(),
-                    UrlPatterns = r.UrlPatterns.ToList(),
+                    Extensions = r.Extensions?.ToList() ?? new List<string>(),
+                    MimeTypes = r.MimeTypes?.ToList() ?? new List<string>(),
+                    Domains = r.Domains?.ToList() ?? new List<string>(),
+                    UrlPatterns = r.UrlPatterns?.ToList() ?? new List<string>(),
                     MatchingSource = r.MatchingSource,
                     TargetCategory = r.TargetCategory,
                     TargetSubFolder = r.TargetSubFolder,

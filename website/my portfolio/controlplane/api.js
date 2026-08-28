@@ -170,100 +170,28 @@ class EdmApiService {
         return { status: "success", message: "Operation completed." };
     }
 
-    async getDashboardMetrics() {
-        return this._request("/admin/dashboard/summary");
+    // Promotions & Coupons
+    async getPromotions() {
+        return this.fetchJson('/admin/promotions');
     }
 
-    async getLiveMetrics() {
-        return this._request("/admin/metrics/live");
+    async createPromotion(promoData) {
+        return this.fetchJson('/admin/promotions', {
+            method: 'POST',
+            body: JSON.stringify(promoData)
+        });
     }
 
-    async getUsers(filters = {}) {
-        let url = `/admin/users?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-        return this._request(url);
+    async deletePromotion(id) {
+        return this.fetchJson(`/admin/promotions/${id}`, {
+            method: 'DELETE'
+        });
     }
 
-    async getDevices(filters = {}) {
-        let url = `/admin/devices?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-        return this._request(url);
+    async validateCoupon(couponCode, planCode, userId = null, installationId = null, userEmail = null) {
+        return this.fetchJson('/pricing/validate-coupon', {
+            method: 'POST',
+            body: JSON.stringify({ couponCode, planCode, userId, installationId, userEmail })
+        });
     }
-
-    async getReleases() {
-        return this._request("/admin/releases");
-    }
-
-    async getLicenses() {
-        return this._request("/admin/licenses");
-    }
-
-    async getAuditLogs(filters = {}) {
-        let url = `/admin/audit-logs?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.action) url += `&action=${encodeURIComponent(filters.action)}`;
-        return this._request(url);
-    }
-
-    async getSubscriptions(page = 1, pageSize = 50) {
-        return this._request(`/admin/subscriptions?page=${page}&pageSize=${pageSize}`);
-    }
-
-    async getGlobalSubConfig() {
-        return this._request("/admin/subscriptions/config");
-    }
-
-    async updateGlobalSubConfig(configPayload) {
-        return this._request("/admin/subscriptions/config", "POST", configPayload);
-    }
-
-    async setGlobalSubSwitch(isEnabled, reason = "") {
-        return this._request("/admin/subscriptions/global-switch", "POST", { isEnabled, reason });
-    }
-
-    async setAsiaSubSwitch(isEnabled, reason = "") {
-        return this._request("/admin/subscriptions/asia-switch", "POST", { isEnabled, reason });
-    }
-
-    async getRegionPolicies() {
-        return this._request("/admin/subscriptions/regions");
-    }
-
-    async saveRegionPolicy(regionPayload) {
-        return this._request("/admin/subscriptions/regions", "POST", regionPayload);
-    }
-
-    async extendTrial(installationId, additionalDays = 10, reason = "Admin trial extension") {
-        return this._request(`/admin/subscriptions/${encodeURIComponent(installationId)}/extend-trial`, "POST", { additionalDays, reason });
-    }
-
-    async extendGrace(installationId, additionalDays = 5, reason = "Admin grace extension") {
-        return this._request(`/admin/subscriptions/${encodeURIComponent(installationId)}/extend-grace`, "POST", { additionalDays, reason });
-    }
-
-    async blockDevice(installationId, reason = "Manual administrator block") {
-        return this._request(`/admin/devices/${encodeURIComponent(installationId)}/block`, "POST", { reason });
-    }
-
-    async unblockDevice(installationId) {
-        return this._request(`/admin/devices/${encodeURIComponent(installationId)}/unblock`, "POST");
-    }
-
-    async blockUser(userId, reason = "Manual administrator block") {
-        return this._request(`/admin/users/${encodeURIComponent(userId)}/block`, "POST", { reason });
-    }
-
-    async unblockUser(userId) {
-        return this._request(`/admin/users/${encodeURIComponent(userId)}/unblock`, "POST");
-    }
-
-    async getPricingRules() {
-        return this._request("/admin/pricing/rules");
-    }
-
-    async savePricingRule(rulePayload) {
-        return this._request("/admin/pricing/rules", "POST", rulePayload);
-    }
-}
-
-// Global live API instance
-window.edmApi = new EdmApiService(EDM_API_CONFIG);
+};

@@ -176,13 +176,27 @@ namespace EDM.NativeMessaging
                         var payload = JsonSerializer.Deserialize<IpcHandoffPayload>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         if (payload != null && !string.IsNullOrWhiteSpace(payload.Url))
                         {
+                            // Scheme & Protocol Security Verification
+                            if (!SecuritySanitizer.IsAllowedUrlScheme(payload.Url))
+                            {
+                                LoggingService.LogWarning($"[EdmWebSocketServer] Security rejection: Disallowed scheme in POST handoff '{ProtocolDetector.SanitizeUrlForLogging(payload.Url)}'");
+                                string secErrJson = JsonSerializer.Serialize(new { success = false, status = "rejected", error = "Security rejection: Disallowed or unsafe URL scheme" });
+                                await SendJsonResponseAsync(stream, 400, "Bad Request", secErrJson).ConfigureAwait(false);
+                                return;
+                            }
+
                             bool success = await _handoffHandler(payload).ConfigureAwait(false);
-                            string respJson = JsonSerializer.Serialize(new { success = success, status = success ? "handed_off" : "failed" });
+                            string respJson = JsonSerializer.Serialize(new 
+                            { 
+                                success = success, 
+                                status = success ? "held_for_confirmation" : "rejected",
+                                timestamp = DateTime.UtcNow
+                            });
                             await SendJsonResponseAsync(stream, 200, "OK", respJson).ConfigureAwait(false);
                         }
                         else
                         {
-                            string errJson = JsonSerializer.Serialize(new { success = false, error = "Invalid URL payload" });
+                            string errJson = JsonSerializer.Serialize(new { success = false, status = "rejected", error = "Invalid URL payload" });
                             await SendJsonResponseAsync(stream, 400, "Bad Request", errJson).ConfigureAwait(false);
                         }
                         return;

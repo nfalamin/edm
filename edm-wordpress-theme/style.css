@@ -1,54 +1,11 @@
 /*
 Theme Name: EDM — Exclusive Download Manager
-Theme URI: https://edm-manager.com
-Author: EDM Development Team
-Author URI: https://edm-manager.com
-Description: Ultra-Premium WordPress Theme & Admin Dashboard for Exclusive Download Manager (EDM). Features 32x download simulator, live landing page, and complete SaaS Control Plane.
-Version: 1.3.0
-Requires at least: 5.8
-Tested up to: 6.7
-Requires PHP: 7.4
+Theme URI: https://edm-app.com
+Author: EDM Technologies
+Author URI: https://edm-app.com
+Description: Premium dark-mode WordPress theme for Exclusive Download Manager with glassmorphism, live animations, and modern SaaS design.
+Version: 2.1.0
+License: Proprietary
 Text Domain: edm-theme
+Tags: dark-mode, saas, glassmorphism, download-manager, modern, premium
 */
-
-/* ══════════════════════════════════════════════════════════════
-   GLOBAL EDM DESIGN TOKENS
-   ══════════════════════════════════════════════════════════════ */
-:root {
-    --color-bg-base: #070B14;
-    --color-bg-sidebar: #0A0F1D;
-    --color-bg-header: rgba(10, 15, 29, 0.94);
-    --color-bg-card: #0E1528;
-    --color-bg-card-hover: #16223E;
-    --color-bg-subtle: #121A30;
-    --color-bg-input: #0A0F1D;
-    --color-bg-modal: #0E1528;
-
-    --color-primary: #5D5FEF;
-    --color-primary-hover: #4F46E5;
-    --color-primary-light: #8183FF;
-    --color-primary-soft: rgba(93, 95, 239, 0.16);
-    --color-primary-glow: rgba(93, 95, 239, 0.4);
-
-    --color-blue: #38BDF8;
-    --color-green: #10B981;
-    --color-amber: #F59E0B;
-    --color-pink: #EC4899;
-    --color-purple: #A855F7;
-    --color-cyan: #06B6D4;
-    --color-teal: #14B8A6;
-    --color-danger: #EF4444;
-
-    --color-border: rgba(255, 255, 255, 0.08);
-    --color-border-hover: rgba(255, 255, 255, 0.16);
-
-    --color-text-main: #F8FAFC;
-    --color-text-secondary: #94A3B8;
-    --color-text-muted: #64748B;
-
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --radius-xl: 20px;
-    --radius-full: 9999px;
-}

@@ -259,7 +259,7 @@ seg1.ts
         [Fact]
         public void Test13_QueueIntegration_StoresSelectedQualityInQueueItem()
         {
-            var queue = new DownloadQueueScheduler();
+            var queue = new DownloadQueueScheduler(_testStorageDir);
             var item = new QueuedDownloadItem
             {
                 DownloadId = "media_1080p_job",

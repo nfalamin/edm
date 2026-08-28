@@ -563,21 +563,41 @@ namespace EDM.Services
             var app = System.Windows.Application.Current;
             if (app == null) return;
 
+            // Enqueue into Pending Confirmation Queue for lifecycle and multi-request tracking
+            var pendingQueue = (App.ServiceProvider?.GetService(typeof(IPendingConfirmationQueueService)) as IPendingConfirmationQueueService)
+                ?? PendingConfirmationQueueService.Instance;
+
+            string fileName = string.Empty;
+            try
+            {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    fileName = Path.GetFileName(uri.LocalPath);
+                }
+            }
+            catch { }
+
+            pendingQueue.EnqueueRequest(
+                url: url,
+                source: IngestionSource.ClipboardMonitor,
+                suggestedFileName: fileName);
+
             app.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
             {
                 try
                 {
-                    // Guard against duplicate dialogs: check if AddUrlWindow is already open
+                    // If multiple requests are pending, show the unified PendingApprovalWindow
+                    if (pendingQueue.PendingCount > 1)
+                    {
+                        PendingApprovalWindow.ShowOrUpdate(pendingQueue);
+                        return;
+                    }
+
+                    // For single request, check if AddUrlWindow is already open
                     var existing = app.Windows.OfType<AddUrlWindow>().FirstOrDefault();
                     if (existing != null)
                     {
-                        existing.UrlTextBox.Text = url;
-                        if (existing.WindowState == WindowState.Minimized)
-                        {
-                            existing.WindowState = WindowState.Normal;
-                        }
-                        existing.Activate();
-                        existing.Focus();
+                        PendingApprovalWindow.ShowOrUpdate(pendingQueue);
                         return;
                     }
 
@@ -591,7 +611,7 @@ namespace EDM.Services
                     {
                         NotificationService.Instance.Notify(
                             "Download Link Detected",
-                            $"Copied link: {Path.GetFileName(new Uri(url).LocalPath)}",
+                            $"Copied link: {(!string.IsNullOrWhiteSpace(fileName) ? fileName : url)}",
                             NotificationSeverity.Info,
                             NotificationCategory.System);
                     }
@@ -609,17 +629,26 @@ namespace EDM.Services
 
         /// <summary>
         /// "Automatically download" workflow:
-        /// Directly submits the DownloadRequest to the central IDownloadRequestGateway.
+        /// Respects global confirmation policy before proceeding.
         /// </summary>
         private void DispatchAutoDownload(string url)
         {
+            // Safety Enforcement: If confirmation is required globally, route to confirmation
+            if (_settingsService.GetBrowserShowConfirmation())
+            {
+                LoggingService.Log($"[ClipboardMonitorService] AutoDownload redirected to confirmation gate by policy for {ProtocolDetector.SanitizeUrlForLogging(url)}");
+                DispatchAskBeforeDownload(url);
+                return;
+            }
+
             var gateway = (App.ServiceProvider?.GetService(typeof(Interfaces.IDownloadRequestGateway)) as Interfaces.IDownloadRequestGateway)
                 ?? new DownloadRequestGateway(_settingsService);
 
             var req = new DownloadRequest
             {
                 Source = IngestionSource.ClipboardMonitor,
-                Url = url
+                Url = url,
+                SilentMode = true
             };
 
             BackgroundTaskManager.FireAndForget($"ClipboardAutoDownload_{Guid.NewGuid():N}", async () =>

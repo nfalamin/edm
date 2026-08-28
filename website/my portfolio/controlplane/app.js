@@ -2640,233 +2640,158 @@ class EdmApp {
                                     <span style="color: var(--color-text-muted);">${dl.status}</span>
                                 </div>
                                 <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden;">
-                                    <div style="width: ${pct}%; height: 100%; background: ${dl.status === 'Failed' ? 'var(--color-danger)' : (dl.status === 'Paused' ? 'var(--color-amber)' : 'var(--color-primary)')}; transition: width 0.3s ease;"></div>
+                                    <div style="width: ${pct}%; height: 100%; background: ${dl.status === 'Failed' ? 'var(--color-danger)' : (dl.status === 'Paused' ? 'var(--color-amber)' : 'var(--color-primary)')}; border-radius: 99px;"></div>
                                 </div>
                             </div>
                         </td>
-                        <td style="font-size: 12px; font-weight: 600; color: var(--color-primary-light);">${speedStr}</td>
-                        <td style="font-size: 12px; color: var(--color-text-muted);">${etaStr}</td>
+                    </tr>`;
+            }).join('');
+        } catch (e) {
+            console.error('Failed to load active transfers:', e);
+        }
+    }
+    
+
+    // ==========================================
+    // PROMOTIONS & COUPONS HANDLERS
+    // ==========================================
+    async loadPromotionsTable() {
+        const tbody = document.getElementById('coupons-table-body');
+        if (!tbody) return;
+
+        try {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--color-text-muted);">Loading coupons...</td></tr>';
+            const res = await window.edmApi.getPromotions();
+            const list = res.promotions || [];
+
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--color-text-muted); padding: 24px;">No active promotional coupons found. Click "Create Coupon" to add one.</td></tr>';
+                return;
+            }
+
+            const now = new Date();
+            tbody.innerHTML = list.map(p => {
+                let statusBadge = '<span class="status-pill status-active">Active</span>';
+                if (!p.isEnabled) {
+                    statusBadge = '<span class="status-pill status-inactive">Disabled</span>';
+                } else if (p.endsAtUtc && new Date(p.endsAtUtc) < now) {
+                    statusBadge = '<span class="status-pill status-blocked">Expired</span>';
+                } else if (p.maxUses && p.currentUses >= p.maxUses) {
+                    statusBadge = '<span class="status-pill status-warning">Maxed Out</span>';
+                }
+
+                const discountStr = p.discountPercent ? `<strong>${p.discountPercent}% OFF</strong>` : `<strong>${p.currency || '$'}${p.discountAmount} OFF</strong>`;
+                const scopeStr = p.targetCountryCode ? `Country: ${p.targetCountryCode}` : (p.targetRegion ? `Region: ${p.targetRegion}` : (p.targetEmail ? `User: ${p.targetEmail}` : 'Global'));
+                const planStr = p.targetPlanCode ? p.targetPlanCode : 'All Plans';
+                const usageStr = `${p.currentUses} / ${p.maxUses || 'âˆž'}`;
+                const expiryStr = p.endsAtUtc ? new Date(p.endsAtUtc).toLocaleDateString() : 'Never';
+
+                return `
+                    <tr>
+                        <td><span style="font-family: monospace; font-weight: 700; background: var(--color-bg-subtle); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--color-border);">${p.promoCode}</span></td>
+                        <td>${discountStr}</td>
+                        <td><span class="status-pill" style="background: var(--color-bg-subtle);">${scopeStr}</span></td>
+                        <td>${planStr}</td>
+                        <td>${usageStr}</td>
+                        <td>${expiryStr}</td>
+                        <td>${statusBadge}</td>
                         <td>
-                            <span style="font-size: 12px;">${dl.deviceName}</span>
-                            ${!dl.isDeviceOnline ? '<span class="badge badge-danger" style="font-size: 9px; margin-left: 4px;">Offline</span>' : ''}
+                            <button class="btn-ghost btn-sm text-danger" onclick="window.edmApp.deleteCoupon('${p.id}', '${p.promoCode}')" title="Delete Coupon"><i data-lucide="trash-2" style="width: 13px; height: 13px;"></i></button>
                         </td>
-                        <td><span class="badge ${statusBadge}">● ${dl.status}</span></td>
-                        <td style="text-align: right;">
-                            <div style="display: flex; gap: 4px; justify-content: flex-end;">
-                                ${dl.status === "Downloading" ? `
-                                    <button class="btn-icon-only btn-sm" title="Pause Download" onclick="window.edmApp.handleRemoteCommand('${dl.deviceId}', 'PauseDownload', '${dl.downloadId}')">
-                                        <i data-lucide="pause" style="width: 13px; height: 13px;"></i>
-                                    </button>
-                                ` : (dl.status === "Paused" ? `
-                                    <button class="btn-icon-only btn-sm" title="Resume Download" onclick="window.edmApp.handleRemoteCommand('${dl.deviceId}', 'ResumeDownload', '${dl.downloadId}')">
-                                        <i data-lucide="play" style="width: 13px; height: 13px; color: var(--color-success);"></i>
-                                    </button>
-                                ` : '')}
-                                ${dl.status === "Failed" || dl.status === "Stopped" ? `
-                                    <button class="btn-icon-only btn-sm" title="Retry Download" onclick="window.edmApp.handleRemoteCommand('${dl.deviceId}', 'RetryDownload', '${dl.downloadId}')">
-                                        <i data-lucide="rotate-cw" style="width: 13px; height: 13px;"></i>
-                                    </button>
-                                ` : ''}
-                                <button class="btn-icon-only btn-sm" title="Cancel Download" onclick="window.edmApp.handleRemoteCommand('${dl.deviceId}', 'CancelDownload', '${dl.downloadId}')">
-                                    <i data-lucide="square" style="width: 13px; height: 13px; color: var(--color-amber);"></i>
-                                </button>
-                                <button class="btn-icon-only btn-sm" title="Delete Download" onclick="window.edmApp.handleRemoteCommand('${dl.deviceId}', 'DeleteDownload', '${dl.downloadId}')">
-                                    <i data-lucide="trash-2" style="width: 13px; height: 13px; color: var(--color-danger);"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                    </tr>`;
             }).join('');
 
             if (window.lucide) window.lucide.createIcons();
-        } catch (err) {
-            this.renderTableError(tbodyId, 8, err.message, "renderDownloadActivity");
+        } catch (e) {
+            console.error('Failed to load coupons:', e);
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load coupons. Please try again.</td></tr>';
         }
     }
 
-    handleRemoteDeviceFilter(deviceId) {
-        this.selectedRemoteDeviceId = deviceId;
-        this.renderDownloadActivity();
+    openCreateCouponModal() {
+        document.getElementById('coupon-code-input').value = '';
+        document.getElementById('coupon-type-select').value = 'percent';
+        document.getElementById('coupon-value-input').value = '';
+        document.getElementById('coupon-plan-select').value = '';
+        document.getElementById('coupon-country-select').value = '';
+        document.getElementById('coupon-max-uses-input').value = '';
+        document.getElementById('coupon-user-uses-input').value = '1';
+        document.getElementById('coupon-target-user-input').value = '';
+        document.getElementById('coupon-expiry-input').value = '';
+        document.getElementById('coupon-desc-input').value = '';
+        this.onCouponTypeChange();
+        this.openModal('modal-create-coupon');
     }
 
-    async handleRemoteCommand(deviceId, commandType, targetDownloadId = null, payload = null) {
-        const banner = document.getElementById("remote-command-banner");
-        const bannerText = document.getElementById("remote-command-text");
-        const bannerBadge = document.getElementById("remote-command-badge");
-
-        if (banner && bannerText && bannerBadge) {
-            banner.style.display = "flex";
-            bannerText.textContent = `Dispatching remote command: ${commandType}...`;
-            bannerBadge.className = "badge badge-primary";
-            bannerBadge.textContent = "Pending";
+    onCouponTypeChange() {
+        const type = document.getElementById('coupon-type-select').value;
+        const lbl = document.getElementById('coupon-value-label');
+        const inp = document.getElementById('coupon-value-input');
+        if (type === 'percent') {
+            lbl.innerText = 'Discount Percent (%)';
+            inp.placeholder = 'e.g. 50';
+            inp.max = '100';
+        } else {
+            lbl.innerText = 'Discount Fixed Amount';
+            inp.placeholder = 'e.g. 20';
+            inp.removeAttribute('max');
         }
+    }
+
+    async submitCreateCoupon() {
+        const code = document.getElementById('coupon-code-input').value.trim();
+        const type = document.getElementById('coupon-type-select').value;
+        const val = parseFloat(document.getElementById('coupon-value-input').value);
+        const plan = document.getElementById('coupon-plan-select').value || null;
+        const country = document.getElementById('coupon-country-select').value || null;
+        const maxUses = parseInt(document.getElementById('coupon-max-uses-input').value) || null;
+        const userUses = parseInt(document.getElementById('coupon-user-uses-input').value) || 1;
+        const targetUser = document.getElementById('coupon-target-user-input').value.trim() || null;
+        const expiry = document.getElementById('coupon-expiry-input').value || null;
+        const desc = document.getElementById('coupon-desc-input').value.trim() || null;
+
+        if (!code || isNaN(val) || val <= 0) {
+            this.showToast('Please enter a valid coupon code and discount value.', 'error');
+            return;
+        }
+
+        const payload = {
+            promoCode: code.toUpperCase(),
+            discountPercent: type === 'percent' ? val : null,
+            discountAmount: type === 'fixed' ? val : null,
+            targetPlanCode: plan,
+            targetCountryCode: country,
+            maxUses: maxUses,
+            maxUsesPerUser: userUses,
+            targetEmail: targetUser && targetUser.includes('@') ? targetUser : null,
+            targetCommunity: targetUser && !targetUser.includes('@') ? targetUser : null,
+            endsAtUtc: expiry ? new Date(expiry).toISOString() : null,
+            description: desc,
+            isEnabled: true
+        };
 
         try {
-            const res = await window.edmApi.sendRemoteCommand(deviceId, commandType, targetDownloadId, payload);
-            if (!res.command) {
-                throw new Error(res.message || "Failed to dispatch command.");
-            }
-
-            const commandId = res.command.id;
-            this.showToast(`Command ${commandType} queued for device.`, "info");
-
-            // Poll for desktop acknowledgement & completion
-            let attempts = 0;
-            const pollInterval = setInterval(async () => {
-                attempts++;
-                try {
-                    const statusRes = await window.edmApi.getRemoteCommandStatus(commandId);
-                    if (bannerText && bannerBadge) {
-                        bannerText.textContent = `Remote Command ${commandType}: State = ${statusRes.status}`;
-                        bannerBadge.textContent = statusRes.status;
-                        if (statusRes.status === "Executing") bannerBadge.className = "badge badge-warning";
-                        else if (statusRes.status === "Completed") bannerBadge.className = "badge badge-success";
-                        else if (statusRes.status === "Failed") bannerBadge.className = "badge badge-danger";
-                    }
-
-                    if (statusRes.status === "Completed") {
-                        clearInterval(pollInterval);
-                        this.showToast(`Command ${commandType} successfully executed by Desktop!`, "success");
-                        setTimeout(() => { if (banner) banner.style.display = "none"; }, 3000);
-                        this.renderDownloadActivity();
-                    } else if (statusRes.status === "Failed") {
-                        clearInterval(pollInterval);
-                        this.showToast(`Command ${commandType} failed: ${statusRes.errorMessage || 'Execution error'}`, "danger");
-                        setTimeout(() => { if (banner) banner.style.display = "none"; }, 4000);
-                        this.renderDownloadActivity();
-                    }
-                } catch (e) {
-                    // Ignore transient poll error
-                }
-
-                if (attempts >= 15) {
-                    clearInterval(pollInterval);
-                    if (bannerBadge) {
-                        bannerBadge.textContent = "Pending (Offline/Queued)";
-                        bannerBadge.className = "badge badge-neutral";
-                    }
-                    setTimeout(() => { if (banner) banner.style.display = "none"; }, 4000);
-                }
-            }, 1000);
-
-        } catch (err) {
-            this.showToast(`Remote command error: ${err.message}`, "danger");
-            if (banner) banner.style.display = "none";
+            await window.edmApi.createPromotion(payload);
+            this.showToast(`Coupon ${code.toUpperCase()} created successfully!`, 'success');
+            this.closeModal('modal-create-coupon');
+            this.loadPromotionsTable();
+        } catch (e) {
+            this.showToast(e.message || 'Failed to create coupon', 'error');
         }
     }
 
-    async openRemoteAddDownloadModal() {
-        const select = document.getElementById("remote-download-device-select");
-        if (select) {
-            select.innerHTML = '<option value="">Loading devices...</option>';
-            try {
-                const res = await window.edmApi.getRemoteDevices();
-                const devices = res.devices || [];
-                if (devices.length === 0) {
-                    select.innerHTML = '<option value="">No authorized devices available</option>';
-                } else {
-                    select.innerHTML = devices.map(d => `
-                        <option value="${d.id}">${d.clientType} (${d.osVersion}) — ${d.isOnline ? 'Online' : 'Offline'}</option>
-                    `).join('');
-                }
-            } catch (e) {
-                select.innerHTML = '<option value="">Failed to load devices</option>';
-            }
+    async deleteCoupon(id, code) {
+        if (!confirm(`Are you sure you want to delete coupon "${code}"?`)) return;
+        try {
+            await window.edmApi.deletePromotion(id);
+            this.showToast(`Coupon ${code} deleted.`, 'success');
+            this.loadPromotionsTable();
+        } catch (e) {
+            this.showToast(e.message || 'Failed to delete coupon', 'error');
         }
-        this.openModal("modal-remote-add-download");
     }
+};
 
-    async handleRemoteAddDownloadSubmit() {
-        const url = document.getElementById("remote-download-url-input")?.value?.trim();
-        const fileName = document.getElementById("remote-download-filename-input")?.value?.trim();
-        const deviceId = document.getElementById("remote-download-device-select")?.value;
-        const category = document.getElementById("remote-download-category-select")?.value || "General";
-
-        if (!url) {
-            this.showToast("Please provide a valid download URL", "warning");
-            return;
-        }
-
-        if (!deviceId) {
-            this.showToast("Please select a target device", "warning");
-            return;
-        }
-
-        this.closeModal("modal-remote-add-download");
-
-        await this.handleRemoteCommand(deviceId, "AddUrl", null, {
-            url,
-            fileName: fileName || null,
-            category
-        });
-    }
-
-    async handleQueueControl(action) {
-        if (!this.remoteDevicesCache || this.remoteDevicesCache.length === 0) {
-            try {
-                const res = await window.edmApi.getRemoteDevices();
-                this.remoteDevicesCache = res.devices || [];
-            } catch (e) {}
-        }
-
-        if (!this.remoteDevicesCache || this.remoteDevicesCache.length === 0) {
-            this.showToast("No connected devices found to control queue.", "warning");
-            return;
-        }
-
-        const onlineDev = this.remoteDevicesCache.find(d => d.isOnline) || this.remoteDevicesCache[0];
-        await this.handleRemoteCommand(onlineDev.id, "QueueControl", null, { action });
-    }
-
-    formatSpeed(bytesPerSec) {
-        if (bytesPerSec >= 1024 * 1024 * 1024) return (bytesPerSec / (1024 * 1024 * 1024)).toFixed(1) + " GB/s";
-        if (bytesPerSec >= 1024 * 1024) return (bytesPerSec / (1024 * 1024)).toFixed(1) + " MB/s";
-        if (bytesPerSec >= 1024) return (bytesPerSec / 1024).toFixed(1) + " KB/s";
-        return bytesPerSec.toFixed(0) + " B/s";
-    }
-
-    formatEta(seconds) {
-        if (!seconds || seconds <= 0) return "--";
-        if (seconds >= 3600) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            return `${h}h ${m}m`;
-        }
-        if (seconds >= 60) {
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            return `${m}m ${s}s`;
-        }
-        return `${Math.floor(seconds)}s`;
-    }
-
-    renderFeatureFlags() {}
-}
-
-// Global DOM Hook with Immediate Evaluation Fallback
-function initEdmControlPlane() {
-    if (!window.edmApp) {
-        window.edmApp = new EdmApp();
-    }
-    
-    document.querySelectorAll("#cmd-results-list .cmd-item").forEach(item => {
-        item.addEventListener("click", () => {
-            const action = item.getAttribute("data-action");
-            const target = item.getAttribute("data-target");
-            if (window.edmApp) window.edmApp.closeCommandPalette();
-            
-            if (action === "nav") {
-                if (window.edmApp) window.edmApp.navigateTo(target);
-            } else if (action === "action") {
-                if (target === "create-release" && window.edmApp) window.edmApp.openModal("modal-release-wizard");
-            }
-        });
-    });
-}
-
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initEdmControlPlane);
-} else {
-    initEdmControlPlane();
-}
+document.addEventListener('DOMContentLoaded', () => {
+    window.edmApp = new EDMApp();
+});

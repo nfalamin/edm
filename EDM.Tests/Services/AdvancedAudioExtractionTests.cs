@@ -218,7 +218,7 @@ video_only.m3u8";
         [Fact]
         public void Test12_QueueIntegration_EnqueuesAudioJob()
         {
-            var queue = new DownloadQueueScheduler();
+            var queue = new DownloadQueueScheduler(_testStorageDir);
             var item = new QueuedDownloadItem
             {
                 DownloadId = "audio_job_1",

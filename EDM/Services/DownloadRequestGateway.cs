@@ -139,7 +139,7 @@ namespace EDM.Services
                 Url = rawUrl,
                 FileName = safeFileName,
                 SavePath = finalSavePath,
-                Status = request.SilentMode ? "Queued" : "Downloading",
+                Status = (request.SilentMode || (request.Source == IngestionSource.ClipboardMonitor && _settingsService.GetBrowserShowConfirmation())) ? "Queued" : "Downloading",
                 Progress = 0.0,
                 LastTryDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 Size = "Detecting...",

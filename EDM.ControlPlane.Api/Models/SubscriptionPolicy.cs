@@ -139,12 +139,29 @@ namespace EDM.ControlPlane.Api.Models
         public string? TargetCountryCode { get; set; }
         public string? TargetRegion { get; set; }
         public string? TargetPlanCode { get; set; }
+        public Guid? TargetUserId { get; set; }
+        public string? TargetEmail { get; set; }
+        public string? TargetCommunity { get; set; }
         public int? MaxUses { get; set; }
+        public int MaxUsesPerUser { get; set; } = 1;
         public int CurrentUses { get; set; } = 0;
         public DateTime StartsAtUtc { get; set; } = DateTime.UtcNow;
         public DateTime? EndsAtUtc { get; set; }
         public bool IsEnabled { get; set; } = true;
+        public string? Description { get; set; }
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    }
+
+    public class CouponUsageRecord
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid PromotionId { get; set; }
+        public string PromoCode { get; set; } = string.Empty;
+        public Guid? UserId { get; set; }
+        public Guid InstallationId { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public string Currency { get; set; } = "USD";
+        public DateTime UsedAtUtc { get; set; } = DateTime.UtcNow;
     }
 
     public record SwitchRequestDto(bool IsEnabled, string? Reason = null);
@@ -200,4 +217,55 @@ namespace EDM.ControlPlane.Api.Models
         Dictionary<string, bool> GlobalFeatureFlags,
         DateTime UpdatedAtUtc,
         string UpdatedByUsername);
+
+    public enum PaymentStatus
+    {
+        CREATED,
+        PENDING,
+        PROCESSING,
+        PAID,
+        FAILED,
+        CANCELLED,
+        EXPIRED,
+        REFUNDED,
+        PARTIALLY_REFUNDED,
+        RECONCILIATION_REQUIRED
+    }
+
+    public class PaymentRecord
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid InstallationId { get; set; }
+        public Guid? UserId { get; set; }
+        public string PlanCode { get; set; } = string.Empty;
+        public string Provider { get; set; } = "None"; // Stripe, Paddle, bKash, None
+        public string? ProviderTransactionId { get; set; }
+        public string? ProviderSessionId { get; set; }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; } = "USD";
+        public string CountryCode { get; set; } = "US";
+        public PaymentStatus Status { get; set; } = PaymentStatus.PENDING;
+        public bool IsTestMode { get; set; } = true;
+        public string? FailureReason { get; set; }
+        public DateTime? PaidAtUtc { get; set; }
+        public DateTime? ExpiresAtUtc { get; set; }
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public User? User { get; set; }
+    }
+
+    public class WebhookEventRecord
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Provider { get; set; } = string.Empty;
+        public string ProviderEventId { get; set; } = string.Empty;
+        public string EventType { get; set; } = string.Empty;
+        public string PayloadJson { get; set; } = string.Empty;
+        public bool IsProcessed { get; set; } = false;
+        public string? ProcessingResult { get; set; }
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    }
+
 }

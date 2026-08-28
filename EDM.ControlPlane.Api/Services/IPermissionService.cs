@@ -184,10 +184,14 @@ namespace EDM.ControlPlane.Api.Services
                 (UserRole.ADMIN, new[]
                 {
                     Permissions.UsersRead, Permissions.UsersManage,
+                    Permissions.SubscriptionsRead, Permissions.SubscriptionsManage, Permissions.SubscriptionGlobalSwitch, Permissions.SubscriptionRegionalSwitch, Permissions.EntitlementsManage,
+                    Permissions.PaymentsRead, Permissions.PaymentsManage, Permissions.PaymentsRefund, Permissions.PaymentsReconcile,
+                    Permissions.SystemSettingsRead, Permissions.SystemSettingsWrite, Permissions.SettingsManage, Permissions.SecurityManage, Permissions.AdminSecurityManage,
+                    Permissions.AuditLogsRead,
                     Permissions.ReleasesRead, Permissions.ReleasesCreate, Permissions.ReleasesPublish,
                     Permissions.WebsiteManage, Permissions.PricingManage,
                     Permissions.LicensesManage, Permissions.SupportManage,
-                    Permissions.AnalyticsRead, Permissions.SettingsManage, Permissions.SecurityManage,
+                    Permissions.AnalyticsRead,
                     Permissions.SystemHealthRead
                 }),
                 (UserRole.RELEASE_MANAGER, new[]
@@ -197,11 +201,11 @@ namespace EDM.ControlPlane.Api.Services
                 }),
                 (UserRole.SUPPORT, new[]
                 {
-                    Permissions.UsersRead, Permissions.SupportManage, Permissions.LicensesManage, Permissions.AnalyticsRead
+                    Permissions.UsersRead, Permissions.SubscriptionsRead, Permissions.PaymentsRead, Permissions.SupportManage, Permissions.LicensesManage, Permissions.AnalyticsRead
                 }),
                 (UserRole.ANALYST, new[]
                 {
-                    Permissions.AnalyticsRead, Permissions.ReleasesRead, Permissions.SystemHealthRead
+                    Permissions.AnalyticsRead, Permissions.SubscriptionsRead, Permissions.PaymentsRead, Permissions.ReleasesRead, Permissions.SystemHealthRead
                 }),
                 (UserRole.USER, Array.Empty<string>())
             };
@@ -230,8 +234,8 @@ namespace EDM.ControlPlane.Api.Services
                 UserRole.SUPER_ADMIN => true,
                 UserRole.ADMIN => permission != Permissions.ReleasesRollback, // Rollback requires explicit release manager or superadmin
                 UserRole.RELEASE_MANAGER => permission.StartsWith("releases.") || permission == Permissions.AnalyticsRead || permission == Permissions.SystemHealthRead,
-                UserRole.SUPPORT => permission == Permissions.UsersRead || permission == Permissions.SupportManage || permission == Permissions.LicensesManage || permission == Permissions.AnalyticsRead,
-                UserRole.ANALYST => permission == Permissions.AnalyticsRead || permission == Permissions.ReleasesRead || permission == Permissions.SystemHealthRead,
+                UserRole.SUPPORT => permission == Permissions.UsersRead || permission == Permissions.SubscriptionsRead || permission == Permissions.PaymentsRead || permission == Permissions.SupportManage || permission == Permissions.LicensesManage || permission == Permissions.AnalyticsRead,
+                UserRole.ANALYST => permission == Permissions.AnalyticsRead || permission == Permissions.SubscriptionsRead || permission == Permissions.PaymentsRead || permission == Permissions.ReleasesRead || permission == Permissions.SystemHealthRead,
                 _ => false
             };
         }
@@ -243,8 +247,8 @@ namespace EDM.ControlPlane.Api.Services
                 UserRole.SUPER_ADMIN => Permissions.AllPermissions.Append(Permissions.All),
                 UserRole.ADMIN => Permissions.AllPermissions.Where(p => p != Permissions.ReleasesRollback),
                 UserRole.RELEASE_MANAGER => new[] { Permissions.ReleasesRead, Permissions.ReleasesCreate, Permissions.ReleasesPublish, Permissions.ReleasesRollback, Permissions.AnalyticsRead, Permissions.SystemHealthRead },
-                UserRole.SUPPORT => new[] { Permissions.UsersRead, Permissions.SupportManage, Permissions.LicensesManage, Permissions.AnalyticsRead },
-                UserRole.ANALYST => new[] { Permissions.AnalyticsRead, Permissions.ReleasesRead, Permissions.SystemHealthRead },
+                UserRole.SUPPORT => new[] { Permissions.UsersRead, Permissions.SubscriptionsRead, Permissions.PaymentsRead, Permissions.SupportManage, Permissions.LicensesManage, Permissions.AnalyticsRead },
+                UserRole.ANALYST => new[] { Permissions.AnalyticsRead, Permissions.SubscriptionsRead, Permissions.PaymentsRead, Permissions.ReleasesRead, Permissions.SystemHealthRead },
                 _ => Enumerable.Empty<string>()
             };
         }

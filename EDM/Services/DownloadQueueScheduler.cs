@@ -106,7 +106,7 @@ namespace EDM.Services
         public int QueuedCount => _items.Values.Count(i => i.State == QueueItemState.Queued || i.State == QueueItemState.Retrying);
 
         public DownloadQueueScheduler() : this(null, 4) { }
-        public DownloadQueueScheduler(int maxActiveDownloads) : this(null, maxActiveDownloads) { }
+        public DownloadQueueScheduler(int maxActiveDownloads) : this(Path.Combine(Path.GetTempPath(), $"EDM_Queue_{Guid.NewGuid():N}"), maxActiveDownloads) { }
         public DownloadQueueScheduler(string? storagePath) : this(storagePath, 4) { }
         public DownloadQueueScheduler(int maxActiveDownloads, string? storagePath) : this(storagePath, maxActiveDownloads) { }
         public DownloadQueueScheduler(string? storagePath, int maxActiveDownloads)

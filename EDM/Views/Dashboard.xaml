@@ -249,31 +249,6 @@
                         </Button.Template>
                     </Button>
 
-                    <!-- Settings Button (Gear) -->
-                    <Button x:Name="TopSettingsBtn" Click="TopSettingsBtn_Click"
-                            Width="36" Height="36" Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" ToolTip="Settings" Margin="0,0,6,0">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="SettingsBrd" Background="{DynamicResource CardInputBg}" 
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
-                                        Width="36" Height="36" CornerRadius="10">
-                                    <Border.Effect>
-                                        <DropShadowEffect Color="#000000" BlurRadius="6" ShadowDepth="1" Opacity="0.3"/>
-                                    </Border.Effect>
-                                    <TextBlock Text="⚙️" FontSize="15" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="SettingsBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
-                                        <Setter TargetName="SettingsBrd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
-
                     <!-- Theme Toggle Button (Light/Dark Switch) -->
                     <Button x:Name="ThemeToggleBtn" Click="ThemeToggle_Click"
                             Width="36" Height="36" Background="Transparent" BorderThickness="0"
@@ -665,6 +640,43 @@
                                         <TextBlock Text="📅" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                     <TextBlock Text="Scheduler" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- Approvals Gate -->
+                <Button Tag="Approvals" Click="ActionButton_Click" Cursor="Hand" Background="Transparent" BorderThickness="0" Margin="4,0" ToolTip="Review and Approve Pending Download Confirmations">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                                <Setter Property="BorderBrush" Value="#10B981"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Grid Width="44" Height="44" Margin="0,0,0,7" HorizontalAlignment="Center">
+                                        <Ellipse>
+                                            <Ellipse.Fill>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#10B981" Offset="0"/>
+                                                    <GradientStop Color="#059669" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Ellipse.Fill>
+                                            <Ellipse.Effect>
+                                                <DropShadowEffect Color="#10B981" BlurRadius="18" ShadowDepth="2" Opacity="0.75"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <TextBlock Text="🛡️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="Approvals" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                         </ControlTemplate>

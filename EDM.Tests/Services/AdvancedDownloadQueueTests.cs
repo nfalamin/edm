@@ -275,6 +275,7 @@ namespace EDM.Tests.Services
 
             var s1 = scheduler.TryGetNextDownloadToStart();
             scheduler.MarkFailed("retry_job", allowRetry: true);
+            scheduler.GetItem("retry_job")!.NextRetryTimeUtc = DateTime.UtcNow.AddSeconds(-1);
 
             // Item is now in Retrying state -> eligible for scheduling again
             var s2 = scheduler.TryGetNextDownloadToStart();

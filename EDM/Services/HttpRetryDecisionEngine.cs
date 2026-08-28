@@ -229,6 +229,14 @@ namespace EDM.Services
         {
             stripAuthorization = false;
 
+            if (currentUri == null || targetUri == null) return false;
+
+            // Reject unsafe or disallowed URL schemes on redirect
+            if (!SecuritySanitizer.IsAllowedUrlScheme(targetUri.ToString()))
+            {
+                return false;
+            }
+
             // Check circular loop
             string targetKey = targetUri.ToString().ToLowerInvariant();
             if (visitedUris.Contains(targetKey))
@@ -237,8 +245,17 @@ namespace EDM.Services
             }
             visitedUris.Add(targetKey);
 
-            // Cross-origin boundary check: Strip Authorization and sensitive cookies if different host/domain
-            if (!string.Equals(currentUri.Host, targetUri.Host, StringComparison.OrdinalIgnoreCase))
+            // HTTPS to HTTP downgrade protection: always strip sensitive authorization
+            if (string.Equals(currentUri.Scheme, "https", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(targetUri.Scheme, "http", StringComparison.OrdinalIgnoreCase))
+            {
+                stripAuthorization = true;
+            }
+
+            // Cross-origin boundary check: Strip Authorization if different host/port/scheme
+            if (!string.Equals(currentUri.Host, targetUri.Host, StringComparison.OrdinalIgnoreCase) ||
+                currentUri.Port != targetUri.Port ||
+                !string.Equals(currentUri.Scheme, targetUri.Scheme, StringComparison.OrdinalIgnoreCase))
             {
                 stripAuthorization = true;
             }
@@ -250,18 +267,23 @@ namespace EDM.Services
         {
             if (response.Headers.RetryAfter == null) return null;
 
+            TimeSpan delay = TimeSpan.Zero;
             if (response.Headers.RetryAfter.Delta.HasValue)
             {
-                return response.Headers.RetryAfter.Delta.Value;
+                delay = response.Headers.RetryAfter.Delta.Value;
             }
-
-            if (response.Headers.RetryAfter.Date.HasValue)
+            else if (response.Headers.RetryAfter.Date.HasValue)
             {
                 var diff = response.Headers.RetryAfter.Date.Value - DateTimeOffset.UtcNow;
-                return diff > TimeSpan.Zero ? diff : TimeSpan.FromSeconds(1);
+                delay = diff > TimeSpan.Zero ? diff : TimeSpan.FromSeconds(1);
+            }
+            else
+            {
+                return null;
             }
 
-            return null;
+            // Server Retry-After cap (60s max) to prevent excessive lockup
+            return delay > TimeSpan.FromSeconds(60) ? TimeSpan.FromSeconds(60) : delay;
         }
 
         public static TimeSpan CalculateBackoffWithJitter(int attempt)

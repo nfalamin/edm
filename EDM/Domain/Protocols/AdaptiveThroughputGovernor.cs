@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace EDM.Domain.Protocols
 {
@@ -38,6 +39,8 @@ namespace EDM.Domain.Protocols
         {
             _rateLimitBytesPerSec = bytesPerSecond > 0 ? bytesPerSecond : null;
         }
+
+        public void SetSpeedLimit(long bytesPerSecond) => SetRateLimit(bytesPerSecond);
 
         public void RecordBytes(long bytes)
         {
@@ -115,7 +118,7 @@ namespace EDM.Domain.Protocols
         }
 
         /// <summary>
-        /// Lock-free speed limiter throttling check.
+        /// Lock-free speed limiter throttling check (synchronous fallback).
         /// </summary>
         public void ApplyRateLimiting(int bytesRead)
         {
@@ -127,6 +130,22 @@ namespace EDM.Domain.Protocols
             if (delayMs > 0 && delayMs < 100)
             {
                 Thread.Sleep(delayMs);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronous non-blocking speed limiter throttling check.
+        /// </summary>
+        public async Task ApplyRateLimitingAsync(int bytesRead, CancellationToken cancellationToken = default)
+        {
+            long? limit = _rateLimitBytesPerSec;
+            if (!limit.HasValue || limit.Value <= 0 || bytesRead <= 0) return;
+
+            double expectedSeconds = (double)bytesRead / limit.Value;
+            int delayMs = (int)(expectedSeconds * 1000);
+            if (delayMs > 0 && delayMs < 100)
+            {
+                await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
             }
         }
     }

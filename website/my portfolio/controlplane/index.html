@@ -1284,6 +1284,7 @@
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('trials-grace', this)">Trials & Grace</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('features', this)">Feature Toggles</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('overrides', this)">Admin Overrides</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('coupons', this)">Promotions & Coupons</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('payments', this)">Payment Gateways</button>
                             <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('audit-logs', this)">Audit Events</button>
                         </div>
@@ -3028,5 +3029,84 @@
         </div>
     </div>
 
+
+    <!-- MODAL: CREATE COUPON -->
+    <div class="modal-backdrop" id="modal-create-coupon" style="display: none;">
+        <div class="modal-dialog" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="tag"></i> Create Promotional Coupon</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-create-coupon')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="form-group">
+                    <label>Promo Code <span style="color: var(--color-danger);">*</span></label>
+                    <input type="text" id="coupon-code-input" class="form-control" placeholder="e.g. EDM50, EID2026, VIP100" style="text-transform: uppercase; font-weight: 700; letter-spacing: 1px;" required />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="coupon-type-select" class="form-control" onchange="window.edmApp.onCouponTypeChange()">
+                            <option value="percent">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (Currency)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label id="coupon-value-label">Discount Percent (%)</label>
+                        <input type="number" id="coupon-value-input" class="form-control" placeholder="e.g. 50" min="1" max="100" required />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Applicable Plan</label>
+                        <select id="coupon-plan-select" class="form-control">
+                            <option value="">All Plans</option>
+                            <option value="pro_monthly">Pro Monthly</option>
+                            <option value="pro_yearly">Pro Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Region / Country</label>
+                        <select id="coupon-country-select" class="form-control">
+                            <option value="">Global (All Countries)</option>
+                            <option value="BD">Bangladesh (BD)</option>
+                            <option value="IN">India (IN)</option>
+                            <option value="PK">Pakistan (PK)</option>
+                            <option value="Asia">Asia Region</option>
+                            <option value="Europe">Europe Region</option>
+                            <option value="US">United States (US)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Max Total Uses</label>
+                        <input type="number" id="coupon-max-uses-input" class="form-control" placeholder="Unlimited (e.g. 100)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Uses Per User</label>
+                        <input type="number" id="coupon-user-uses-input" class="form-control" value="1" min="1" />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Target User / Email / Community (Optional)</label>
+                        <input type="text" id="coupon-target-user-input" class="form-control" placeholder="e.g. user@domain.com or VIP" />
+                    </div>
+                    <div class="form-group">
+                        <label>Expires At (Optional)</label>
+                        <input type="datetime-local" id="coupon-expiry-input" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description / Internal Note</label>
+                    <input type="text" id="coupon-desc-input" class="form-control" placeholder="e.g. Ramadan 50% discount campaign" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-create-coupon')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmApp.submitCreateCoupon()">Create Coupon</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

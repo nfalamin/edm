@@ -258,8 +258,8 @@ namespace EDM.Services
                     // 3. Per-connection efficiency is maintained
                     if (gain >= _policy.MinimumUsefulGainPercent && _currentConnections < effectiveMax)
                     {
-                        // Aggressive scale-up: jump by 4 below 16, by 8 from 16 onwards
-                        int step = _currentConnections < 8 ? 4 : (_currentConnections < 16 ? 8 : 8);
+                        // Gradual scale-up: increment by 2
+                        int step = 2;
                         int nextConnections = Math.Min(effectiveMax, _currentConnections + step);
 
                         if (nextConnections != _currentConnections)

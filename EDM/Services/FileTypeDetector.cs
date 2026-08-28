@@ -143,19 +143,22 @@ namespace EDM.Services
             }
 
             // MP4 / MOV / QuickTime / M4V / M4A / AVIF / HEIC: bytes 4-7 contain "ftyp" (0x66, 0x74, 0x79, 0x70)
-            if (header.Length >= 12 && header[4] == 0x66 && header[5] == 0x74 && header[6] == 0x79 && header[7] == 0x70)
+            if (header.Length >= 8 && header[4] == 0x66 && header[5] == 0x74 && header[6] == 0x79 && header[7] == 0x70)
             {
-                // Check AVIF / HEIC / HEIF image brands
-                if ((header[8] == 0x61 && header[9] == 0x76 && header[10] == 0x69 && header[11] == 0x66) || // avif
-                    (header[8] == 0x68 && header[9] == 0x65 && header[10] == 0x69 && header[11] == 0x63) || // heic
-                    (header[8] == 0x6D && header[9] == 0x69 && header[10] == 0x66 && header[11] == 0x31))   // mif1
+                if (header.Length >= 12)
                 {
-                    return DetectedFileType.Images;
-                }
-                // Check M4A audio brand (M4A )
-                if (header[8] == 0x4D && header[9] == 0x34 && header[10] == 0x41 && header[11] == 0x20)
-                {
-                    return DetectedFileType.Audio;
+                    // Check AVIF / HEIC / HEIF image brands
+                    if ((header[8] == 0x61 && header[9] == 0x76 && header[10] == 0x69 && header[11] == 0x66) || // avif
+                        (header[8] == 0x68 && header[9] == 0x65 && header[10] == 0x69 && header[11] == 0x63) || // heic
+                        (header[8] == 0x6D && header[9] == 0x69 && header[10] == 0x66 && header[11] == 0x31))   // mif1
+                    {
+                        return DetectedFileType.Images;
+                    }
+                    // Check M4A audio brand (M4A )
+                    if (header[8] == 0x4D && header[9] == 0x34 && header[10] == 0x41 && header[11] == 0x20)
+                    {
+                        return DetectedFileType.Audio;
+                    }
                 }
                 return DetectedFileType.Video;
             }

@@ -144,8 +144,8 @@ namespace EDM.Services
                 int currentHostActiveCount = _hostActiveDownloads.TryGetValue(host, out var count) ? count : 1;
                 if (currentHostActiveCount > 1)
                 {
-                    // Scale connection budget per download on the same host (max 64 per host)
-                    int budgetPerDownload = Math.Max(1, 64 / currentHostActiveCount);
+                    // Scale connection budget per download on the same host (max 16 total per host)
+                    int budgetPerDownload = Math.Max(1, 16 / currentHostActiveCount);
                     baseConns = Math.Min(baseConns, budgetPerDownload);
                 }
 

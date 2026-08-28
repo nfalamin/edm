@@ -82,6 +82,8 @@ namespace EDM.Services
                 foreach (var cp in contentProtections)
                 {
                     string scheme = ((string?)cp.Attribute("schemeIdUri") ?? "").ToLowerInvariant();
+                    string value = ((string?)cp.Attribute("value") ?? "").ToLowerInvariant();
+
                     if (scheme.Contains("edef8ba9") || scheme.Contains("widevine"))
                     {
                         manifest.IsDrmProtected = true;
@@ -102,6 +104,11 @@ namespace EDM.Services
                         manifest.IsDrmProtected = true;
                         manifest.DrmSystem = "ClearKey";
                     }
+                    else if (scheme.Contains("mp4protection") || value.Contains("cenc"))
+                    {
+                        manifest.IsDrmProtected = true;
+                        manifest.DrmSystem = "CENC (DRM)";
+                    }
                     else if (!string.IsNullOrEmpty(scheme))
                     {
                         manifest.IsDrmProtected = true;
@@ -110,8 +117,8 @@ namespace EDM.Services
                 }
 
                 // 3. Periods & AdaptationSets
-                var periods = root.Elements(ns + "Period");
-                if (!periods.Any()) periods = new[] { root }; // Fallback if no Period element
+                var periods = root.Elements(ns + "Period").ToList();
+                if (!periods.Any()) periods.Add(root); // Fallback if no Period element
 
                 foreach (var period in periods)
                 {
@@ -323,7 +330,10 @@ namespace EDM.Services
                     long dAttr = (long?)sElem.Attribute("d") ?? durationUnits;
                     long rAttr = (long?)sElem.Attribute("r") ?? 0;
 
-                    for (long r = 0; r <= rAttr; r++)
+                    // Positive or zero repeat
+                    long repeatCount = Math.Max(0, rAttr);
+
+                    for (long r = 0; r <= repeatCount; r++)
                     {
                         string segUrl = FormatTemplateUrl(mediaPattern, dashRep.Id, currentNumber, currentTime, dashRep.Bandwidth);
                         string absUrl = MakeAbsoluteUri(segUrl, baseUri);
@@ -339,7 +349,11 @@ namespace EDM.Services
 
                         currentTime += dAttr;
                         currentNumber++;
+
+                        if (dashRep.Segments.Count >= MaxSegmentCount) break;
                     }
+
+                    if (dashRep.Segments.Count >= MaxSegmentCount) break;
                 }
             }
             else if (durationUnits > 0 && timescale > 0)
@@ -375,7 +389,7 @@ namespace EDM.Services
             }
         }
 
-        private static string FormatTemplateUrl(string pattern, string repId, long number, long time, int bandwidth)
+        public static string FormatTemplateUrl(string pattern, string repId, long number, long time, int bandwidth)
         {
             string formatted = pattern;
             formatted = formatted.Replace("$RepresentationID$", repId);
@@ -422,7 +436,7 @@ namespace EDM.Services
             return currentBaseUrl;
         }
 
-        private static double ParseIso8601Duration(string durationStr)
+        public static double ParseIso8601Duration(string durationStr)
         {
             try
             {
@@ -454,4 +468,3 @@ namespace EDM.Services
         }
     }
 }
-
