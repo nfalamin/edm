@@ -6,6 +6,17 @@
     <meta name="description" content="Portfolio of Alamin Hossain - Certified Digital Marketing Expert specializing in SEO, Google Ads, and Social Media Marketing.">
     <meta name="keywords" content="SEO Specialist, Google Ads Expert, Social Media Marketing, Freelance Digital Marketer, Lead Generation">
 	
+    <!-- Google tag (gtag.js) / Firebase Analytics (Project: nfalamin) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MVY5QPC483"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-MVY5QPC483', {
+        send_page_view: true,
+        project_id: 'nfalamin'
+      });
+    </script>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>

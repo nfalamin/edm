@@ -608,7 +608,9 @@ namespace EDM.Views
                 }
                 if (confirmBox != null)
                 {
-                    _settingsService.SetBrowserShowConfirmation(confirmBox.IsChecked == true);
+                    bool showConfirm = confirmBox.IsChecked == true;
+                    _settingsService.SetBrowserShowConfirmation(showConfirm);
+                    _settingsService.SetBrowserDownloadMode(showConfirm ? "ShowDialog" : "StartImmediately");
                 }
                 if (notifyBrowserBox != null)
                 {

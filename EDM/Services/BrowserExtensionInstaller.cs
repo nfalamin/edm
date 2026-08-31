@@ -109,6 +109,10 @@ namespace EDM.Services
                 type = "stdio",
                 allowed_origins = new[]
                 {
+                    // Workspace unpacked developer mode IDs
+                    "chrome-extension://bmobaefglgbodphlbnhggngmgildnhba/",
+                    "chrome-extension://mbedpdjfokbheigakehhdmcfahoaphke/",
+                    "chrome-extension://iehgcnopfabclpdckcgbmnhfndockfdp/",
                     // ★ ACTUAL INSTALLED EXTENSION ID (unpacked developer mode)
                     "chrome-extension://mpnldpbpddhpihmkkbjnegggjljalnai/",
                     // EDM Official Extension IDs
@@ -117,7 +121,7 @@ namespace EDM.Services
                     "chrome-extension://lhfkofephegnnhpcfkffnflfobafpaoe/",
                     "chrome-extension://pjnefijmagpdjfhhkpljicbbpicelgko/",
                     "chrome-extension://agionbommeaifngbhincahgmoflcikhm/",
-                    // IDM extension IDs (for compatibility)
+                    // Legacy extension IDs (for fallback compatibility)
                     "chrome-extension://aapbdbdomjkkjkaonfhkkikfgjllcleb/",
                     "chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/",
                     // Developer mode unpacked extension — broad coverage

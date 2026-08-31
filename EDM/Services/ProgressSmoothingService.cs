@@ -26,11 +26,11 @@ namespace EDM.Services
         private readonly double _ewmaAlpha; // smoothing factor
         private double _peakSpeed = 0;
 
-        public SmoothProgressReporter(IProgress<DownloadProgressInfo> inner, int tickMs = 60, int animationMs = 800, double ewmaAlpha = 0.2)
+        public SmoothProgressReporter(IProgress<DownloadProgressInfo> inner, int tickMs = 30, int animationMs = 80, double ewmaAlpha = 0.85)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _tickMs = Math.Max(20, tickMs);
-            _animDuration = TimeSpan.FromMilliseconds(Math.Max(100, animationMs));
+            _tickMs = Math.Max(15, tickMs);
+            _animDuration = TimeSpan.FromMilliseconds(Math.Max(30, animationMs));
             _ewmaAlpha = Math.Clamp(ewmaAlpha, 0.01, 0.99);
         }
 
@@ -51,6 +51,18 @@ namespace EDM.Services
                 }
                 catch (Exception ex) { LoggingService.Log($"[SmoothProgressReporter] EWMA update failed: {ex.Message}"); }
 
+                // Terminal state or 100% completion emits immediately with zero animation delay
+                if (value.IsCompleted || value.ProgressPercentage >= 100.0)
+                {
+                    _lastEmitted = CloneInfo(value);
+                    _lastEmitted.SmoothedProgressPercentage = value.ProgressPercentage;
+                    _lastEmitted.AverageSpeedBytesPerSecond = _ewmaSpeed > 0 ? _ewmaSpeed : value.SpeedBytesPerSecond;
+                    _lastEmitted.PeakSpeedBytesPerSecond = _peakSpeed;
+                    _target = null;
+                    SafeEmit(_lastEmitted);
+                    return;
+                }
+
                 // Ensure we have a baseline lastEmitted
                 if (_lastEmitted == null)
                 {
@@ -63,15 +75,14 @@ namespace EDM.Services
                     return;
                 }
 
-                // Update target and restart animation
+                // Update target and restart animation with snappy bounded duration
                 _target = CloneInfo(value);
                 _target.AverageSpeedBytesPerSecond = _ewmaSpeed > 0 ? _ewmaSpeed : _target.SpeedBytesPerSecond;
                 _target.PeakSpeedBytesPerSecond = _peakSpeed;
 
                 _animStart = DateTime.UtcNow;
-                // duration scales with delta but bounded
                 var delta = Math.Abs(_target.ProgressPercentage - _lastEmitted.ProgressPercentage);
-                var dur = (int)Math.Clamp(_animDuration.TotalMilliseconds * Math.Min(1.0, delta / 10.0), 100, _animDuration.TotalMilliseconds);
+                var dur = (int)Math.Clamp(_animDuration.TotalMilliseconds * Math.Min(1.0, delta / 5.0), 30, _animDuration.TotalMilliseconds);
                 _animDuration = TimeSpan.FromMilliseconds(dur);
 
                 if (_workerTask == null)

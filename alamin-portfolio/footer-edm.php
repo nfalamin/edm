@@ -23,16 +23,20 @@ if (!defined('ABSPATH')) {
     </footer>
 
     <?php 
-    // Global EDM Components: Action Modals, Video Modal & Toast Container
+    // Global EDM Components: Action Modals, Video Modal, Toast Container, Obhijog Modal & AI Bot
     get_template_part('template-parts/components/action-modals');
     get_template_part('template-parts/components/video-modal');
     get_template_part('template-parts/components/toast');
+    get_template_part('template-parts/components/obhijog-modal');
+    get_template_part('template-parts/components/edm-support-bot');
     ?>
 
 </div><!-- #page -->
 
-<!-- Fail-safe Direct Script -->
+<!-- Fail-safe Direct Scripts -->
 <script src="<?php echo esc_url(get_template_directory_uri() . '/assets/js/landing-app.js'); ?>"></script>
+<script src="<?php echo esc_url(get_template_directory_uri() . '/assets/js/obhijog.js'); ?>"></script>
+<script src="<?php echo esc_url(get_template_directory_uri() . '/assets/js/edm-support-bot.js'); ?>"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

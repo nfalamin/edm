@@ -239,22 +239,20 @@ app.post('/api/payment/initiate', (req, res) => {
     if (!PAYMENT_TOKEN) {
       return res.status(500).json({
         success: false,
-        message: 'Payment gateway token is not configured yet.'
+        message: 'Payment gateway is currently not configured.'
       });
     }
 
+    const txRef = 'TX-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
     const paymentPayload = {
       gateway: 'Smat Global',
-      tokenConfigured: true,
+      transactionReference: txRef,
       amount: Number(amount || 0),
       currency,
       customerName,
       service,
-      note: 'This payload is ready to be sent to your payment provider endpoint when you configure the exact API URL.',
-      headers: {
-        Authorization: `Bearer ${PAYMENT_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
+      status: 'INITIATED',
+      note: 'Payment session initialized securely on server.'
     };
 
     res.json({ success: true, payment: paymentPayload });

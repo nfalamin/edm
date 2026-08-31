@@ -201,10 +201,6 @@ namespace EDM.Services
                 if (seg != null)
                 {
                     seg.BytesDownloaded = Math.Min(seg.TotalBytes, Math.Max(0, bytesDownloaded));
-                    if (seg.BytesDownloaded >= seg.TotalBytes)
-                    {
-                        seg.State = SegmentState.Completed;
-                    }
                 }
             }
         }
@@ -250,7 +246,8 @@ namespace EDM.Services
                         return false;
                     }
 
-                    if (requeue)
+                    seg.RetryCount++;
+                    if (requeue && seg.RetryCount <= 8)
                     {
                         seg.State = SegmentState.Pending;
                     }

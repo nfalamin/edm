@@ -1113,7 +1113,7 @@ namespace EDM.Services
                     CategoryId = 5,
                     CategoryName = "5. Download Speed Problems",
                     CategoryIcon = "⚡",
-                    Title = "IDM-Style Dynamic Multi-Thread Parallel Execution Engine",
+                    Title = "EDM Dynamic Multi-Thread Parallel Execution Engine",
                     Summary = "How EDM achieves maximum bandwidth saturation by dynamically splitting files into parallel concurrent worker streams.",
                     Keywords = new() { "turbo", "multithread", "parallel", "segments", "chunks", "speed", "concurrency" },
                     PossibleCauses = new()

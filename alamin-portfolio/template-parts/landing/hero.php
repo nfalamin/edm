@@ -57,7 +57,7 @@ $download_url = edm_get_download_url();
             <div class="hero-cta-group">
                 <a href="<?php echo esc_url($download_url); ?>" class="btn btn-primary btn-lg" style="box-shadow: 0 0 35px rgba(93, 95, 239, 0.45);" download>
                     <i data-lucide="download" style="width: 18px; height: 18px;"></i>
-                    <span><?php esc_html_e('Download EDM for Windows', 'edm-theme'); ?></span>
+                    <span><?php printf(esc_html__('Download EDM for Windows (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
                 </a>
                 <a href="<?php echo esc_url(home_url('/edm-features/')); ?>" class="btn btn-secondary btn-lg">
                     <i data-lucide="sliders" style="width: 18px; height: 18px; color: var(--edm-primary-light);"></i>
@@ -69,7 +69,7 @@ $download_url = edm_get_download_url();
             <div class="hero-compatibility-row">
                 <span><i data-lucide="check-circle" style="width: 13px; height: 13px; color: var(--edm-green); display: inline-block; vertical-align: middle;"></i> <?php esc_html_e('Windows 11 / 10 / 8.1 / 7 (64-bit & ARM64)', 'edm-theme'); ?></span>
                 <span>•</span>
-                <span><?php esc_html_e('Installer Size:', 'edm-theme'); ?> <strong>19.8 MB</strong></span>
+                <span><?php esc_html_e('Installer Size:', 'edm-theme'); ?> <strong><?php echo function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'; ?></strong></span>
                 <span>•</span>
                 <span><?php esc_html_e('SHA-256 Verified Clean', 'edm-theme'); ?></span>
             </div>

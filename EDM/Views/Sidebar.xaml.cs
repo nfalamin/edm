@@ -53,14 +53,18 @@ namespace EDM.Views
                 SetButtonActiveState(_activeButton, true);
             }
 
+            // Subscribe to language changes for live nav label updates
+            EDM.Services.LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+            ApplyLocalization(); // Apply current language immediately
+
             // Pre-fill history with zeros
             for (int i = 0; i < _maxGraphPoints; i++)
                 _speedHistory.Enqueue(0.0);
 
-            // Start the graph update timer — every 600ms
+            // Start the graph update timer — every 150ms for responsive real-time wave
             _graphTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(600)
+                Interval = TimeSpan.FromMilliseconds(150)
             };
             _graphTimer.Tick += GraphTimer_Tick;
             _graphTimer.Start();
@@ -68,8 +72,64 @@ namespace EDM.Views
 
         private void Sidebar_Unloaded(object sender, RoutedEventArgs e)
         {
+            EDM.Services.LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
             _graphTimer?.Stop();
             _graphTimer = null;
+        }
+
+        private void OnLanguageChanged(string cultureCode)
+        {
+            Dispatcher.InvokeAsync(ApplyLocalization);
+        }
+
+        /// <summary>
+        /// Reads all nav TextBlock labels from LocalizationService and updates them live.
+        /// </summary>
+        private void ApplyLocalization()
+        {
+            var loc = EDM.Services.LocalizationService.Instance;
+            SetNavLabel(DashboardBtn, loc.GetString("Nav_Dashboard", "Dashboard"));
+            SetNavLabel(AllDownloadsBtn, loc.GetString("Nav_AllDownloads", "All Downloads"));
+            SetNavLabel(DownloadingBtn, loc.GetString("Nav_Downloading", "Downloading"));
+            SetNavLabel(CompletedBtn, loc.GetString("Nav_Finished", "Completed"));
+            SetNavLabel(CompressedBtn, loc.GetString("Nav_Compressed", "Compressed"));
+            SetNavLabel(VideoBtn, loc.GetString("Nav_Video", "Video"));
+            SetNavLabel(MusicBtn, loc.GetString("Nav_Music", "Music"));
+            SetNavLabel(DocumentsBtn, loc.GetString("Nav_Documents", "Documents"));
+            SetNavLabel(ProgramsBtn, loc.GetString("Nav_Programs", "Programs"));
+            SetNavLabel(QueuesBtn, loc.GetString("Nav_Queues", "Queues"));
+            SetNavLabel(SchedulerNavBtn, loc.GetString("Nav_Scheduler", "Scheduler"));
+            SetNavLabel(AiChatNavBtn, "AI Assistant");
+            SetNavLabel(SettingsNavBtn, loc.GetString("Nav_Settings", "Settings"));
+            SetNavLabel(SupportNavBtn, loc.GetString("Nav_Support", "Support & Help"));
+            SetNavLabel(AboutNavBtn, loc.GetString("Nav_About", "About EDM"));
+            SetNavLabel(PrivacyNavBtn, loc.GetString("Nav_Privacy", "Privacy & Policy"));
+        }
+
+        /// <summary>
+        /// Finds the LabelText TextBlock inside a Button's ControlTemplate and sets its text.
+        /// </summary>
+        private static void SetNavLabel(System.Windows.Controls.Button? btn, string text)
+        {
+            if (btn == null) return;
+            // The template may not be applied yet; use ApplyTemplate to ensure it is
+            btn.ApplyTemplate();
+            // Walk the visual tree inside the button to find "LabelText"
+            var label = FindVisualChild<TextBlock>(btn, "LabelText");
+            if (label != null) label.Text = text;
+        }
+
+        private static T? FindVisualChild<T>(System.Windows.DependencyObject parent, string name) where T : System.Windows.FrameworkElement
+        {
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T fe && fe.Name == name) return fe;
+                var result = FindVisualChild<T>(child, name);
+                if (result != null) return result;
+            }
+            return null;
         }
 
         private void GraphTimer_Tick(object? sender, EventArgs e)
@@ -83,7 +143,8 @@ namespace EDM.Views
             }
             else
             {
-                _currentSpeed = (_currentSpeed * 0.5) + (target * 0.5);
+                // 85% instantaneous convergence for zero-lag real-time graph
+                _currentSpeed = (_currentSpeed * 0.15) + (target * 0.85);
             }
 
             // Enqueue new sample, dequeue oldest

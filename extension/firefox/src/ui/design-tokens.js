@@ -12,21 +12,21 @@ export const EDMTheme = Object.freeze({
 
 export const DesignTokens = Object.freeze({
     colors: {
-        primaryGradient: 'linear-gradient(135deg, #0284C7 0%, #0EA5E9 100%)',
-        accentBlue: '#0284C7',
-        accentCyan: '#38BDF8',
-        accentEmerald: '#10B981',
-        accentPurple: '#8B5CF6',
-        accentAmber: '#F59E0B',
-        accentRose: '#F43F5E',
+        primaryGradient: 'linear-gradient(135deg, #06F0FB 0%, #25D4DC 100%)',
+        accentBlue: '#25D4DC',
+        accentCyan: '#06F0FB',
+        accentEmerald: '#12A89C',
+        accentPurple: '#06F0FB',
+        accentAmber: '#F0D000',
+        accentRose: '#D51F32',
         dark: {
-            bgPrimary: '#0B0F19',
-            bgSecondary: '#0F172A',
-            bgCard: 'rgba(15, 23, 42, 0.88)',
-            borderGlass: 'rgba(255, 255, 255, 0.12)',
-            textPrimary: '#F8FAFC',
-            textSecondary: '#94A3B8',
-            textMuted: '#64748B'
+            bgPrimary: '#05080C',
+            bgSecondary: '#10181C',
+            bgCard: '#0B0F14',
+            borderGlass: '#26292D',
+            textPrimary: '#F0F0F0',
+            textSecondary: '#7F8488',
+            textMuted: '#7F8488'
         },
         light: {
             bgPrimary: '#F8FAFC',
@@ -39,9 +39,9 @@ export const DesignTokens = Object.freeze({
         }
     },
     shadows: {
-        glass: '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(2, 132, 199, 0.25)',
-        card: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        button: '0 4px 14px rgba(2, 132, 199, 0.4)'
+        glass: '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(6, 240, 251, 0.25)',
+        card: '0 4px 20px rgba(0, 0, 0, 0.3)',
+        button: '0 4px 14px rgba(6, 240, 251, 0.4)'
     },
     radius: {
         sm: '6px',

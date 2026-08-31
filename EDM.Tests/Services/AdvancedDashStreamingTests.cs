@@ -515,7 +515,7 @@ namespace EDM.Tests.Services
         [Fact]
         public void Test24_QueueIntegration_EnqueuesDashItemCorrectly()
         {
-            var queueScheduler = new DownloadQueueScheduler();
+            var queueScheduler = new DownloadQueueScheduler(Path.Combine(_testStorageDir, "dash_queue_test"));
             var item = new QueuedDownloadItem
             {
                 DownloadId = "dash_job_1",

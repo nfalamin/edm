@@ -20,6 +20,7 @@ namespace EDM.Services
         private readonly string _toolsDir;
         private string? _cachedYtDlpPath;
         private string? _cachedFfmpegPath;
+        private string? _cachedNodePath;
         private readonly SemaphoreSlim _lock = new(1, 1);
 
         public MediaDependencyManager()
@@ -128,6 +129,39 @@ namespace EDM.Services
             {
                 _lock.Release();
             }
+        }
+
+        /// <summary>
+        /// Resolves and validates a JavaScript runtime (node.exe) for solving modern YouTube cipher challenges.
+        /// </summary>
+        public async Task<string?> GetValidatedNodePathAsync(CancellationToken cancellationToken = default)
+        {
+            if (!string.IsNullOrWhiteSpace(_cachedNodePath) && File.Exists(_cachedNodePath))
+            {
+                return _cachedNodePath;
+            }
+
+            var candidatePaths = new List<string>
+            {
+                @"C:\Program Files\nodejs\node.exe",
+                @"C:\Program Files (x86)\nodejs\node.exe",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "nodejs", "node.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm", "node.exe")
+            };
+
+            candidatePaths.AddRange(GetCandidatePaths("node.exe", "node"));
+
+            foreach (var candidate in candidatePaths.Distinct())
+            {
+                if (await ValidateExecutableAsync(candidate, "-v", cancellationToken).ConfigureAwait(false))
+                {
+                    _cachedNodePath = Path.GetFullPath(candidate);
+                    LoggingService.Log($"[MediaDependencyManager] Found validated Node.js runtime at: {_cachedNodePath}");
+                    return _cachedNodePath;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

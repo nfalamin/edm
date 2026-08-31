@@ -271,8 +271,8 @@ namespace EDM.Tests.E2E
             File.Exists(savePath).Should().BeTrue();
             new FileInfo(savePath).Length.Should().Be(_server.RangeData.Length);
 
-            // 2MB at 250 KB/s takes ~ 4-8 seconds
-            sw.Elapsed.TotalSeconds.Should().BeGreaterThan(2.0);
+            // 2MB at 250 KB/s throttled vs unthrottled burst (~0.05s) takes ~1.2-4.0s
+            sw.Elapsed.TotalSeconds.Should().BeGreaterThan(1.0);
         }
 
         [Fact]

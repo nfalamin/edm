@@ -39,7 +39,14 @@ namespace EDM.ControlPlane.Api.Controllers
         long FileSizeBytes,
         string Status,
         DateTime CompletedAtUtc,
-        string? Sha256Hash = null);
+        string? Sha256Hash = null,
+        string? Host = null,
+        int? HttpStatusCode = 200,
+        int ConnectionsCount = 1,
+        int RetryCount = 0,
+        double SpeedBytesPerSecond = 0,
+        long DurationSeconds = 0,
+        DateTime? StartedAtUtc = null);
 
     public record LiveDownloadItemDto(
         string DownloadId,
@@ -52,7 +59,13 @@ namespace EDM.ControlPlane.Api.Controllers
         double SpeedBytesPerSecond,
         long? EtaSeconds,
         string Status,
-        string? ErrorMessage);
+        string? ErrorMessage,
+        string? Host = null,
+        int Connections = 1,
+        int RetryCount = 0,
+        int? HttpStatusCode = 200,
+        DateTime? StartedAtUtc = null,
+        DateTime? CompletedAtUtc = null);
 
     public record CreateRemoteCommandRequest(
         Guid DeviceId,
@@ -70,10 +83,14 @@ namespace EDM.ControlPlane.Api.Controllers
     public class RemoteControlController : ControllerBase
     {
         private readonly ControlPlaneDbContext _dbContext;
+        private readonly Services.IRealtimeEventBroadcaster _broadcaster;
 
-        public RemoteControlController(ControlPlaneDbContext dbContext)
+        public RemoteControlController(
+            ControlPlaneDbContext dbContext,
+            Services.IRealtimeEventBroadcaster broadcaster)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
         }
 
         private Guid? GetCurrentUserId()
@@ -245,19 +262,25 @@ namespace EDM.ControlPlane.Api.Controllers
                 // Upsert incoming downloads
                 foreach (var incoming in request.Downloads)
                 {
+                    string host = incoming.Host ?? ExtractHost(incoming.Url);
                     var existing = existingDownloads.FirstOrDefault(e => string.Equals(e.DownloadId, incoming.DownloadId, StringComparison.OrdinalIgnoreCase));
                     if (existing != null)
                     {
                         existing.FileName = incoming.FileName;
                         existing.Url = incoming.Url;
+                        existing.Host = host;
                         existing.Category = incoming.Category ?? "General";
                         existing.TotalBytes = incoming.TotalBytes;
                         existing.DownloadedBytes = incoming.DownloadedBytes;
                         existing.ProgressPercentage = incoming.ProgressPercentage;
                         existing.SpeedBytesPerSecond = incoming.SpeedBytesPerSecond;
                         existing.EtaSeconds = incoming.EtaSeconds;
+                        existing.Connections = incoming.Connections > 0 ? incoming.Connections : 1;
+                        existing.RetryCount = incoming.RetryCount;
+                        existing.HttpStatusCode = incoming.HttpStatusCode ?? 200;
                         existing.Status = incoming.Status;
                         existing.ErrorMessage = incoming.ErrorMessage;
+                        if (incoming.CompletedAtUtc.HasValue) existing.CompletedAtUtc = incoming.CompletedAtUtc;
                         existing.LastUpdatedUtc = DateTime.UtcNow;
                     }
                     else
@@ -270,17 +293,45 @@ namespace EDM.ControlPlane.Api.Controllers
                             DownloadId = incoming.DownloadId,
                             FileName = incoming.FileName,
                             Url = incoming.Url,
+                            Host = host,
                             Category = incoming.Category ?? "General",
                             TotalBytes = incoming.TotalBytes,
                             DownloadedBytes = incoming.DownloadedBytes,
                             ProgressPercentage = incoming.ProgressPercentage,
                             SpeedBytesPerSecond = incoming.SpeedBytesPerSecond,
                             EtaSeconds = incoming.EtaSeconds,
+                            Connections = incoming.Connections > 0 ? incoming.Connections : 1,
+                            RetryCount = incoming.RetryCount,
+                            HttpStatusCode = incoming.HttpStatusCode ?? 200,
                             Status = incoming.Status,
                             ErrorMessage = incoming.ErrorMessage,
+                            StartedAtUtc = incoming.StartedAtUtc ?? DateTime.UtcNow,
+                            CompletedAtUtc = incoming.CompletedAtUtc,
                             LastUpdatedUtc = DateTime.UtcNow
                         });
                     }
+
+                    // Non-blocking real-time broadcast
+                    _ = _broadcaster.BroadcastEventAsync("download_progress", new
+                    {
+                        deviceId = device.Id,
+                        downloadId = incoming.DownloadId,
+                        fileName = incoming.FileName,
+                        url = incoming.Url,
+                        host,
+                        category = incoming.Category ?? "General",
+                        totalBytes = incoming.TotalBytes,
+                        downloadedBytes = incoming.DownloadedBytes,
+                        progressPercentage = incoming.ProgressPercentage,
+                        speedBytesPerSecond = incoming.SpeedBytesPerSecond,
+                        etaSeconds = incoming.EtaSeconds,
+                        connections = incoming.Connections > 0 ? incoming.Connections : 1,
+                        retryCount = incoming.RetryCount,
+                        httpStatusCode = incoming.HttpStatusCode ?? 200,
+                        status = incoming.Status,
+                        errorMessage = incoming.ErrorMessage,
+                        timestampUtc = DateTime.UtcNow
+                    });
                 }
             }
 
@@ -615,20 +666,58 @@ namespace EDM.ControlPlane.Api.Controllers
 
                 if (!exists)
                 {
-                    _dbContext.DownloadRecords.Add(new DownloadRecord
+                    string host = rec.Host ?? ExtractHost(rec.Url);
+                    var status = DownloadStatus.Completed;
+                    if (string.Equals(rec.Status, "Failed", StringComparison.OrdinalIgnoreCase)) status = DownloadStatus.Failed;
+                    else if (string.Equals(rec.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) || string.Equals(rec.Status, "Canceled", StringComparison.OrdinalIgnoreCase)) status = DownloadStatus.Cancelled;
+
+                    var completedAt = rec.CompletedAtUtc != default ? rec.CompletedAtUtc : DateTime.UtcNow;
+                    var startedAt = rec.StartedAtUtc ?? completedAt.AddSeconds(-Math.Max(1, rec.DurationSeconds));
+
+                    var downloadRecord = new DownloadRecord
                     {
                         Id = Guid.NewGuid(),
                         UserId = userId.Value,
                         DeviceId = deviceId,
                         Url = rec.Url,
+                        Host = host,
                         FileName = rec.FileName,
                         Category = rec.Category ?? "General",
                         BytesTransferred = rec.FileSizeBytes,
+                        ConnectionsCount = rec.ConnectionsCount > 0 ? rec.ConnectionsCount : 1,
+                        RetryCount = rec.RetryCount,
+                        HttpStatusCode = rec.HttpStatusCode ?? 200,
+                        SpeedBytesPerSecond = rec.SpeedBytesPerSecond,
+                        DurationSeconds = rec.DurationSeconds > 0 ? rec.DurationSeconds : (long)(completedAt - startedAt).TotalSeconds,
                         Sha256Hash = rec.Sha256Hash,
-                        Status = string.Equals(rec.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? DownloadStatus.Failed : DownloadStatus.Completed,
-                        DownloadedAtUtc = rec.CompletedAtUtc != default ? rec.CompletedAtUtc : DateTime.UtcNow
-                    });
+                        Status = status,
+                        StartedAtUtc = startedAt,
+                        CompletedAtUtc = completedAt,
+                        DownloadedAtUtc = completedAt
+                    };
+
+                    _dbContext.DownloadRecords.Add(downloadRecord);
                     addedCount++;
+
+                    // Non-blocking real-time broadcast of completed/failed download
+                    _ = _broadcaster.BroadcastEventAsync("download_completed", new
+                    {
+                        downloadId = downloadRecord.Id.ToString(),
+                        fileName = downloadRecord.FileName,
+                        url = downloadRecord.Url,
+                        host = downloadRecord.Host,
+                        category = downloadRecord.Category,
+                        fileSizeBytes = downloadRecord.BytesTransferred,
+                        status = downloadRecord.Status.ToString(),
+                        durationSeconds = downloadRecord.DurationSeconds,
+                        speedBytesPerSecond = downloadRecord.SpeedBytesPerSecond,
+                        connections = downloadRecord.ConnectionsCount,
+                        retryCount = downloadRecord.RetryCount,
+                        httpStatusCode = downloadRecord.HttpStatusCode,
+                        startedAtUtc = downloadRecord.StartedAtUtc,
+                        completedAtUtc = downloadRecord.CompletedAtUtc,
+                        timestampUtc = DateTime.UtcNow
+                    });
                 }
             }
 
@@ -682,10 +771,18 @@ namespace EDM.ControlPlane.Api.Controllers
                 {
                     id = d.Id,
                     url = d.Url,
+                    host = d.Host,
                     fileName = d.FileName,
                     category = d.Category,
                     fileSizeBytes = d.BytesTransferred,
                     status = d.Status.ToString(),
+                    connections = d.ConnectionsCount,
+                    retryCount = d.RetryCount,
+                    httpStatusCode = d.HttpStatusCode,
+                    speedBytesPerSecond = d.SpeedBytesPerSecond,
+                    durationSeconds = d.DurationSeconds,
+                    startedAtUtc = d.StartedAtUtc,
+                    completedAtUtc = d.CompletedAtUtc,
                     sha256Hash = d.Sha256Hash,
                     deviceId = d.DeviceId,
                     deviceName = d.Device != null ? $"{d.Device.ClientType} ({d.Device.OsVersion})" : "Desktop Client",
@@ -698,6 +795,20 @@ namespace EDM.ControlPlane.Api.Controllers
                 total = records.Count,
                 history = records
             });
+        }
+
+        private static string ExtractHost(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return "unknown";
+            try
+            {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    return uri.Host;
+                }
+            }
+            catch { }
+            return "direct-link";
         }
     }
 }

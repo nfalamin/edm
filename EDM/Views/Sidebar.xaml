@@ -130,7 +130,7 @@
                 </Button>
 
                 <!-- Compressed -->
-                <Button Click="NavCategory_Click" Tag="Compressed" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="CompressedBtn" Click="NavCategory_Click" Tag="Compressed" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -153,7 +153,7 @@
                 </Button>
 
                 <!-- Video -->
-                <Button Click="NavCategory_Click" Tag="Video" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="VideoBtn" Click="NavCategory_Click" Tag="Video" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -176,7 +176,7 @@
                 </Button>
 
                 <!-- Music -->
-                <Button Click="NavCategory_Click" Tag="Music" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="MusicBtn" Click="NavCategory_Click" Tag="Music" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -199,7 +199,7 @@
                 </Button>
 
                 <!-- Documents -->
-                <Button Click="NavCategory_Click" Tag="Documents" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="DocumentsBtn" Click="NavCategory_Click" Tag="Documents" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -222,7 +222,7 @@
                 </Button>
 
                 <!-- Programs -->
-                <Button Click="NavCategory_Click" Tag="Programs" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="ProgramsBtn" Click="NavCategory_Click" Tag="Programs" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -245,7 +245,7 @@
                 </Button>
 
                 <!-- Queues -->
-                <Button Click="NavCategory_Click" Tag="Queues" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="QueuesBtn" Click="NavCategory_Click" Tag="Queues" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -271,7 +271,7 @@
                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,10"/>
 
                 <!-- Scheduler -->
-                <Button Click="NavCategory_Click" Tag="Scheduler" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="SchedulerNavBtn" Click="NavCategory_Click" Tag="Scheduler" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -295,7 +295,7 @@
                 </Button>
 
                 <!-- AI Assistant -->
-                <Button Click="NavCategory_Click" Tag="AiChat" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="AiChatNavBtn" Click="NavCategory_Click" Tag="AiChat" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -319,7 +319,7 @@
                 </Button>
 
                 <!-- Settings -->
-                <Button Click="NavCategory_Click" Tag="Settings" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="SettingsNavBtn" Click="NavCategory_Click" Tag="Settings" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -343,7 +343,7 @@
                 </Button>
 
                 <!-- Support & Help -->
-                <Button Click="NavCategory_Click" Tag="Support" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="SupportNavBtn" Click="NavCategory_Click" Tag="Support" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -367,7 +367,7 @@
                 </Button>
 
                 <!-- About EDM -->
-                <Button Click="NavCategory_Click" Tag="About" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="AboutNavBtn" Click="NavCategory_Click" Tag="About" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
@@ -391,7 +391,7 @@
                 </Button>
 
                 <!-- Privacy & Policy -->
-                <Button Click="NavCategory_Click" Tag="Privacy" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                <Button x:Name="PrivacyNavBtn" Click="NavCategory_Click" Tag="Privacy" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">

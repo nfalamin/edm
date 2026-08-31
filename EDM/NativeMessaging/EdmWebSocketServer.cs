@@ -20,17 +20,25 @@ namespace EDM.NativeMessaging
         public const int DefaultPort = 48912;
         private readonly int _port;
         private readonly Func<IpcHandoffPayload, Task<bool>> _handoffHandler;
+        private readonly Func<string, string, Task<string>>? _variantsHandler;
         private readonly CancellationTokenSource _cts = new();
         private TcpListener? _tcpListener;
         private Task? _listenTask;
 
         public bool IsRunning => _tcpListener != null && !_cts.IsCancellationRequested;
 
-        public EdmWebSocketServer(Func<IpcHandoffPayload, Task<bool>> handoffHandler, int port = DefaultPort)
+        /// <param name="handoffHandler">Handles POST /handoff download dispatch.</param>
+        /// <param name="variantsHandler">Optional. Handles POST /variants format resolution. Args: (url, cookies) → JSON string.</param>
+        public EdmWebSocketServer(
+            Func<IpcHandoffPayload, Task<bool>> handoffHandler,
+            Func<string, string, Task<string>>? variantsHandler = null,
+            int port = DefaultPort)
         {
             _handoffHandler = handoffHandler ?? throw new ArgumentNullException(nameof(handoffHandler));
+            _variantsHandler = variantsHandler;
             _port = port;
         }
+
 
         public void Start()
         {
@@ -116,10 +124,12 @@ namespace EDM.NativeMessaging
                         return;
                     }
 
-                    // 2. GET /ping or /health
-                    if (method == "GET" && (path.StartsWith("/ping", StringComparison.OrdinalIgnoreCase) || path.StartsWith("/health", StringComparison.OrdinalIgnoreCase)))
+                    // 2. GET /ping, /health, /status — Extension connectivity check
+                    if (method == "GET" && (path.StartsWith("/ping", StringComparison.OrdinalIgnoreCase) ||
+                                           path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+                                           path.StartsWith("/status", StringComparison.OrdinalIgnoreCase)))
                     {
-                        string json = JsonSerializer.Serialize(new { status = "ok", app = "EDM", version = "1.0.0" });
+                        string json = JsonSerializer.Serialize(new { status = "ok", app = "EDM", version = "1.0.0", connected = true });
                         await SendJsonResponseAsync(stream, 200, "OK", json).ConfigureAwait(false);
                         return;
                     }
@@ -132,7 +142,39 @@ namespace EDM.NativeMessaging
                         return;
                     }
 
-                    // 4. POST /handoff or POST /
+                    // 4. POST /variants — Browser extension requests media format list
+                    if (method == "POST" && path.StartsWith("/variants", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string body = await ReadPostBodyAsync(stream, requestString, lines, ct).ConfigureAwait(false);
+                        LoggingService.Log($"[EdmWebSocketServer] Received /variants request (Length: {body.Length} bytes)");
+
+                        if (_variantsHandler != null && !string.IsNullOrWhiteSpace(body))
+                        {
+                            try
+                            {
+                                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                                string url = doc.RootElement.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+                                string cookies = doc.RootElement.TryGetProperty("cookies", out var c) ? c.GetString() ?? "" : "";
+
+                                if (!string.IsNullOrWhiteSpace(url))
+                                {
+                                    string variantsJson = await _variantsHandler(url, cookies).ConfigureAwait(false);
+                                    await SendJsonResponseAsync(stream, 200, "OK", variantsJson).ConfigureAwait(false);
+                                    return;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggingService.LogException("[EdmWebSocketServer] /variants handler error", ex);
+                            }
+                        }
+
+                        // Fallback: return empty variants (extension will use its own YouTube extractor)
+                        string emptyJson = JsonSerializer.Serialize(new { success = false, variants = Array.Empty<object>(), error = "Variants resolver unavailable" });
+                        await SendJsonResponseAsync(stream, 200, "OK", emptyJson).ConfigureAwait(false);
+                        return;
+                    }
+
                     if (method == "POST")
                     {
                         int headerEnd = requestString.IndexOf("\r\n\r\n", StringComparison.Ordinal);
@@ -211,6 +253,49 @@ namespace EDM.NativeMessaging
                     LoggingService.LogException("[EdmWebSocketServer] ProcessClient error", ex);
                 }
             }
+        }
+
+        /// <summary>
+        /// Extracts the HTTP POST body from an already-read request string + remaining stream bytes.
+        /// Shared by /handoff and /variants handlers.
+        /// </summary>
+        private static async Task<string> ReadPostBodyAsync(Stream stream, string requestString, string[] lines, CancellationToken ct)
+        {
+            int headerEnd = requestString.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+            string body = string.Empty;
+
+            // Count bytes already read
+            byte[] rawBuf = Encoding.UTF8.GetBytes(requestString);
+
+            if (headerEnd >= 0)
+            {
+                int bodyStartIndex = headerEnd + 4;
+                int headerByteCount = Encoding.UTF8.GetByteCount(requestString.Substring(0, bodyStartIndex));
+                int bodyByteCount = rawBuf.Length - headerByteCount;
+                if (bodyByteCount > 0)
+                    body = Encoding.UTF8.GetString(rawBuf, headerByteCount, bodyByteCount);
+            }
+
+            // Read remaining bytes if Content-Length says there's more
+            int contentLength = 0;
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                {
+                    int.TryParse(line.Substring(15).Trim(), out contentLength);
+                    break;
+                }
+            }
+
+            if (contentLength > 0 && Encoding.UTF8.GetByteCount(body) < contentLength)
+            {
+                int remaining = contentLength - Encoding.UTF8.GetByteCount(body);
+                var bodyBuf = new byte[Math.Min(remaining, 1024 * 1024)]; // cap at 1MB
+                int read = await stream.ReadAsync(bodyBuf, 0, bodyBuf.Length, ct).ConfigureAwait(false);
+                if (read > 0) body += Encoding.UTF8.GetString(bodyBuf, 0, read);
+            }
+
+            return body;
         }
 
         private static async Task SendCorsResponseAsync(Stream stream)

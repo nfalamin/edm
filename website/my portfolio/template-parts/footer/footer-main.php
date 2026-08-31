@@ -56,6 +56,7 @@ if (!defined('ABSPATH')) {
             <!-- Col 4: Trust & Verification -->
             <div class="footer-col">
                 <h4 class="footer-heading"><?php esc_html_e('Security & Privacy', 'edm-theme'); ?></h4>
+                <ul class="footer-links">
                     <li><a href="<?php echo esc_url(home_url('/privacy/')); ?>"><?php esc_html_e('Privacy Policy', 'edm-theme'); ?></a></li>
                     <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php esc_html_e('Terms of Service', 'edm-theme'); ?></a></li>
                     <li><a href="<?php echo esc_url(home_url('/edm-download/')); ?>"><?php esc_html_e('SHA-256 Checksums', 'edm-theme'); ?></a></li>

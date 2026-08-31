@@ -43,6 +43,12 @@ $is_edm_page = (is_page('edm') || is_page_template('page-edm.php'));
 
         <!-- Right Action Items -->
         <div class="nav-actions">
+            <!-- Obhijog & Feedback Center CTA -->
+            <button type="button" class="btn btn-secondary btn-sm btn-obhijog-nav" onclick="window.openObhijogModal()" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s ease;">
+                <i data-lucide="message-square-plus" style="width: 14px; height: 14px; color: #fbbf24;"></i>
+                <span>অভিযোগ ও পরামর্শ</span>
+            </button>
+
             <!-- Theme Switcher -->
             <button type="button" class="btn-theme-toggle" id="btn-theme-toggle" title="<?php esc_attr_e('Toggle Theme', 'portfolio'); ?>" onclick="if(window.edmSite) window.edmSite.toggleTheme();" aria-label="<?php esc_attr_e('Toggle Theme', 'portfolio'); ?>">
                 <i data-lucide="sun" id="theme-icon" style="width: 15px; height: 15px;"></i>

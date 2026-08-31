@@ -716,6 +716,19 @@ class EdmWebsiteEngine {
         this.showToast(`Currency switched to ${this.currency}`, "info");
     }
 
+    togglePricingPeriod() {
+        this.pricingPeriod = this.pricingPeriod === "monthly" ? "yearly" : "monthly";
+        const toggleBtn = document.getElementById("pricing-period-toggle");
+        if (toggleBtn) {
+            const slider = toggleBtn.querySelector(".toggle-switch-slider");
+            if (slider) {
+                if (this.pricingPeriod === "yearly") slider.classList.add("active");
+                else slider.classList.remove("active");
+            }
+        }
+        this.updateCurrencyUI();
+    }
+
     updateCurrencyUI() {
         const label = document.getElementById("currency-label");
         if (label) label.textContent = this.currency === "BDT" ? "BDT (৳)" : "USD ($)";
@@ -725,15 +738,15 @@ class EdmWebsiteEngine {
 
         const curFree = document.getElementById("price-cur-free");
         const curPro = document.getElementById("price-cur-pro");
-        const curEnt = document.getElementById("price-cur-ent");
+        const curEnt = document.getElementById("price-cur-ent") || document.getElementById("price-cur-life");
 
         if (curFree) curFree.textContent = sym;
         if (curPro) curPro.textContent = sym;
         if (curEnt) curEnt.textContent = sym;
 
-        const amtPro = document.getElementById("price-amt-pro");
+        const amtPro = document.getElementById("price-amt-pro") || document.getElementById("price-val-pro");
         const oldPro = document.getElementById("price-old-pro");
-        const amtEnt = document.getElementById("price-amt-ent");
+        const amtEnt = document.getElementById("price-amt-ent") || document.getElementById("price-val-life");
         const oldEnt = document.getElementById("price-old-ent");
 
         if (this.pricingPeriod === "monthly") {
@@ -742,15 +755,15 @@ class EdmWebsiteEngine {
             if (amtEnt) amtEnt.textContent = isBDT ? "299" : "2.99";
             if (oldEnt) oldEnt.textContent = isBDT ? "Was ৳ 599 / mo" : "Was $ 6.99 / mo";
         } else if (this.pricingPeriod === "yearly") {
-            if (amtPro) amtPro.textContent = isBDT ? "499" : "4.99";
-            if (oldPro) oldPro.textContent = isBDT ? "Was ৳ 1,299 / year" : "Was $ 14.99 / year";
-            if (amtEnt) amtEnt.textContent = isBDT ? "1,499" : "14.99";
-            if (oldEnt) oldEnt.textContent = isBDT ? "Was ৳ 3,500 / year" : "Was $ 39.99 / year";
+            if (amtPro) amtPro.textContent = isBDT ? "1,200" : "12.00";
+            if (oldPro) oldPro.textContent = isBDT ? "Was ৳ 2,400 / year" : "Was $ 24.00 / year";
+            if (amtEnt) amtEnt.textContent = isBDT ? "2,800" : "28.00";
+            if (oldEnt) oldEnt.textContent = isBDT ? "Was ৳ 5,600 one-time" : "Was $ 56.00 one-time";
         } else {
             if (amtPro) amtPro.textContent = isBDT ? "999" : "9.99";
             if (oldPro) oldPro.textContent = isBDT ? "Was ৳ 2,499 one-time" : "Was $ 29.99 one-time";
-            if (amtEnt) amtEnt.textContent = isBDT ? "2,999" : "29.99";
-            if (oldEnt) oldEnt.textContent = isBDT ? "Was ৳ 6,999 one-time" : "Was $ 69.99 one-time";
+            if (amtEnt) amtEnt.textContent = isBDT ? "2,800" : "28.00";
+            if (oldEnt) oldEnt.textContent = isBDT ? "Was ৳ 5,600 one-time" : "Was $ 56.00 one-time";
         }
     }
 

@@ -121,8 +121,7 @@ namespace EDM.Services
 
         /// <summary>
         /// Quick connectivity test: tries to reach a well-known URL through the given proxy settings.
-        /// Used by the "Test Connection" button in Settings so users get instant feedback,
-        /// something IDM's proxy dialog does not offer.
+        /// Used by the "Test Connection" button in Settings so users get instant feedback.
         /// </summary>
         public static async System.Threading.Tasks.Task<(bool Success, string Message)> TestProxyAsync(ProxySettings settings, System.Threading.CancellationToken ct = default)
         {

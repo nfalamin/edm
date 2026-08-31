@@ -1,5 +1,5 @@
 ; EDMSetup.iss — Inno Setup Installer for EDM (Exclusive Download Manager)
-; Version 2.1.0 — IDM-Grade with Browser Extension + NativeHost + Admin Dashboard
+; Version 2.1.0 — Enterprise-Grade with Browser Extension + NativeHost + Admin Dashboard
 
 #define MyAppName       "Exclusive Download Manager"
 #define MyAppShortName  "EDM"

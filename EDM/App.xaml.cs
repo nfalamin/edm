@@ -39,7 +39,7 @@ namespace EDM
                 // Register global exception handlers FIRST
                 RegisterExceptionHandlers();
 
-                // IDM-style Auto Extension Registration for Chrome, Edge, Firefox, Brave, Opera, Vivaldi
+                // EDM Native Auto Extension Registration for Chrome, Edge, Firefox, Brave, Opera, Vivaldi
                 EDM.Services.BrowserExtensionInstaller.InstallAllBrowsersIntegration();
 
                 // Check for headless native-host mode early
@@ -496,30 +496,32 @@ namespace EDM
                 estimatedSizeBytes: payload.EstimatedSizeBytes,
                 requiresFfmpegMerge: payload.RequiresFfmpegMerge);
 
-            // 5. Zero-Trust Confirmation Policy Check
-            bool requireConfirmation = settingsService.GetBrowserShowConfirmation();
+            // 5. Browser Download Policy Check (IDM-Style Dialog vs Instant Start)
+            string downloadMode = settingsService.GetBrowserDownloadMode(); // "ShowDialog" (default) or "StartImmediately"
 
-            if (requireConfirmation)
+            if (string.Equals(downloadMode, "ShowDialog", StringComparison.OrdinalIgnoreCase))
             {
-                // Dispatch confirmation UI on the Dispatcher
+                // IDM-Style: Directly show the AddUrlWindow pre-filled with download info and category
                 await Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {
-                        PendingApprovalWindow.ShowOrUpdate(pendingQueue);
+                        var addUrlWin = new AddUrlWindow();
+                        var mainVm = System.Windows.Application.Current?.MainWindow?.DataContext as EDM.ViewModels.DownloadManagerViewModel;
+                        addUrlWin.PrefillFromHandoff(payload, mainVm);
 
                         if (settingsService.GetBrowserShowNotification())
                         {
                             NotificationService.Instance.Notify(
                                 "Download Request Captured",
-                                $"Reviewing: {(string.IsNullOrWhiteSpace(effectiveFileName) ? payload.Url : effectiveFileName)}",
+                                $"Captured: {(string.IsNullOrWhiteSpace(effectiveFileName) ? payload.Url : effectiveFileName)}",
                                 NotificationSeverity.Info,
                                 NotificationCategory.System);
                         }
                     }
                     catch (Exception ex)
                     {
-                        LoggingService.LogException("[App.HandleIpcHandoffAsync] Failed to display PendingApprovalWindow", ex);
+                        LoggingService.LogException("[App.HandleIpcHandoffAsync] Failed to display AddUrlWindow", ex);
                     }
                 });
 

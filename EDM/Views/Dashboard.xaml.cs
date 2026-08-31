@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Microsoft.Win32;
+using EDM.Services;
 using EDM.ViewModels;
 // Explicit aliases to resolve ambiguity with System.Windows.Forms
 using WpfApp        = System.Windows.Application;
@@ -58,6 +59,24 @@ namespace EDM.Views
             };
 
             _ = _viewModel.StartMetricsUpdates(500);
+
+            // Hook Live Speed Limiter updates
+            int activeLimit = EDM.Services.BandwidthThrottler.Instance.LimitKbps;
+            if (activeLimit <= 0)
+            {
+                var settings = new EDM.Services.SettingsService();
+                activeLimit = settings.GetActiveBandwidthLimitKbps();
+                if (activeLimit > 0)
+                {
+                    EDM.Services.BandwidthThrottler.Instance.SetLimit(activeLimit);
+                }
+            }
+            UpdateSpeedLimiterUI(activeLimit);
+
+            EDM.Services.BandwidthThrottler.Instance.LimitChanged += (kbps) =>
+            {
+                Dispatcher.BeginInvoke(() => UpdateSpeedLimiterUI(kbps));
+            };
 
             // Hook notification updates
             EDM.Services.NotificationService.Instance.UnreadCountChanged += (s, e) =>
@@ -421,6 +440,67 @@ namespace EDM.Views
             }
         }
 
+        private void SpeedLimiterBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (SpeedLimiterPopup != null)
+            {
+                SpeedLimiterPopup.IsOpen = !SpeedLimiterPopup.IsOpen;
+            }
+        }
+
+        private void SelectSpeedLimitPreset_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is string tagStr && int.TryParse(tagStr, out int kbps))
+            {
+                EDM.Services.BandwidthThrottler.Instance.SetLimit(kbps);
+                var settings = new EDM.Services.SettingsService();
+                settings.SetBandwidthLimitKbps(kbps);
+
+                UpdateSpeedLimiterUI(kbps);
+
+                if (SpeedLimiterPopup != null)
+                {
+                    SpeedLimiterPopup.IsOpen = false;
+                }
+            }
+        }
+
+        private void UpdateSpeedLimiterUI(int kbps)
+        {
+            if (SpeedLimiterText == null || SpeedLimiterIcon == null) return;
+
+            if (kbps <= 0)
+            {
+                SpeedLimiterText.Text = "Speed Limit: OFF";
+                try
+                {
+                    SpeedLimiterText.Foreground = (System.Windows.Media.Brush)FindResource("PrimaryTextBrush");
+                }
+                catch
+                {
+                    SpeedLimiterText.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0xF8, 0xFA, 0xFC));
+                }
+                SpeedLimiterIcon.Text = "⚡";
+                SpeedLimiterIcon.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0x94, 0xA3, 0xB8)); // Muted slate
+            }
+            else
+            {
+                string label = kbps switch
+                {
+                    < 1024 => $"{kbps} KB/s",
+                    1024 => "1.0 MB/s",
+                    2048 => "2.0 MB/s",
+                    5120 => "5.0 MB/s",
+                    10240 => "10.0 MB/s",
+                    _ => $"{Math.Round(kbps / 1024.0, 1)} MB/s"
+                };
+                SpeedLimiterText.Text = $"⚡ {label}";
+                SpeedLimiterText.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0x10, 0xB9, 0x81)); // Vivid Emerald
+                SpeedLimiterIcon.Text = "⚡";
+                SpeedLimiterIcon.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0x00, 0xC9, 0xA7));
+            }
+        }
+
         private void LanguageBtn_Click(object sender, System.Windows.RoutedEventArgs e)
         {
             if (LanguagePopup != null)
@@ -438,6 +518,63 @@ namespace EDM.Views
                 {
                     LanguagePopup.IsOpen = false;
                 }
+            }
+        }
+
+        private async void AutoDetectLanguage_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (LanguagePopup != null) LanguagePopup.IsOpen = false;
+
+            // Show loading state on the Auto Detect sub-label
+            if (AutoDetectSubLabel != null)
+                AutoDetectSubLabel.Text = "🔄 Detecting your country...";
+            if (AutoDetectLangBtn != null)
+                AutoDetectLangBtn.IsEnabled = false;
+
+            try
+            {
+                var (success, country, langCode, error) =
+                    await EDM.Services.AutoTranslateService.Instance.DetectAndApplyAsync();
+
+                if (success && string.IsNullOrEmpty(error))
+                {
+                    var pack = EDM.Services.LocalizationService.Instance.GetLanguagePack(langCode);
+                    string flag = pack?.FlagEmoji ?? "🌍";
+                    string name = pack?.DisplayName ?? langCode;
+
+                    if (AutoDetectSubLabel != null)
+                        AutoDetectSubLabel.Text = $"{flag} {country} → {name}";
+                    if (AutoDetectIcon != null)
+                        AutoDetectIcon.Text = flag;
+
+                    WpfMsgBox.Show(
+                        $"✅ দেশ শনাক্ত হয়েছে: {country}\nভাষা প্রয়োগ করা হয়েছে: {name}",
+                        "Auto Language Detect",
+                        WpfMsgBtn.OK,
+                        WpfMsgImg.Information);
+                }
+                else
+                {
+                    if (AutoDetectSubLabel != null)
+                        AutoDetectSubLabel.Text = "Detect language from your IP";
+
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        WpfMsgBox.Show(error, "Auto Language Detect",
+                            WpfMsgBtn.OK, WpfMsgImg.Warning);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (AutoDetectSubLabel != null)
+                    AutoDetectSubLabel.Text = "Detect language from your IP";
+                EDM.Services.LoggingService.LogException("[Dashboard] AutoDetectLanguage failed", ex);
+            }
+            finally
+            {
+                if (AutoDetectLangBtn != null)
+                    AutoDetectLangBtn.IsEnabled = true;
             }
         }
 
@@ -486,6 +623,7 @@ namespace EDM.Views
                     case "Delete":    OnDeleteClicked();    break;
                     case "DeleteAll": OnDeleteAllClicked(); break;
                     case "Scheduler": OnSchedulerClicked(); break;
+                    case "Grabber":   OnSiteGrabberClicked(); break;
                     case "Approvals": OnApprovalsClicked(); break;
                     case "Settings":  OnSettingsClicked();  break;
                 }
@@ -556,6 +694,119 @@ namespace EDM.Views
                 win.ShowDialog();
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+        }
+
+        private void OnSiteGrabberClicked()
+        {
+            try
+            {
+                var grabberWizard = new SiteGrabberWizardWindow();
+                grabberWizard.Owner = WpfWindow.GetWindow(this);
+                grabberWizard.OnGrabberFinished = (urls, queue) =>
+                {
+                    if (_viewModel == null || urls == null || urls.Count == 0) return;
+                    foreach (var u in urls)
+                    {
+                        if (string.IsNullOrWhiteSpace(u)) continue;
+                        try
+                        {
+                            string fileName = string.Empty;
+                            if (Uri.TryCreate(u, UriKind.Absolute, out var uri))
+                            {
+                                fileName = System.IO.Path.GetFileName(uri.AbsolutePath);
+                            }
+                            if (string.IsNullOrWhiteSpace(fileName))
+                            {
+                                fileName = "download_" + Guid.NewGuid().ToString("N")[..8];
+                            }
+
+                            var cat = DownloadPathCategoryService.DetermineFileCategory(fileName);
+                            string catStr = cat.ToString();
+                            string baseDir = DownloadPathCategoryService.GetDefaultBasePath();
+                            string saveDir = DownloadPathCategoryService.BuildCategorizedPath(baseDir, fileName);
+                            if (!System.IO.Directory.Exists(saveDir))
+                            {
+                                System.IO.Directory.CreateDirectory(saveDir);
+                            }
+                            string savePath = System.IO.Path.Combine(saveDir, fileName);
+
+                            var item = new EDM.Models.DownloadItem
+                            {
+                                FileName = fileName,
+                                Url = u,
+                                SavePath = savePath,
+                                Category = catStr,
+                                Status = "Downloading"
+                            };
+
+                            _viewModel.AllDownloads.Insert(0, item);
+                            _ = _viewModel.StartDownloadProcessAsync(item);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogException("[Dashboard] Ingesting grabbed item failed", ex);
+                        }
+                    }
+                };
+                grabberWizard.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[Dashboard] OnSiteGrabberClicked failed", ex);
+            }
+        }
+
+        private FloatingDropTargetWindow? _dropBasketWindow;
+
+        private void DropBasketBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            try
+            {
+                if (_dropBasketWindow == null)
+                {
+                    _dropBasketWindow = new FloatingDropTargetWindow();
+                    if (_viewModel != null)
+                    {
+                        _dropBasketWindow.SetViewModel(_viewModel);
+                    }
+                    _dropBasketWindow.WidgetClosed += () =>
+                    {
+                        Dispatcher.InvokeAsync(() => UpdateDropBasketUI(false));
+                    };
+                }
+
+                if (_dropBasketWindow.IsVisible)
+                {
+                    _dropBasketWindow.Hide();
+                    UpdateDropBasketUI(false);
+                }
+                else
+                {
+                    _dropBasketWindow.Show();
+                    UpdateDropBasketUI(true);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[Dashboard] DropBasketBtn_Click failed", ex);
+            }
+        }
+
+        private void UpdateDropBasketUI(bool isActive)
+        {
+            if (BasketLabel == null) return;
+            if (isActive)
+            {
+                BasketLabel.Text = "Drop Basket: ACTIVE";
+                BasketLabel.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0xC0, 0x84, 0xFC));
+                if (BasketIcon != null) BasketIcon.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0xC0, 0x84, 0xFC));
+            }
+            else
+            {
+                BasketLabel.Text = "Drop Basket: OFF";
+                BasketLabel.Foreground = FindResource("PrimaryTextBrush") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.White;
+                if (BasketIcon != null) BasketIcon.Foreground = new WpfSolidBrush(WpfColor.FromRgb(0xA8, 0x55, 0xF7));
+            }
         }
 
         private void OnApprovalsClicked()

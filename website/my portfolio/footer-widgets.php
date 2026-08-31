@@ -14,9 +14,10 @@
             </div>
         </div>
         <div class="flex items-center space-x-6 text-slate-400">
-            <a href="#" class="hover:text-blue-500 hover:-translate-y-1 transition-all duration-300 text-xl"><i class="fa-brands fa-linkedin-in"></i></a>
-            <a href="#" class="hover:text-cyan-400 hover:-translate-y-1 transition-all duration-300 text-xl"><i class="fa-brands fa-twitter"></i></a>
-            <a href="#" class="hover:text-blue-600 hover:-translate-y-1 transition-all duration-300 text-xl"><i class="fa-brands fa-facebook"></i></a>
+            <a href="https://linkedin.com/in/nfalamin" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 hover:-translate-y-1 transition-all duration-300 text-xl" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://twitter.com/nfalamin" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-400 hover:-translate-y-1 transition-all duration-300 text-xl" title="Twitter / X"><i class="fa-brands fa-twitter"></i></a>
+            <a href="https://facebook.com/nfxalamin" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 hover:-translate-y-1 transition-all duration-300 text-xl" title="Facebook"><i class="fa-brands fa-facebook"></i></a>
+            <a href="https://github.com/nfalamin" target="_blank" rel="noopener noreferrer" class="hover:text-purple-400 hover:-translate-y-1 transition-all duration-300 text-xl" title="GitHub"><i class="fa-brands fa-github"></i></a>
         </div>
     </div>
 </footer>

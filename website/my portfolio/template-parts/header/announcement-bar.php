@@ -26,8 +26,8 @@ $notice_text = !empty($custom_text) ? $custom_text : sprintf(__('⚡ EDM v%s Pro
             <span id="top-notice-text" class="top-notice-title"><?php echo esc_html($notice_text); ?></span>
         </div>
         <div class="top-notice-right">
-            <a href="<?php echo esc_url(home_url('/edm-download/')); ?>" class="notice-quick-link" download>
-                <i data-lucide="download" style="width: 12px; height: 12px;"></i> <span><?php esc_html_e('Setup (19.8 MB)', 'edm-theme'); ?></span>
+            <a href="<?php echo function_exists('edm_get_download_url') ? edm_get_download_url() : esc_url(home_url('/downloads/EDM-Setup-v2.1.0.exe')); ?>" class="notice-quick-link" download>
+                <i data-lucide="download" style="width: 12px; height: 12px;"></i> <span><?php printf(esc_html__('Setup (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
             </a>
             <a href="<?php echo esc_url(home_url('/edm-extensions/')); ?>" class="notice-quick-link">
                 <i data-lucide="puzzle" style="width: 12px; height: 12px;"></i> <span><?php esc_html_e('Extensions', 'edm-theme'); ?></span>

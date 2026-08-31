@@ -26,7 +26,7 @@ namespace EDM.Services
     }
 
     /// <summary>
-    /// IDM-Exceeding Periodic Synchronization Queue Engine.
+    /// EDM Native Periodic Synchronization Queue Engine.
     /// Periodically probes remote resources with HTTP HEAD requests, inspects ETag / Last-Modified / Content-Length headers,
     /// and automatically redownloads and performs atomic file swaps when remote contents change.
     /// </summary>

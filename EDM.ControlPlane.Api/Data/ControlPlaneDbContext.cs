@@ -31,6 +31,7 @@ namespace EDM.ControlPlane.Api.Data
         public DbSet<DownloadRecord> DownloadRecords => Set<DownloadRecord>();
         public DbSet<WebsiteEvent> WebsiteEvents => Set<WebsiteEvent>();
         public DbSet<WebsiteContent> WebsiteContents => Set<WebsiteContent>();
+        public DbSet<ContentDocument> ContentDocuments => Set<ContentDocument>();
         public DbSet<PricingTier> PricingTiers => Set<PricingTier>();
         public DbSet<Announcement> Announcements => Set<Announcement>();
         public DbSet<AdminNotification> AdminNotifications => Set<AdminNotification>();
@@ -52,6 +53,7 @@ namespace EDM.ControlPlane.Api.Data
         public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
         public DbSet<WebhookEventRecord> WebhookEvents => Set<WebhookEventRecord>();
         public DbSet<CouponUsageRecord> CouponUsages => Set<CouponUsageRecord>();
+        public DbSet<EmailCampaignRecord> EmailCampaigns => Set<EmailCampaignRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -305,6 +307,10 @@ namespace EDM.ControlPlane.Api.Data
                     .WithMany()
                     .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // WebsiteEvent configuration
@@ -498,6 +504,86 @@ namespace EDM.ControlPlane.Api.Data
                     .WithMany()
                     .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ContentDocument configuration
+            modelBuilder.Entity<ContentDocument>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Slug).IsUnique();
+                entity.HasIndex(e => new { e.DocType, e.IsPublished });
+                entity.Property(e => e.Slug).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.DocType).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Title).HasMaxLength(255).IsRequired();
+            });
+
+            // Promotion configuration
+            modelBuilder.Entity<PromotionRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.PromoCode).IsUnique();
+                entity.HasIndex(e => new { e.IsEnabled, e.StartsAtUtc, e.EndsAtUtc });
+                entity.Property(e => e.PromoCode).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.DiscountPercent).HasPrecision(18, 2);
+                entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
+            });
+
+            // CouponUsage configuration
+            modelBuilder.Entity<CouponUsageRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.PromotionId, e.UserId });
+                entity.HasIndex(e => new { e.PromotionId, e.InstallationId });
+                entity.Property(e => e.PromoCode).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
+            });
+
+            // Payment configuration
+            modelBuilder.Entity<PaymentRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.ProviderTransactionId);
+                entity.HasIndex(e => e.ProviderSessionId);
+                entity.HasIndex(e => new { e.InstallationId, e.Status });
+                entity.HasIndex(e => new { e.UserId, e.Status });
+                entity.Property(e => e.Status).HasConversion<string>();
+                entity.Property(e => e.Amount).HasPrecision(18, 2);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // WebhookEvent configuration
+            modelBuilder.Entity<WebhookEventRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.Provider, e.ProviderEventId });
+                entity.HasIndex(e => new { e.IsProcessed, e.CreatedAtUtc });
+                entity.Property(e => e.Provider).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.ProviderEventId).HasMaxLength(100).IsRequired();
+            });
+
+            // SubscriptionPolicy configuration
+            modelBuilder.Entity<SubscriptionPolicyRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.InstallationId).IsUnique();
+                entity.HasIndex(e => new { e.UserId, e.CurrentState });
+                entity.Property(e => e.CurrentState).HasConversion<string>();
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // AdminOverride configuration
+            modelBuilder.Entity<AdminOverrideRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.TargetType, e.TargetValue, e.IsActive });
+                entity.Property(e => e.TargetType).HasConversion<string>();
+                entity.Property(e => e.OverrideState).HasConversion<string>();
             });
 
             // Seed Default Geo-Pricing Rules

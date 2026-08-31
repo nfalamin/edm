@@ -386,6 +386,7 @@ enc_seg1.ts
         public void Test21_QueueIntegration_EnqueuesHlsItemCorrectly()
         {
             var queueScheduler = new DownloadQueueScheduler();
+            queueScheduler.Clear();
             var item = new QueuedDownloadItem
             {
                 DownloadId = "hls_job_1",

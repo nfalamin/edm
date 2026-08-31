@@ -49,6 +49,24 @@ namespace EDM.Services
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Open EDM", null, (s, e) => ShowMainWindow());
             contextMenu.Items.Add(new ToolStripSeparator());
+
+            var settingsService = (App.ServiceProvider?.GetService(typeof(Interfaces.ISettingsService)) as Interfaces.ISettingsService)
+                ?? new SettingsService();
+
+            var clipboardMenuItem = new ToolStripMenuItem("Monitor Clipboard")
+            {
+                CheckOnClick = true,
+                Checked = settingsService.GetEnableClipboardMonitoring()
+            };
+            clipboardMenuItem.Click += (s, e) =>
+            {
+                bool newState = clipboardMenuItem.Checked;
+                settingsService.SetEnableClipboardMonitoring(newState);
+                ShowNotification("EDM Clipboard Monitor", newState ? "Clipboard monitoring enabled ✓" : "Clipboard monitoring disabled", ToolTipIcon.Info);
+            };
+            contextMenu.Items.Add(clipboardMenuItem);
+
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Pause All Downloads", null, (s, e) => OnPauseAllRequested?.Invoke());
             contextMenu.Items.Add("Resume All Downloads", null, (s, e) => OnResumeAllRequested?.Invoke());
             contextMenu.Items.Add(new ToolStripSeparator());

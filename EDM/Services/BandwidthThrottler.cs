@@ -29,17 +29,41 @@ namespace EDM.Services
         private const int MetricsIntervalMs = 1000; // 1s metrics
         private long _consumedSinceLastReport = 0;
 
+        public int LimitKbps => _limitKbps;
+        public bool IsLimitEnabled => _limitKbps > 0;
+        public int LastConfiguredLimitKbps { get; private set; } = 500;
+        public event Action<int>? LimitChanged;
+
         private BandwidthThrottler()
         {
             // start with unlimited
             SetLimit(0);
         }
 
+        public void ToggleLimit()
+        {
+            if (_limitKbps > 0)
+            {
+                SetLimit(0);
+            }
+            else
+            {
+                SetLimit(LastConfiguredLimitKbps > 0 ? LastConfiguredLimitKbps : 500);
+            }
+        }
+
         public void SetLimit(int kbps)
         {
+            int updatedLimit;
             lock (_lock)
             {
                 _limitKbps = Math.Max(0, kbps);
+                updatedLimit = _limitKbps;
+                if (_limitKbps > 0)
+                {
+                    LastConfiguredLimitKbps = _limitKbps;
+                }
+
                 if (_limitKbps <= 0)
                 {
                     // Unlimited
@@ -72,7 +96,15 @@ namespace EDM.Services
                 }
             }
 
-            LoggingService.Log($"[BandwidthThrottler] Set limit: {_limitKbps} KB/s");
+            LoggingService.Log($"[BandwidthThrottler] Set limit: {updatedLimit} KB/s");
+            try
+            {
+                LimitChanged?.Invoke(updatedLimit);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[BandwidthThrottler] LimitChanged subscriber failed", ex);
+            }
         }
 
         private void RefillCallback(object? state)

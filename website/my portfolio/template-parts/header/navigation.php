@@ -43,6 +43,12 @@ $is_edm_page = (is_page('edm') || is_page_template('page-edm.php'));
 
         <!-- Right Action Items -->
         <div class="nav-actions">
+            <!-- Obhijog & Feedback Center CTA -->
+            <button type="button" class="btn btn-secondary btn-sm btn-obhijog-nav" onclick="window.openObhijogModal()" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); color: #fbbf24; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; transition: all 0.2s ease;">
+                <i data-lucide="message-square-plus" style="width: 14px; height: 14px; color: #fbbf24;"></i>
+                <span>অভিযোগ ও পরামর্শ</span>
+            </button>
+
             <!-- Theme Switcher -->
             <button type="button" class="btn-theme-toggle" id="btn-theme-toggle" title="<?php esc_attr_e('Toggle Theme', 'portfolio'); ?>" onclick="if(window.edmSite) window.edmSite.toggleTheme();" aria-label="<?php esc_attr_e('Toggle Theme', 'portfolio'); ?>">
                 <i data-lucide="sun" id="theme-icon" style="width: 15px; height: 15px;"></i>
@@ -76,7 +82,7 @@ $is_edm_page = (is_page('edm') || is_page_template('page-edm.php'));
         <i data-lucide="puzzle" style="width: 14px; height: 14px;"></i> Browser Extensions
     </a>
     <a href="<?php echo esc_url(home_url('/edm-download/')); ?>" class="mobile-nav-link">
-        <i data-lucide="download-cloud" style="width: 14px; height: 14px;"></i> Official Downloads (19.8 MB)
+        <i data-lucide="download-cloud" style="width: 14px; height: 14px;"></i> Official Downloads (<?php echo function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'; ?>)
     </a>
     <a href="<?php echo esc_url(home_url('/edm-features/')); ?>" class="mobile-nav-link">
         <i data-lucide="cpu" style="width: 14px; height: 14px;"></i> 32-Socket Architecture
@@ -90,6 +96,6 @@ $is_edm_page = (is_page('edm') || is_page_template('page-edm.php'));
         <i data-lucide="layout-dashboard" style="width: 14px; height: 14px;"></i> Super Admin (/nf)
     </a>
     <a href="<?php echo esc_url($download_url); ?>" class="btn btn-primary" style="width: 100%; margin-top: 14px;" download>
-        <i data-lucide="download" style="width: 14px; height: 14px;"></i> Download EDM (19.8 MB)
+        <i data-lucide="download" style="width: 14px; height: 14px;"></i> Download EDM (<?php echo function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'; ?>)
     </a>
 </div>

@@ -100,7 +100,7 @@ namespace EDM.ControlPlane.Api.Controllers
         }
 
         [HttpGet("events")]
-        public async Task<IActionResult> GetEventsAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? eventName = null)
+        public async Task<IActionResult> GetEventsAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] string? eventName = null, [FromQuery] string? filter = null)
         {
             if (page < 1) page = 1;
             if (pageSize < 1 || pageSize > 100) pageSize = 50;
@@ -111,6 +111,21 @@ namespace EDM.ControlPlane.Api.Controllers
             {
                 var ev = eventName.Trim().ToLowerInvariant();
                 query = query.Where(t => t.EventName == ev);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter))
+            {
+                var f = filter.Trim().ToLowerInvariant();
+                if (f.Contains("premium"))
+                {
+                    var premUserIds = await _dbContext.Licenses.Where(l => l.Status == LicenseStatus.Active && l.UserId.HasValue).Select(l => l.UserId!.Value).Distinct().ToListAsync();
+                    query = query.Where(t => t.Device != null && t.Device.UserId.HasValue && premUserIds.Contains(t.Device.UserId.Value));
+                }
+                else if (f.Contains("trial"))
+                {
+                    var trialUserIds = await _dbContext.SubscriptionPolicies.Where(s => s.CurrentState == SubscriptionState.TRIAL_ACTIVE && s.UserId.HasValue).Select(s => s.UserId!.Value).Distinct().ToListAsync();
+                    query = query.Where(t => t.Device != null && t.Device.UserId.HasValue && trialUserIds.Contains(t.Device.UserId.Value));
+                }
             }
 
             var totalCount = await query.CountAsync();

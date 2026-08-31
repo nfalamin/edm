@@ -18,7 +18,7 @@ const HANDOFF_TIMEOUT_MS = 6000;
 const tabMediaStreams = new Map();
 const recentHandoffs = new Set();
 
-// Comprehensive 60+ IDM-Grade Downloadable File Extensions Dictionary
+// Comprehensive 60+ EDM-Grade Downloadable File Extensions Dictionary
 const DOWNLOAD_EXTENSIONS = new Set([
     // Archives & Compressed (20)
     "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "tbz2", "xz", "txz", "iso", "img", "dmg", "pkg", "deb", "rpm", "cab", "ace", "arc", "arj",
@@ -176,8 +176,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.action === "GET_NATIVE_STATUS") {
         sendNativePing()
-            .then(res => sendResponse({ success: true, connected: !!(res && res.success), version: res?.version || "2.0.0" }))
-            .catch(() => sendResponse({ success: false, connected: false }));
+            .then(res => sendResponse({ success: true, connected: !!(res && res.success), version: res?.version || "2.0.0", mode: "native" }))
+            .catch(async () => {
+                // Dual Fallback: Check local HTTP daemon at 127.0.0.1:48912
+                try {
+                    const resp = await fetch("http://127.0.0.1:48912/status", { method: "GET" });
+                    if (resp.ok) {
+                        const data = await resp.json().catch(() => ({}));
+                        sendResponse({ success: true, connected: true, version: data.version || "2.0.0", mode: "http" });
+                        return;
+                    }
+                } catch (e) {}
+                sendResponse({ success: false, connected: false });
+            });
         return true;
     }
 
@@ -465,62 +476,207 @@ function sendNativePing() {
 }
 
 // =============================================================================
-// 5. SAFE BROWSER DOWNLOADS INTERCEPTION & BYPASS PROTECTION
+// 5. SAFE BROWSER DOWNLOADS INTERCEPTION & BYPASS PROTECTION (IDM STYLE)
 // =============================================================================
 const bypassNextUrls = new Set();
 
 function bypassNextUrl(url) {
     if (!url) return;
     bypassNextUrls.add(url);
-    setTimeout(() => bypassNextUrls.delete(url), 10000);
+    setTimeout(() => bypassNextUrls.delete(url), 15000);
 }
 
-if (typeof chrome !== "undefined" && chrome.downloads && chrome.downloads.onCreated) {
-    chrome.downloads.onCreated.addListener(async (downloadItem) => {
-        if (!downloadItem || !downloadItem.url) return;
-        if (downloadItem.url.startsWith("blob:") || downloadItem.url.startsWith("data:")) return;
+function isInterceptableFile(filename, url, mime) {
+    if (url && (url.startsWith("blob:") || url.startsWith("data:"))) return false;
 
-        const url = downloadItem.url;
-        if (bypassNextUrls.has(url)) {
-            bypassNextUrls.delete(url);
-            return;
+    // Check filename extension
+    const nameToCheck = (filename || url || "").split("?")[0].split("#")[0].toLowerCase();
+    const dotIdx = nameToCheck.lastIndexOf(".");
+    if (dotIdx !== -1) {
+        const ext = nameToCheck.substring(dotIdx + 1);
+        if (DOWNLOAD_EXTENSIONS.has(ext)) return true;
+    }
+
+    // Check MIME type against downloadable dictionary
+    if (mime) {
+        const lowerMime = mime.toLowerCase();
+        for (const pattern of DOWNLOAD_MIME_PATTERNS) {
+            if (lowerMime.includes(pattern)) return true;
         }
+    }
 
-        const correlationId = "browser_dl_" + downloadItem.id;
+    return false;
+}
 
-        let cookiesStr = "";
-        try {
-            if (chrome.cookies && chrome.cookies.getAll) {
-                const cookieList = await chrome.cookies.getAll({ url: url });
-                if (cookieList && cookieList.length > 0) {
-                    cookiesStr = cookieList.map(c => `${c.name}=${c.value}`).join("; ");
-                }
+if (typeof chrome !== "undefined" && chrome.downloads) {
+    // Primary Interception Hook: fires when filename is determined, before file write begins
+    if (chrome.downloads.onDeterminingFilename) {
+        chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+            if (!downloadItem || !downloadItem.url) {
+                suggest();
+                return;
             }
-        } catch (e) {}
 
-        const handoffResult = await handoffDownloadToEdm({
-            url: url,
-            videoUrl: url,
-            filename: downloadItem.filename || "",
-            referer: downloadItem.referrer || downloadItem.finalUrl || "",
-            pageUrl: downloadItem.referrer || "",
-            userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-            mime: downloadItem.mime || "",
-            fileSize: downloadItem.fileSize || -1,
-            cookies: cookiesStr,
-            correlationId: correlationId,
-            source: "BrowserDownloadInterception"
-        });
+            const rawUrl = downloadItem.finalUrl || downloadItem.url;
+            if (bypassNextUrls.has(rawUrl) || bypassNextUrls.has(downloadItem.url)) {
+                bypassNextUrls.delete(rawUrl);
+                bypassNextUrls.delete(downloadItem.url);
+                suggest();
+                return;
+            }
 
-        // Transactional: ONLY cancel browser download if EDM explicitly accepted
-        if (handoffResult && handoffResult.success) {
-            try {
-                chrome.downloads.cancel(downloadItem.id);
+            const filename = downloadItem.filename || "";
+            const mime = downloadItem.mime || "";
+
+            if (!isInterceptableFile(filename, rawUrl, mime)) {
+                // Not an intercepted file format -> allow standard browser download
+                suggest();
+                return;
+            }
+
+            console.info("[EDM] Intercepting browser file download:", filename, rawUrl);
+
+            // Cancel Chrome's download immediately
+            chrome.downloads.cancel(downloadItem.id, () => {
                 if (chrome.downloads.erase) {
                     chrome.downloads.erase({ id: downloadItem.id });
                 }
+            });
+
+            // Hand off to EDM Desktop asynchronously
+            (async () => {
+                let cookiesStr = "";
+                try {
+                    if (chrome.cookies && chrome.cookies.getAll) {
+                        const cookieList = await chrome.cookies.getAll({ url: rawUrl });
+                        if (cookieList && cookieList.length > 0) {
+                            cookiesStr = cookieList.map(c => `${c.name}=${c.value}`).join("; ");
+                        }
+                    }
+                } catch (e) {}
+
+                const correlationId = "browser_dl_" + downloadItem.id + "_" + Date.now();
+
+                await handoffDownloadToEdm({
+                    url: rawUrl,
+                    videoUrl: rawUrl,
+                    filename: filename,
+                    referer: downloadItem.referrer || rawUrl,
+                    pageUrl: downloadItem.referrer || "",
+                    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+                    mime: mime,
+                    fileSize: downloadItem.fileSize || -1,
+                    cookies: cookiesStr,
+                    correlationId: correlationId,
+                    source: "BrowserDownloadInterception"
+                });
+            })();
+        });
+    } else if (chrome.downloads.onCreated) {
+        // Fallback for browsers supporting onCreated
+        chrome.downloads.onCreated.addListener(async (downloadItem) => {
+            if (!downloadItem || !downloadItem.url) return;
+            if (downloadItem.url.startsWith("blob:") || downloadItem.url.startsWith("data:")) return;
+
+            const url = downloadItem.url;
+            if (bypassNextUrls.has(url)) {
+                bypassNextUrls.delete(url);
+                return;
+            }
+
+            if (!isInterceptableFile(downloadItem.filename, url, downloadItem.mime)) return;
+
+            try {
+                chrome.downloads.cancel(downloadItem.id);
+                if (chrome.downloads.erase) chrome.downloads.erase({ id: downloadItem.id });
             } catch (err) {}
+
+            let cookiesStr = "";
+            try {
+                if (chrome.cookies && chrome.cookies.getAll) {
+                    const cookieList = await chrome.cookies.getAll({ url: url });
+                    if (cookieList && cookieList.length > 0) {
+                        cookiesStr = cookieList.map(c => `${c.name}=${c.value}`).join("; ");
+                    }
+                }
+            } catch (e) {}
+
+            await handoffDownloadToEdm({
+                url: url,
+                videoUrl: url,
+                filename: downloadItem.filename || "",
+                referer: downloadItem.referrer || downloadItem.finalUrl || "",
+                pageUrl: downloadItem.referrer || "",
+                userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+                mime: downloadItem.mime || "",
+                fileSize: downloadItem.fileSize || -1,
+                cookies: cookiesStr,
+                correlationId: "browser_dl_" + downloadItem.id,
+                source: "BrowserDownloadInterception"
+            });
+        });
+    }
+}
+
+// =============================================================================
+// 6. ON INSTALL / RELOAD: AUTOMATIC TAB REFRESH (IDM-GRADE BEHAVIOR)
+// =============================================================================
+if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onInstalled) {
+    chrome.runtime.onInstalled.addListener(async (details) => {
+        console.log("[EDM] Extension installed/updated, reason:", details.reason);
+        
+        // Auto-refresh existing tabs so content scripts and floating button immediately activate
+        try {
+            if (chrome.tabs && chrome.tabs.query) {
+                const tabs = await chrome.tabs.query({ url: ["http://*/*", "https://*/*"] });
+                for (const tab of tabs) {
+                    if (tab.id && !tab.url.startsWith("chrome://") && !tab.url.startsWith("edge://")) {
+                        try {
+                            chrome.tabs.reload(tab.id);
+                        } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("[EDM] Tab reload on install error:", e);
         }
+
+        // Setup Context Menus
+        setupContextMenus();
+    });
+}
+
+function setupContextMenus() {
+    if (typeof chrome === "undefined" || !chrome.contextMenus) return;
+    try {
+        chrome.contextMenus.removeAll(() => {
+            chrome.contextMenus.create({
+                id: "edm-download-link",
+                title: "Download with EDM",
+                contexts: ["link"]
+            });
+            chrome.contextMenus.create({
+                id: "edm-download-media",
+                title: "Download Media with EDM",
+                contexts: ["video", "audio", "image"]
+            });
+        });
+    } catch (e) {}
+}
+
+if (typeof chrome !== "undefined" && chrome.contextMenus && chrome.contextMenus.onClicked) {
+    chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+        const targetUrl = info.srcUrl || info.linkUrl || "";
+        if (!targetUrl) return;
+
+        await handoffDownloadToEdm({
+            url: targetUrl,
+            videoUrl: targetUrl,
+            referer: (tab && tab.url) ? tab.url : "",
+            pageUrl: (tab && tab.url) ? tab.url : "",
+            correlationId: "ctx_" + Date.now(),
+            source: "ContextMenu"
+        });
     });
 }
 

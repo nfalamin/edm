@@ -433,11 +433,10 @@
                 }
             }
 
-            // 2. Generic HTML5 Video Elements
+            // 2. Generic HTML5 Video Elements (Facebook, Twitter/X, TikTok, Instagram, Reddit, Vimeo, Dailymotion, etc.)
             const videos = document.querySelectorAll('video');
             videos.forEach((v, index) => {
-                const rect = v.getBoundingClientRect();
-                if (rect.width < 120 || rect.height < 90) return; // ignore tiny audio players/ads
+                if (!this.isValidMediaElement(v)) return;
 
                 let src = v.currentSrc || v.src || '';
                 if (!src) {
@@ -445,16 +444,20 @@
                     if (sourceTag) src = sourceTag.src;
                 }
 
-                if (src && !src.startsWith('blob:') && FormatValidator.isValidMediaUrl(src)) {
-                    candidates.push({
-                        candidateId: `video_html5_${index}`,
-                        type: 'html5_video',
-                        container: v.parentElement || v,
-                        url: src,
-                        title: this.getPageMediaTitle(),
-                        state: CandidateState.DISCOVERED
-                    });
-                }
+                // Support both direct media links and blob streams (MSE/HLS/DASH)
+                const mediaUrl = (src && !src.startsWith('blob:') && FormatValidator.isValidMediaUrl(src))
+                    ? src
+                    : window.location.href;
+
+                candidates.push({
+                    candidateId: `video_html5_${index}`,
+                    type: 'html5_video',
+                    container: v.parentElement || v,
+                    videoElement: v,
+                    url: mediaUrl,
+                    title: this.getPageMediaTitle(),
+                    state: CandidateState.DISCOVERED
+                });
             });
 
             return candidates;
@@ -464,7 +467,7 @@
     // =========================================================================
     // 4. FROSTED-GLASS FLOATING PILL & FORMAT SELECTOR UI OVERLAY
     // =========================================================================
-    class IdmDownloadOverlay {
+    class EdmDownloadOverlay {
         constructor(candidate) {
             this.candidate = candidate;
             this.container = candidate.container;
@@ -493,36 +496,36 @@
             `;
 
             this.panel.innerHTML = `
-                <div class="edm-idm-bar" role="button" tabindex="0" aria-label="Download this video with EDM" title="Download this video">
-                    <div class="edm-idm-main-btn">
-                        <span class="edm-idm-logo-wrap">
-                            <svg class="edm-idm-icon" viewBox="0 0 24 24">
+                <div class="edm-overlay-bar" role="button" tabindex="0" aria-label="Download this video with EDM" title="Download this video">
+                    <div class="edm-overlay-main-btn">
+                        <span class="edm-overlay-logo-wrap">
+                            <svg class="edm-overlay-icon" viewBox="0 0 24 24">
                                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
                             </svg>
                         </span>
-                        <span class="edm-idm-text">Download this video</span>
-                        <span class="edm-idm-badge" style="display: none;">0</span>
+                        <span class="edm-overlay-text">Download this video</span>
+                        <span class="edm-overlay-badge" style="display: none;">0</span>
                     </div>
-                    <div class="edm-idm-actions">
-                        <span class="edm-idm-btn-help" title="EDM Settings & Info">?</span>
-                        <span class="edm-idm-btn-close" title="Hide this button">✕</span>
+                    <div class="edm-overlay-actions">
+                        <span class="edm-overlay-btn-help" title="EDM Settings & Info">?</span>
+                        <span class="edm-overlay-btn-close" title="Hide this button">✕</span>
                     </div>
                 </div>
-                <div class="edm-idm-dropdown-panel" style="display: none;" role="menu" aria-label="Download Formats">
-                    <div class="edm-idm-header-opt" role="menuitem" tabindex="0" title="Download all available video streams">
+                <div class="edm-overlay-dropdown-panel" style="display: none;" role="menu" aria-label="Download Formats">
+                    <div class="edm-overlay-header-opt" role="menuitem" tabindex="0" title="Download all available video streams">
                         <span>Download all</span>
                     </div>
-                    <div class="edm-idm-divider"></div>
-                    <div class="edm-idm-variants-list"></div>
+                    <div class="edm-overlay-divider"></div>
+                    <div class="edm-overlay-variants-list"></div>
                 </div>
             `;
 
-            this.btn = this.panel.querySelector('.edm-idm-main-btn') || this.panel.querySelector('.edm-idm-bar');
-            this.dropdown = this.panel.querySelector('.edm-idm-dropdown-panel');
-            this.variantsList = this.panel.querySelector('.edm-idm-variants-list');
-            const closeBarBtn = this.panel.querySelector('.edm-idm-btn-close');
-            const helpBarBtn = this.panel.querySelector('.edm-idm-btn-help');
-            const downloadAllBtn = this.panel.querySelector('.edm-idm-header-opt');
+            this.btn = this.panel.querySelector('.edm-overlay-main-btn') || this.panel.querySelector('.edm-overlay-bar');
+            this.dropdown = this.panel.querySelector('.edm-overlay-dropdown-panel');
+            this.variantsList = this.panel.querySelector('.edm-overlay-variants-list');
+            const closeBarBtn = this.panel.querySelector('.edm-overlay-btn-close');
+            const helpBarBtn = this.panel.querySelector('.edm-overlay-btn-help');
+            const downloadAllBtn = this.panel.querySelector('.edm-overlay-header-opt');
 
             // Toggle Dropdown on Main Button Click
             this.btn.addEventListener('click', (e) => {
@@ -556,7 +559,10 @@
                     e.stopPropagation();
                     if (this.currentVariants && this.currentVariants.length > 0) {
                         const best = this.currentVariants.find(v => !v.isAudioOnly) || this.currentVariants[0];
-                        this.showDownloadFileInfoDialog(best, this.candidate.title || 'Video Media');
+                        this.close();
+                        this.executeDownload(best.directUrl || this.candidate.url, this.candidate.title || 'Video Media', best.qualityLabel || `${best.height}p`, best, {
+                            category: best.isAudioOnly ? 'Audio' : 'Video'
+                        });
                     }
                 });
             }
@@ -575,9 +581,117 @@
             }
 
             this.container.appendChild(this.panel);
+            this.initDraggable();
+            this.initFullscreenWatcher();
             this.bindHoverBehavior();
             this.checkPreloadedVariants();
             YouTubeInPageExtractor.requestPlayerResponseFromBridge();
+        }
+
+        initDraggable() {
+            const bar = this.panel.querySelector('.edm-overlay-bar');
+            if (!bar) return;
+
+            let isDragging = false;
+            let hasMoved = false;
+            let startX = 0, startY = 0;
+            let startLeft = 0, startTop = 0;
+
+            try {
+                const saved = localStorage.getItem('edm_overlay_corner');
+                if (saved) {
+                    const pos = JSON.parse(saved);
+                    if (pos && typeof pos.top === 'number' && typeof pos.left === 'number') {
+                        this.panel.style.left = `${pos.left}px`;
+                        this.panel.style.top = `${pos.top}px`;
+                        this.panel.style.right = 'auto';
+                    }
+                }
+            } catch (e) {}
+
+            bar.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.edm-overlay-actions') || e.target.closest('.edm-overlay-dropdown-panel')) {
+                    return;
+                }
+                isDragging = true;
+                hasMoved = false;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const panelRect = this.panel.getBoundingClientRect();
+                const containerRect = this.container.getBoundingClientRect();
+                startLeft = panelRect.left - containerRect.left;
+                startTop = panelRect.top - containerRect.top;
+
+                const onMouseMove = (ev) => {
+                    if (!isDragging) return;
+                    const dx = ev.clientX - startX;
+                    const dy = ev.clientY - startY;
+
+                    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                        hasMoved = true;
+                        bar.style.cursor = 'grabbing';
+                    }
+
+                    if (hasMoved) {
+                        const cRect = this.container.getBoundingClientRect();
+                        const pRect = this.panel.getBoundingClientRect();
+                        const maxLeft = Math.max(0, cRect.width - pRect.width);
+                        const maxTop = Math.max(0, cRect.height - pRect.height);
+
+                        const newLeft = Math.max(0, Math.min(maxLeft, startLeft + dx));
+                        const newTop = Math.max(0, Math.min(maxTop, startTop + dy));
+
+                        this.panel.style.left = `${newLeft}px`;
+                        this.panel.style.top = `${newTop}px`;
+                        this.panel.style.right = 'auto';
+                    }
+                };
+
+                const onMouseUp = (ev) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    bar.style.cursor = 'grab';
+                    document.removeEventListener('mousemove', onMouseMove, true);
+                    document.removeEventListener('mouseup', onMouseUp, true);
+
+                    if (hasMoved) {
+                        ev.stopPropagation();
+                        ev.preventDefault();
+
+                        try {
+                            const pRect = this.panel.getBoundingClientRect();
+                            const cRect = this.container.getBoundingClientRect();
+                            localStorage.setItem('edm_overlay_corner', JSON.stringify({
+                                left: Math.round(pRect.left - cRect.left),
+                                top: Math.round(pRect.top - cRect.top)
+                            }));
+                        } catch (err) {}
+                    }
+                };
+
+                document.addEventListener('mousemove', onMouseMove, true);
+                document.addEventListener('mouseup', onMouseUp, true);
+            });
+        }
+
+        initFullscreenWatcher() {
+            const handleFs = () => {
+                const fsElem = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+                if (fsElem) {
+                    if (fsElem.id === 'movie_player' || fsElem.classList?.contains('html5-video-player') || fsElem.contains(this.container) || fsElem.querySelector('video')) {
+                        fsElem.appendChild(this.panel);
+                        this.panel.style.zIndex = '2147483647';
+                    }
+                } else {
+                    if (this.container && !this.container.contains(this.panel)) {
+                        this.container.appendChild(this.panel);
+                    }
+                }
+            };
+
+            document.addEventListener('fullscreenchange', handleFs);
+            document.addEventListener('webkitfullscreenchange', handleFs);
         }
 
         checkPreloadedVariants() {
@@ -588,7 +702,7 @@
         }
 
         updateBadgeCount(count) {
-            const badge = this.panel?.querySelector('.edm-idm-badge') || this.panel?.querySelector('.edm-btn-badge');
+            const badge = this.panel?.querySelector('.edm-overlay-badge') || this.panel?.querySelector('.edm-btn-badge');
             if (badge && count > 0) {
                 badge.textContent = count;
                 badge.style.display = 'inline-block';
@@ -596,14 +710,14 @@
         }
 
         bindHoverBehavior() {
-            this.panel.style.opacity = '0.35';
-            this.panel.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+            this.panel.style.opacity = '0.95';
+            this.panel.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
 
             const showHover = () => {
-                if (this.panel) this.panel.style.opacity = '1';
+                if (this.panel) this.panel.style.opacity = '1.0';
             };
             const hideHover = () => {
-                if (this.panel && !this.isOpen) this.panel.style.opacity = '0.35';
+                if (this.panel && !this.isOpen) this.panel.style.opacity = '0.95';
             };
 
             this.container.addEventListener('mouseenter', showHover);
@@ -708,7 +822,7 @@
         renderLoadingState() {
             if (!this.variantsList) return;
             this.variantsList.innerHTML = `
-                <div class="edm-idm-state">
+                <div class="edm-overlay-state">
                     <span>Extracting available formats...</span>
                 </div>
             `;
@@ -719,7 +833,7 @@
             this.updateBadgeCount(0);
             if (!this.variantsList) return;
             this.variantsList.innerHTML = `
-                <div class="edm-idm-state">
+                <div class="edm-overlay-state">
                     <span>${escapeHtml(message)}</span>
                 </div>
             `;
@@ -757,7 +871,7 @@
 
             sortedVariants.forEach((v, idx) => {
                 const item = document.createElement('div');
-                item.className = 'edm-idm-row';
+                item.className = 'edm-overlay-row';
                 item.setAttribute('role', 'menuitem');
                 item.setAttribute('tabindex', '0');
 
@@ -780,15 +894,18 @@
                 }
 
                 item.innerHTML = `
-                    <span class="edm-idm-row-num">${idx + 1}.</span>
-                    <span class="edm-idm-row-title" title="${escapeHtml(videoTitle)}">${escapeHtml(displayTitle)}</span>
-                    <span class="edm-idm-row-sep">|</span>
-                    <span class="edm-idm-row-desc">${escapeHtml(qualityDesc)}</span>
+                    <span class="edm-overlay-row-num">${idx + 1}.</span>
+                    <span class="edm-overlay-row-title" title="${escapeHtml(videoTitle)}">${escapeHtml(displayTitle)}</span>
+                    <span class="edm-overlay-row-sep">|</span>
+                    <span class="edm-overlay-row-desc">${escapeHtml(qualityDesc)}</span>
                 `;
 
                 const handleSelection = (e) => {
                     e.stopPropagation();
-                    this.showDownloadFileInfoDialog(v, videoTitle);
+                    this.close();
+                    this.executeDownload(v.directUrl || this.candidate.url, videoTitle, v.qualityLabel || `${v.height}p`, v, {
+                        category: v.isAudioOnly ? 'Audio' : 'Video'
+                    });
                 };
 
                 item.addEventListener('click', handleSelection);
@@ -1085,7 +1202,7 @@
         const candidates = MediaCandidateDetector.findMediaCandidates();
         candidates.forEach((cand) => {
             if (!activeOverlays.has(cand.candidateId)) {
-                const overlay = new IdmDownloadOverlay(cand);
+                const overlay = new EdmDownloadOverlay(cand);
                 activeOverlays.set(cand.candidateId, overlay);
             }
         });
@@ -1122,8 +1239,13 @@
                 const extLabel = isManifest ? (streamUrl.includes('.m3u8') ? 'HLS' : 'DASH') : (isAudio ? 'Audio' : 'Video');
                 const sizeLabel = stream.contentLength > 0 ? `${(stream.contentLength / (1024 * 1024)).toFixed(1)} MB` : 'Stream';
 
+                let streamHash = 0;
+                for (let c = 0; c < streamUrl.length; c++) {
+                    streamHash = ((streamHash << 5) - streamHash) + streamUrl.charCodeAt(c);
+                    streamHash |= 0;
+                }
                 const genericVariant = {
-                    variantId: 'generic_' + Math.abs(generateDownloadIdentity(streamUrl, 0, '')),
+                    variantId: 'generic_' + Math.abs(streamHash).toString(36),
                     qualityLabel: isManifest ? `Live Stream (${extLabel})` : `${extLabel} • ${sizeLabel}`,
                     container: isManifest ? 'm3u8' : (isAudio ? 'mp3' : 'mp4'),
                     directUrl: streamUrl,
@@ -1240,4 +1362,78 @@
 
         return false;
     });
+
+    // =========================================================================
+    // SMART BROWSER FILE CLICK AUTO-TAKEOVER (IDM STYLE)
+    // =========================================================================
+    const INTERCEPTABLE_EXTENSIONS = new Set([
+        // Archives & Compressed
+        'zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'tbz2', 'xz', 'txz', 'iso', 'img', 'dmg', 'pkg', 'deb', 'rpm', 'cab', 'ace', 'arc', 'arj',
+        // Executables & Installers
+        'exe', 'msi', 'apk', 'appx', 'msix', 'bin', 'run', 'jar', 'crx', 'xpi',
+        // Media Video & Audio
+        'mp4', 'm4v', 'mkv', 'webm', 'avi', 'mov', 'wmv', 'flv', 'f4v', 'ts', 'm2ts', 'mts', '3gp', '3g2', 'ogv',
+        'mp3', 'm4a', 'aac', 'flac', 'wav', 'wma', 'ogg', 'oga', 'opus',
+        // Documents
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'epub'
+    ]);
+
+    function isDownloadableUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        try {
+            const cleanUrl = url.split('?')[0].split('#')[0].toLowerCase();
+            const lastDot = cleanUrl.lastIndexOf('.');
+            if (lastDot === -1) return false;
+            const ext = cleanUrl.substring(lastDot + 1);
+            return INTERCEPTABLE_EXTENSIONS.has(ext);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        // IDM-Style: Holding Alt key completely bypasses EDM and lets browser download natively
+        if (e.altKey) return;
+
+        // Find closest anchor tag
+        const link = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (!link || !link.href) return;
+
+        const href = link.href.trim();
+        if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('ftp://')) return;
+
+        // Check if URL ends with a downloadable file extension
+        if (!isDownloadableUrl(href)) return;
+
+        // Prevent browser from navigating or starting native download
+        e.preventDefault();
+        e.stopPropagation();
+
+        let suggestedFilename = link.getAttribute('download') || '';
+        if (!suggestedFilename) {
+            try {
+                const u = new URL(href);
+                suggestedFilename = u.pathname.substring(u.pathname.lastIndexOf('/') + 1);
+            } catch (err) {}
+        }
+        if (!suggestedFilename) suggestedFilename = 'download';
+
+        console.info('[EDM] Intercepted browser link click for:', href);
+
+        // Send to EDM background worker
+        chrome.runtime.sendMessage({
+            action: 'START_EDM_DOWNLOAD',
+            candidate: {
+                url: href,
+                filename: suggestedFilename,
+                pageUrl: window.location.href,
+                title: document.title || suggestedFilename,
+                referer: window.location.href
+            }
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.warn('[EDM] Handoff message error:', chrome.runtime.lastError.message);
+            }
+        });
+    }, true);
 })();

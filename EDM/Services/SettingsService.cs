@@ -51,8 +51,8 @@ namespace EDM.Services
         // Crash reporting preferences - default OFF for privacy
         public bool SendAnonymousCrashReports { get; set; } = false;
 
-        // Clipboard Monitoring preferences (OFF by default for user control and safety)
-        public bool EnableClipboardMonitoring { get; set; } = false;
+        // Clipboard Monitoring preferences (ON by default for seamless out-of-the-box IDM parity)
+        public bool EnableClipboardMonitoring { get; set; } = true;
         public bool ClipboardMonitorHttp { get; set; } = true;
         public bool ClipboardMonitorHttps { get; set; } = true;
         public bool ClipboardMonitorFtp { get; set; } = true;
@@ -65,6 +65,8 @@ namespace EDM.Services
         public bool BrowserCaptureDownloads { get; set; } = true;
         public bool BrowserShowConfirmation { get; set; } = true;
         public bool BrowserShowNotification { get; set; } = true;
+        public string BrowserDownloadMode { get; set; } = "ShowDialog"; // "ShowDialog" (IDM-style) or "StartImmediately"
+        public string BrowserInterceptedExtensions { get; set; } = "ZIP RAR 7Z TAR GZ ISO EXE MSI APK BIN MP4 MKV MP3 PDF DOCX XLSX PPTX DMG";
 
         // Next-Gen Advanced Features
         public bool EnableMultiSourceMirrorAggregation { get; set; } = true;
@@ -471,6 +473,20 @@ namespace EDM.Services
         public void SetBrowserShowNotification(bool enable)
         {
             _settings.BrowserShowNotification = enable;
+            Save();
+        }
+
+        public string GetBrowserDownloadMode() => _settings.BrowserDownloadMode ?? "ShowDialog";
+        public void SetBrowserDownloadMode(string mode)
+        {
+            _settings.BrowserDownloadMode = string.IsNullOrWhiteSpace(mode) ? "ShowDialog" : mode;
+            Save();
+        }
+
+        public string GetBrowserInterceptedExtensions() => _settings.BrowserInterceptedExtensions ?? "ZIP RAR 7Z TAR GZ ISO EXE MSI APK BIN MP4 MKV MP3 PDF DOCX XLSX PPTX DMG";
+        public void SetBrowserInterceptedExtensions(string extensions)
+        {
+            _settings.BrowserInterceptedExtensions = extensions ?? string.Empty;
             Save();
         }
 

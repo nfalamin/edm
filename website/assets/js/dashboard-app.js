@@ -208,14 +208,14 @@ class NfDashboardControlPlane {
                     datasets: [{
                         label: 'Throughput (MB/s)',
                         data: dataPoints,
-                        borderColor: '#5D5FEF',
+                        borderColor: '#06F0FB',
                         borderWidth: 2.5,
                         backgroundColor: grad,
                         fill: true,
                         tension: 0.35,
                         pointRadius: 2,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#38BDF8'
+                        pointBackgroundColor: '#25D4DC'
                     }]
                 },
                 options: {
@@ -224,10 +224,10 @@ class NfDashboardControlPlane {
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#0E1424',
-                            titleColor: '#38BDF8',
-                            bodyColor: '#F8FAFC',
-                            borderColor: 'rgba(255,255,255,0.1)',
+                            backgroundColor: '#0B0F14',
+                            titleColor: '#06F0FB',
+                            bodyColor: '#F0F0F0',
+                            borderColor: '#26292D',
                             borderWidth: 1,
                             padding: 10,
                             displayColors: false
@@ -236,11 +236,11 @@ class NfDashboardControlPlane {
                     scales: {
                         x: {
                             grid: { color: 'rgba(255,255,255,0.03)' },
-                            ticks: { color: '#64748B', font: { size: 10 } }
+                            ticks: { color: '#7F8488', font: { size: 10 } }
                         },
                         y: {
                             grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { color: '#64748B', font: { size: 10 } }
+                            ticks: { color: '#7F8488', font: { size: 10 } }
                         }
                     }
                 }
@@ -259,7 +259,7 @@ class NfDashboardControlPlane {
                     labels: ['EDM Desktop Installer', 'Chrome Extension', 'Edge Extension', 'Firefox Add-on'],
                     datasets: [{
                         data: [18450, 5120, 2840, 1880],
-                        backgroundColor: ['#5D5FEF', '#F59E0B', '#38BDF8', '#EC4899'],
+                        backgroundColor: ['#06F0FB', '#F0D000', '#25D4DC', '#12A89C'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
@@ -270,7 +270,7 @@ class NfDashboardControlPlane {
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: { color: '#94A3B8', font: { size: 11 }, boxWidth: 10, padding: 12 }
+                            labels: { color: '#7F8488', font: { size: 11 }, boxWidth: 10, padding: 12 }
                         }
                     },
                     cutout: '72%'
@@ -290,7 +290,7 @@ class NfDashboardControlPlane {
                     labels: ['USA', 'Germany', 'UK', 'Bangladesh', 'Canada', 'Other'],
                     datasets: [{
                         data: [38, 18, 14, 12, 8, 10],
-                        backgroundColor: '#06B6D4',
+                        backgroundColor: '#06F0FB',
                         borderRadius: 6
                     }]
                 },
@@ -299,8 +299,8 @@ class NfDashboardControlPlane {
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94A3B8' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748B' } }
+                        x: { grid: { display: false }, ticks: { color: '#7F8488' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7F8488' } }
                     }
                 }
             });
@@ -463,8 +463,8 @@ class NfDashboardControlPlane {
         }
 
         const toast = document.createElement('div');
-        const bg = type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#5D5FEF';
-        toast.style.cssText = `background:#0E1424;border:1px solid ${bg};color:#F8FAFC;padding:12px 18px;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.6);font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;animation:nfdFadeIn 0.3s ease;`;
+        const bg = type === 'success' ? '#12A89C' : type === 'error' ? '#D51F32' : '#06F0FB';
+        toast.style.cssText = `background:#0B0F14;border:1px solid ${bg};color:#F0F0F0;padding:12px 18px;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.6);font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;animation:nfdFadeIn 0.3s ease;`;
         toast.textContent = message;
 
         container.appendChild(toast);

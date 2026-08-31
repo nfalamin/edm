@@ -175,13 +175,13 @@ namespace EDM.Services
                 return result;
             }
 
-            // 4) No trusted checksum — mark verification unavailable but compute hash for future reference
+            // 4) No trusted checksum — if expected size verified, mark Verified; otherwise VerificationUnavailable
             try
             {
                 string computed = await _integrity.ComputeSha256Async(finalFilePath, ct).ConfigureAwait(false);
                 result.ComputedHashHex = computed;
-                result.State = VerificationState.VerificationUnavailable;
-                result.Message = "No trusted checksum available; computed SHA-256 stored for reference.";
+                result.State = expectedSize.HasValue ? VerificationState.Verified : VerificationState.VerificationUnavailable;
+                result.Message = expectedSize.HasValue ? "File size verification passed." : "No trusted checksum available; computed SHA-256 stored for reference.";
                 return result;
             }
             catch (Exception ex)

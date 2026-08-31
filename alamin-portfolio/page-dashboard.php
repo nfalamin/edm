@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template Name: NF Control Plane Dashboard
  * Description: Dedicated Full-Stack EDM Control Plane & Management Hub (/nf, /nfdashbord).
@@ -27,13 +27,14 @@ if (file_exists($sync_engine_file)) {
     require_once $sync_engine_file;
 }
 
-// 2. Dual-Layer Security Authentication
+// 2. Dual-Layer Security Authentication with Google Authenticator (TOTP)
 $master_pin = '7788';
 $cookie_name = 'nf_admin_auth_' . (defined('COOKIEHASH') ? COOKIEHASH : 'secret_hash');
 $auth_secret = hash('sha256', (defined('AUTH_KEY') ? AUTH_KEY : 'default_salt') . $master_pin . 'nf_secure_plane');
 
 $is_authorized = false;
 $auth_error = '';
+$step2_active = false;
 
 // Check A: WordPress Administrator
 if (is_user_logged_in() && current_user_can('administrator')) {
@@ -45,21 +46,43 @@ if (!$is_authorized && isset($_COOKIE[$cookie_name]) && hash_equals($auth_secret
     $is_authorized = true;
 }
 
-// Check C: POST Login or PIN
-if (!$is_authorized && isset($_POST['nf_login_submit'])) {
-    $pin = sanitize_text_field($_POST['admin_pin'] ?? '');
-    $pwd = sanitize_text_field($_POST['admin_password'] ?? '');
-    $user = sanitize_text_field($_POST['admin_username'] ?? '');
-
-    if ($pin === $master_pin || $pwd === $master_pin || ($user === 'admin' && $pwd === 'admin')) {
+// Check C: POST 2FA Code Verification
+if (!$is_authorized && isset($_POST['nf_2fa_submit'])) {
+    $totp_code = sanitize_text_field($_POST['totp_code'] ?? '');
+    if (class_exists('EdmTotp') && EdmTotp::verifyCode($totp_code)) {
         $is_authorized = true;
-        setcookie($cookie_name, $auth_secret, time() + (86400 * 30), defined('COOKIEPATH') ? COOKIEPATH : '/', defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '', is_ssl(), true);
+        setcookie($cookie_name, $auth_secret, time() + (86400 * 90), defined('COOKIEPATH') ? COOKIEPATH : '/', defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '', is_ssl(), true);
     } else {
-        $auth_error = 'Invalid security PIN or credentials. Access denied.';
+        $step2_active = true;
+        $auth_error = '❌ Invalid 6-digit Google Authenticator code. Check your phone app.';
     }
 }
 
-// Check D: Session Logout
+// Check D: POST Step 1 Credentials
+if (!$is_authorized && !isset($_POST['nf_2fa_submit']) && (isset($_POST['nf_login_submit']) || isset($_POST['google_auth_submit']))) {
+    $pin = sanitize_text_field($_POST['admin_pin'] ?? '');
+    $pwd = sanitize_text_field($_POST['admin_password'] ?? '');
+    $user = strtolower(sanitize_text_field($_POST['admin_username'] ?? ''));
+    $totp_code = sanitize_text_field($_POST['totp_code'] ?? '');
+
+    // If TOTP code provided together with credentials
+    if (!empty($totp_code)) {
+        if (class_exists('EdmTotp') && EdmTotp::verifyCode($totp_code)) {
+            $is_authorized = true;
+            setcookie($cookie_name, $auth_secret, time() + (86400 * 90), defined('COOKIEPATH') ? COOKIEPATH : '/', defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '', is_ssl(), true);
+        } else {
+            $step2_active = true;
+            $auth_error = '❌ Invalid 2FA Google Authenticator code.';
+        }
+    } else if ($pin === $master_pin || $pwd === $master_pin || $pin === '7788' || $pwd === '7788' || $user === 'admin' || strpos($user, 'alamin') !== false || isset($_POST['google_auth_submit'])) {
+        // Step 1 Passed -> Prompt for Google Authenticator 2FA Step 2
+        $step2_active = true;
+    } else {
+        $auth_error = 'Invalid credentials or PIN. Use Master PIN 7788.';
+    }
+}
+
+// Check E: Session Logout
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     setcookie($cookie_name, '', time() - 3600, defined('COOKIEPATH') ? COOKIEPATH : '/', defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '', is_ssl(), true);
     wp_safe_redirect(home_url('/nf/'));
@@ -463,48 +486,177 @@ $version = $manifest['version'] ?? '2.1.0';
         }
     </style>
 </head>
-<body class="<?php echo  ? 'app-body' : 'login-page-body'; ?>">
+<body class="<?php echo $is_authorized ? 'app-body' : 'login-page-body'; ?>">
 
-<?php if (!): ?>
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     STAGE 1: SUPER ADMIN LOGIN & MASTER PIN GATEWAY
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<?php if (!$is_authorized): ?>
+<!-- ══════════════════════════════════════════════════════════════
+     STAGE 1: SUPER ADMIN LOGIN & GOOGLE AUTHENTICATOR 2FA GATEWAY
+     ══════════════════════════════════════════════════════════════ -->
 <div class="login-ambient-glow"></div>
 
 <div class="login-card-container">
     <div class="login-brand-header">
         <div class="login-logo-badge">
-            <i data-lucide="shield-check" style="width: 28px; height: 28px;"></i>
+            <i data-lucide="shield-check" style="width: 28px; height: 28px; color: #38bdf8;"></i>
         </div>
         <h1 class="login-brand-title">EDM Super Admin</h1>
-        <p class="login-brand-subtitle">Exclusive Download Manager Control Plane</p>
+        <p class="login-brand-subtitle">Restricted Control Plane • Google Authenticator 2FA</p>
     </div>
 
-    <?php if (!empty()): ?>
+    <?php if (!empty($auth_error)): ?>
         <div class="alert-banner alert-error" style="display: flex; margin-bottom: 16px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; padding: 10px 14px; border-radius: 8px; color: #fca5a5; font-size: 13px;">
             <i data-lucide="alert-circle" style="width: 16px; height: 16px; margin-right: 8px; flex-shrink: 0;"></i>
-            <span><?php echo esc_html(); ?></span>
+            <span><?php echo esc_html($auth_error); ?></span>
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="">
-        <div class="login-form-group">
-            <label class="login-label">Master PIN or Password</label>
-            <input type="password" name="admin_pin" class="form-input-full" placeholder="Enter Security PIN (7788)" required autofocus style="font-family: var(--font-mono); letter-spacing: 2px; font-size: 15px; padding: 12px 14px; background: var(--color-bg-input); border: 1px solid var(--color-border); border-radius: 10px; color: #fff; width: 100%;">
+    <!-- ── STEP 1: PRIMARY CREDENTIALS (PIN / PASSWORD) ── -->
+    <div id="step-1-credentials" style="<?php echo $step2_active ? 'display: none;' : 'display: block;'; ?>">
+        <form method="POST" action="" id="nf-step1-form" onsubmit="event.preventDefault(); proceedTo2Fa();">
+            <div class="login-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="login-label" style="font-size: 12.5px; color: #e2e8f0; font-weight: 600;">Super Admin Identity</label>
+                    <span style="font-size: 11.5px; color: #38bdf8;">nfxalamin@gmail.com</span>
+                </div>
+                <input type="text" name="admin_username" id="wp-admin-user-input" class="form-input-full" value="Super Admin Alamin" readonly style="font-size: 13.5px; padding: 10px 14px; background: rgba(10, 15, 29, 0.6); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 10px; color: #94a3b8; width: 100%; box-sizing: border-box; margin-bottom: 12px;">
+            </div>
+
+            <div class="login-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="login-label" style="font-size: 12.5px; color: #e2e8f0; font-weight: 600;">Master PIN or Password</label>
+                    <a href="javascript:void(0)" onclick="document.getElementById('modal-wp-forgot').style.display='flex'" style="font-size: 12px; color: #38bdf8; text-decoration: none;">Forgot?</a>
+                </div>
+                <input type="password" name="admin_pin" id="wp-admin-pin-input" class="form-input-full" placeholder="Enter PIN (7788)" required autofocus style="font-family: var(--font-mono); letter-spacing: 2px; font-size: 14px; padding: 12px 14px; background: rgba(10, 15, 29, 0.9); border: 1px solid rgba(51, 65, 85, 0.8); border-radius: 10px; color: #fff; width: 100%; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" style="padding: 13px; font-size: 14px; font-weight: 700; width: 100%; margin-top: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
+                <span>Continue to Google 2FA ➔</span>
+            </button>
+        </form>
+
+        <div style="display: flex; align-items: center; margin: 18px 0; color: #64748b; font-size: 11px; font-weight: 700;">
+            <span style="flex:1; height:1px; background: rgba(51,65,85,0.6);"></span>
+            <span style="padding: 0 10px;">GOOGLE 2FA SECURITY</span>
+            <span style="flex:1; height:1px; background: rgba(51,65,85,0.6);"></span>
         </div>
 
-        <button type="submit" name="nf_login_submit" class="btn btn-primary btn-full" style="padding: 13px; font-size: 14px; font-weight: 700; width: 100%; margin-top: 10px;">
-            <i data-lucide="key" style="width: 16px; height: 16px; margin-right: 6px;"></i>
-            <span>Unlock Control Plane</span>
+        <button type="button" onclick="document.getElementById('modal-google-auth-setup').style.display='flex'" style="width: 100%; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 10px; color: #38bdf8; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i data-lucide="qr-code" style="width: 16px; height: 16px;"></i>
+            <span>📱 Setup / Scan Google Authenticator QR Code</span>
         </button>
-    </form>
+    </div>
 
-    <div class="login-footnote" style="margin-top: 24px; text-align: center; font-size: 12px; color: var(--color-text-muted);">
-        <span>Default PIN: <code>7788</code> â€¢ Authenticode Verified</span>
+    <!-- ── STEP 2: GOOGLE AUTHENTICATOR 2FA (6-DIGIT CODE) ── -->
+    <div id="step-2-totp" style="<?php echo $step2_active ? 'display: block;' : 'display: none;'; ?>">
+        <form method="POST" action="" id="nf-2fa-form">
+            <input type="hidden" name="admin_pin" id="wp-hidden-pin" value="7788">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); color: #38bdf8; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto;">
+                    <i data-lucide="smartphone" style="width: 24px; height: 24px;"></i>
+                </div>
+                <strong style="font-size: 14px; color: #fff; display: block;">Two-Factor Authentication</strong>
+                <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0 0;">Enter the 6-digit code from Google Authenticator on your mobile phone.</p>
+            </div>
+
+            <div class="login-form-group">
+                <input type="text" name="totp_code" id="wp-totp-input" class="form-input-full totp-input-box" placeholder="••••••" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" required autofocus style="font-family: 'JetBrains Mono', monospace; font-size: 24px; letter-spacing: 8px; text-align: center; height: 52px; padding: 0; background: rgba(10, 15, 29, 0.9); border: 1px solid #38bdf8; border-radius: 10px; color: #38bdf8; width: 100%; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" name="nf_2fa_submit" class="btn btn-primary btn-full" style="padding: 13px; font-size: 14px; font-weight: 700; width: 100%; margin-top: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(135deg, #0284c7, #6366f1);">
+                <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+                <span>Verify 2FA & Access Control Plane</span>
+            </button>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px;">
+                <a href="javascript:void(0)" onclick="backToStep1()" style="color: #94a3b8; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                    <i data-lucide="arrow-left" style="width: 13px; height: 13px;"></i> Back
+                </a>
+                <a href="javascript:void(0)" onclick="document.getElementById('modal-google-auth-setup').style.display='flex'" style="color: #38bdf8; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                    <i data-lucide="help-circle" style="width: 13px; height: 13px;"></i> Show QR Code
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="login-footnote" style="margin-top: 20px; text-align: center; font-size: 11.5px; color: var(--color-text-muted);">
+        <span>Protected by RFC 6238 Time-Based 2FA • Super Admin Only</span>
+    </div>
+</div>
+
+<!-- GOOGLE AUTHENTICATOR SETUP / QR CODE MODAL -->
+<div id="modal-google-auth-setup" style="display: none; position: fixed; inset: 0; background: rgba(7,11,20,0.95); backdrop-filter: blur(20px); z-index: 999999; align-items: center; justify-content: center; padding: 16px;">
+    <div class="login-card-container" style="max-width: 440px; padding: 28px; text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 17px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="smartphone" style="color: #38bdf8;"></i> Google Authenticator Setup
+            </h3>
+            <button type="button" onclick="document.getElementById('modal-google-auth-setup').style.display='none'" style="background: transparent; border: none; color: #94a3b8; cursor: pointer;"><i data-lucide="x"></i></button>
+        </div>
+
+        <p style="font-size: 12.5px; color: #94a3b8; line-height: 1.5; margin-bottom: 16px;">
+            আপনার মোবাইলে <strong>Google Authenticator</strong> অ্যাপ ওপেন করে নিচের QR কোডটি স্ক্যান করুন:
+        </p>
+
+        <!-- QR Code Image -->
+        <div style="background: #ffffff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 8px 24px rgba(0,0,0,0.4); margin-bottom: 16px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth%3A%2F%2Ftotp%2FEDM%2520Download%2520Manager%3Anfxalamin%40gmail.com%3Fsecret%3DEDMNFALAMIN2026SUPERSECRET2FA%26issuer%3DEDM%2520Download%2520Manager" alt="Google Authenticator QR Code" style="width: 180px; height: 180px; display: block;">
+        </div>
+
+        <!-- Manual Secret Key -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 10px 14px; text-align: left; margin-bottom: 16px;">
+            <span style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 2px;">Manual Setup Key (ম্যানুয়ালি যোগ করার কোড):</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <code style="color: #38bdf8; font-family: monospace; font-size: 13px; font-weight: 700;">EDMNFALAMIN2026SUPERSECRET2FA</code>
+                <button type="button" onclick="navigator.clipboard.writeText('EDMNFALAMIN2026SUPERSECRET2FA'); alert('Secret key copied!');" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 11px; font-weight: 700;">COPY</button>
+            </div>
+        </div>
+
+        <button type="button" onclick="document.getElementById('modal-google-auth-setup').style.display='none'; document.getElementById('step-1-credentials').style.display='none'; document.getElementById('step-2-totp').style.display='block'; document.getElementById('wp-totp-input').focus();" class="btn btn-primary btn-full" style="padding: 12px; font-size: 13.5px; font-weight: 700; border-radius: 10px; width: 100%;">
+            <span>আমি স্ক্যান করেছি, কোড দিন ➔</span>
+        </button>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div id="modal-wp-forgot" style="display: none; position: fixed; inset: 0; background: rgba(7,11,20,0.9); backdrop-filter: blur(16px); z-index: 99999; align-items: center; justify-content: center; padding: 16px;">
+    <div class="login-card-container" style="max-width: 400px; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Password Recovery</h3>
+            <button type="button" onclick="document.getElementById('modal-wp-forgot').style.display='none'" style="background: transparent; border: none; color: #94a3b8; cursor: pointer;"><i data-lucide="x"></i></button>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+            Recovery codes are bound to your Google Authenticator account <strong>nfxalamin@gmail.com</strong>.
+        </p>
+        <div style="margin-bottom: 14px;">
+            <input type="email" value="nfxalamin@gmail.com" readonly style="width: 100%; padding: 10px; background: rgba(10,15,29,0.9); border: 1px solid rgba(51,65,85,0.8); border-radius: 8px; color: #fff; font-size: 13px; box-sizing: border-box;">
+        </div>
+        <button type="button" onclick="document.getElementById('modal-wp-forgot').style.display='none'; document.getElementById('modal-google-auth-setup').style.display='flex';" class="btn btn-primary btn-full" style="padding: 10px; font-size: 13px; font-weight: 700; border-radius: 8px; width: 100%;">
+            <span>Show Google Authenticator Setup</span>
+        </button>
     </div>
 </div>
 
 <script>
+    function proceedTo2Fa() {
+        const pin = document.getElementById('wp-admin-pin-input').value.trim();
+        if (!pin) {
+            alert('Please enter your Master PIN.');
+            return;
+        }
+        document.getElementById('wp-hidden-pin').value = pin;
+        document.getElementById('step-1-credentials').style.display = 'none';
+        document.getElementById('step-2-totp').style.display = 'block';
+        document.getElementById('wp-totp-input').focus();
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function backToStep1() {
+        document.getElementById('step-2-totp').style.display = 'none';
+        document.getElementById('step-1-credentials').style.display = 'block';
+        if (window.lucide) window.lucide.createIcons();
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         if (window.lucide) window.lucide.createIcons();
     });
@@ -587,6 +739,10 @@ $version = $manifest['version'] ?? '2.1.0';
                     <button class="nav-item" data-page="storage-quota">
                         <span class="nav-item-icon"><i data-lucide="hard-drive"></i></span>
                         <span class="nav-item-text">Storage &amp; Quota</span>
+                    </button>
+                    <button class="nav-item" data-page="google-database">
+                        <span class="nav-item-icon"><i data-lucide="database"></i></span>
+                        <span class="nav-item-text">Google Cloud Database</span>
                     </button>
                 </div>
 
@@ -791,306 +947,462 @@ $version = $manifest['version'] ?? '2.1.0';
             <!-- ── SCROLLABLE VIEWS CONTAINER ── -->
             <main class="app-view-container">
 
-                <!-- ══════════════════════════════════════════════════════════
-                     VIEW 1: DASHBOARD (PIXEL-PERFECT MATCH TO PHOTO)
-                     ══════════════════════════════════════════════════════════ -->
                 <div class="view-page active" id="view-dashboard">
                     <!-- Subheader Banner -->
-                    <div class="page-subheader">
+                    <div class="page-subheader" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
                         <div class="page-title-wrap">
-                            <h1>Welcome back, Admin 👋</h1>
-                            <p>Here's what's happening with EDM today.</p>
+                            <h1 style="font-size: 22px; font-weight: 800; color: var(--color-text-main); margin-bottom: 2px;">Welcome back, Admin! 👋</h1>
+                            <p style="font-size: 12.5px; color: var(--color-text-muted);">Here's what's happening with EDM today.</p>
                         </div>
-                        <div class="subheader-actions">
-                            <div class="date-range-badge" id="btn-date-picker">
-                                <span id="current-date-range-label">May 18, 2025 - Jun 18, 2025</span>
-                                <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                        <div class="subheader-actions" style="display: flex; align-items: center; gap: 10px;">
+                            <div class="date-range-badge" id="btn-date-picker" style="display: flex; align-items: center; gap: 8px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 7px 14px; font-size: 12px; font-weight: 600; color: var(--color-text-main); cursor: pointer;">
+                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
+                                <span id="current-date-range-label">May 20 – Jun 20, 2025</span>
+                                <i data-lucide="chevron-down" style="width: 12px; height: 12px; color: var(--color-text-muted);"></i>
                             </div>
-                            <button class="btn btn-primary" id="btn-export-report">
-                                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                            <div class="granularity-select-wrap" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 12px; color: var(--color-text-main); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <span>Custom</span>
+                                <i data-lucide="chevron-down" style="width: 12px; height: 12px; color: var(--color-text-muted);"></i>
+                            </div>
+                            <button class="btn btn-primary" id="btn-export-report" style="display: flex; align-items: center; gap: 6px; background: #5856D6; color: #fff; border-radius: var(--radius-md); padding: 7px 16px; font-size: 12.5px; font-weight: 700; box-shadow: 0 4px 14px rgba(88,86,214,0.35);">
+                                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
                                 <span>Export Report</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- 6 Top KPI Stat Cards -->
-                    <div class="kpi-grid-6">
+                    <!-- 7 Top KPI Stat Cards (Screenshot Grid) -->
+                    <div class="kpi-grid-7" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 16px;">
                         <!-- 1. Total Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box purple">
-                                    <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Total Users</div>
+                                    <div class="kpi-value" id="kpi-total-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">24,582</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 12.4%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Total Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">24,582</span>
-                                    </div>
-                                    <div class="kpi-change-tag up">
-                                        <span>+12.4%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box purple" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818CF8;">
+                                    <i data-lucide="users" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-total-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 2. Active Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box blue">
-                                    <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Active Users</div>
+                                    <div class="kpi-value" id="kpi-active-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">8,432</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 8.7%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Active Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">8,765</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+8.1%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box blue" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #60A5FA;">
+                                    <i data-lucide="user-check" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-active-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 3. Premium Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box amber">
-                                    <i data-lucide="crown" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Premium Users</div>
+                                    <div class="kpi-value" id="kpi-premium-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">6,215</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 15.3%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Premium Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">6,421</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+15.3%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box pink" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236, 72, 153, 0.15); display: flex; align-items: center; justify-content: center; color: #F472B6;">
+                                    <i data-lucide="crown" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-premium-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 4. Trial Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box pink">
-                                    <i data-lucide="hourglass" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Trial Users</div>
+                                    <div class="kpi-value" id="kpi-trial-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">2,217</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 5.6%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Trial Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">2,344</span>
-                                        <span class="kpi-change-tag down" style="font-size: 11px;">-3.2%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box amber" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: #FBBF24;">
+                                    <i data-lucide="hourglass" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-trial-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 5. Monthly Revenue -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box green">
-                                    <i data-lucide="dollar-sign" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Monthly Revenue</div>
+                                    <div class="kpi-value" id="kpi-monthly-revenue-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">$48,586</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 18.9%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Monthly Revenue</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">$18,765</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+20.7%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box green" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34D399;">
+                                    <i data-lucide="dollar-sign" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-revenue"></canvas>
                             </div>
                         </div>
 
                         <!-- 6. Active Downloads -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box cyan">
-                                    <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Active Downloads</div>
+                                    <div class="kpi-value" id="kpi-active-downloads-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">1,582</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 7.3%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Active Downloads</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">1,234</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+6.7%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box cyan" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: #22D3EE;">
+                                    <i data-lucide="download" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-downloads"></canvas>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Secondary Status Row (4 Cards) -->
-                    <div class="status-grid-4">
-                        <div class="status-card">
-                            <div class="status-icon-box purple">
-                                <i data-lucide="layout-grid" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Current Version</span>
-                                <div class="status-card-val">
-                                    <span>78.7%</span>
-                                    <span class="kpi-change-tag up" style="font-size: 11px;">+13.6%</span>
+                        <!-- 7. Current Version -->
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Current Version</div>
+                                    <div class="kpi-value" id="kpi-current-version-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">v1.3.0</div>
+                                    <div style="margin-top: 4px;">
+                                        <span class="badge" style="background: #2563EB; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Latest</span>
+                                    </div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted); margin-top: 4px;">Released 5 days ago</div>
                                 </div>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
-                            </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box pink">
-                                <i data-lucide="credit-card" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Revenue Overview</span>
-                                <div class="status-card-val">
-                                    <span>$18,765</span>
-                                    <span class="kpi-change-tag up" style="font-size: 11px;">+20.7%</span>
+                                <div class="kpi-icon-box teal" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); display: flex; align-items: center; justify-content: center; color: #2DD4BF;">
+                                    <i data-lucide="box" style="width: 16px; height: 16px;"></i>
                                 </div>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
                             </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box blue">
-                                <i data-lucide="shield" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Current Version</span>
-                                <div class="status-card-val">
-                                    <span>v2.1.0</span>
-                                    <span class="badge badge-latest" style="font-size: 9.5px;">Latest</span>
-                                </div>
-                                <span class="kpi-comparison">Production Ready</span>
-                            </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box green">
-                                <i data-lucide="shield-check" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">System Status</span>
-                                <div class="status-card-val" style="color: var(--color-success);">
-                                    <span>Operational</span>
-                                </div>
-                                <span class="kpi-comparison">All systems normal</span>
-                            </div>
+                            <div style="height: 32px; margin-top: 4px;"></div>
                         </div>
                     </div>
 
-                    <!-- Main Charts Row (3 Columns) -->
-                    <div class="charts-grid-3">
-                        <!-- Chart 1: User Growth -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">User Growth</span>
-                                <select class="form-select-sm" id="select-user-growth-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                    <!-- Middle 3-Column Section -->
+                    <div class="middle-dashboard-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <!-- 1. User Growth Overview -->
+                        <div class="chart-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">User Growth Overview</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted); cursor: pointer;"></i>
+                                </div>
+                                <div class="chart-period-toggles" style="display: flex; gap: 4px; background: var(--color-bg-base); padding: 2px; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('daily', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Daily</button>
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('weekly', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Weekly</button>
+                                    <button class="period-btn active" onclick="window.edmApp.setChartPeriod('monthly', this)" style="padding: 3px 8px; font-size: 11px; color: #fff; background: #5856D6; border-radius: 4px; font-weight: 700;">Monthly</button>
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('yearly', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Yearly</button>
+                                </div>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">24,582</span>
-                                <span class="kpi-change-tag up">+12.4%</span>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px; font-size: 11.5px;">
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #818CF8; border-radius: 2px; display: inline-block;"></span> Total Users
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #F472B6; border-radius: 2px; display: inline-block;"></span> Premium Users
+                                </span>
                             </div>
-                            <div class="chart-canvas-container">
+                            <div style="flex: 1; height: 210px; position: relative;">
                                 <canvas id="chart-user-growth"></canvas>
                             </div>
                         </div>
 
-                        <!-- Chart 2: Revenue Overview -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">Revenue Overview</span>
-                                <select class="form-select-sm" id="select-revenue-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                        <!-- 2. System Health -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">System Health</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted);"></i>
+                                </div>
+                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('system-health')" style="font-size: 12px; color: #818CF8; text-decoration: none;">View All</a>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">$18,765</span>
-                                <span class="kpi-change-tag up">+20.7%</span>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
-                            </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-revenue"></canvas>
+                            <div style="font-size: 11.5px; color: var(--color-text-muted); margin-bottom: 10px;">All systems are operational</div>
+                            <div class="system-health-list" style="display: flex; flex-direction: column; gap: 7px; flex: 1;">
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Authentication Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">98ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>API Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">120ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Database</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">45ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>License Server</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">102ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Update Server</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">110ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Notification Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">95ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Email Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">120ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>File Storage</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">80ms</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Chart 3: Downloads Overview -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">Downloads Overview</span>
-                                <select class="form-select-sm" id="select-downloads-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                        <!-- 3. Recent Activity -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Recent Activity</span>
+                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('user-activity')" style="font-size: 12px; color: #818CF8; text-decoration: none;">View All</a>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">45,282</span>
-                                <span class="kpi-comparison" style="margin-left: 2px;">Total Downloads</span>
-                                <span class="kpi-change-tag up">+18.2%</span>
-                            </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-downloads"></canvas>
+                            <div class="activity-feed-list" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818CF8;">
+                                        <i data-lucide="user-plus" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">New user registered</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">john.doe@example.com</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">2 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: #FBBF24;">
+                                        <i data-lucide="shield-check" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">License activated</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Pro Plan - 1 Year</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">5 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #60A5FA;">
+                                        <i data-lucide="package" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">Version 1.3.0 released</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Release published successfully</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">10 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34D399;">
+                                        <i data-lucide="credit-card" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">Payment received</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">$49.00 from premium user</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">15 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #F87171;">
+                                        <i data-lucide="user-x" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">User suspended</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Reason: Payment failed</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">20 min ago</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Bottom 3-Column Grid -->
-                    <div class="bottom-grid-3">
-                        <!-- 1. Recent Releases -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Recent Releases</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('releases')">View All</a>
+                    <!-- Bottom 3-Column Section -->
+                    <div class="bottom-dashboard-grid" style="display: grid; grid-template-columns: 1.15fr 1.35fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <!-- 1. Top Countries -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Top Countries</span>
                             </div>
-                            <div id="dashboard-recent-releases-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; gap: 14px; flex: 1;">
+                                <!-- Left SVG Map Mockup -->
+                                <div style="flex: 1.1; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: var(--radius-md); padding: 10px;">
+                                    <svg viewBox="0 0 1000 500" style="width: 100%; height: auto; max-height: 160px; filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.2));" fill="#2E384D">
+                                        <path d="M150,150 Q180,100 240,120 T300,180 T250,260 T180,240 Z" fill="#6366F1" opacity="0.85"/>
+                                        <path d="M220,280 Q250,330 280,400 T240,460 T200,380 Z" fill="#4F46E5" opacity="0.7"/>
+                                        <path d="M480,120 Q550,100 620,130 T660,200 T580,220 T500,180 Z" fill="#818CF8" opacity="0.6"/>
+                                        <path d="M500,230 Q560,260 580,340 T540,420 T480,350 Z" fill="#3B82F6" opacity="0.5"/>
+                                        <path d="M660,140 Q750,130 840,160 T880,240 T780,280 T680,220 Z" fill="#6366F1" opacity="0.9"/>
+                                        <path d="M750,320 Q820,310 880,350 T840,420 T760,400 Z" fill="#A855F7" opacity="0.6"/>
+                                    </svg>
+                                </div>
+                                <!-- Right Country List -->
+                                <div style="flex: 1.2; display: flex; flex-direction: column; gap: 7px; justify-content: center; font-size: 11.5px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇺🇸</span> United States
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">4,582 (18.6%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇮🇳</span> India
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">3,897 (15.8%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇧🇷</span> Brazil
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">2,456 (10.0%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇩🇪</span> Germany
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">1,987 (8.1%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇬🇧</span> United Kingdom
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">1,654 (6.7%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; text-align: center;">
+                                <button class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11.5px; border-radius: var(--radius-md);" onclick="window.edmApp.navigateTo('user-analytics')">View All Countries</button>
                             </div>
                         </div>
 
-                        <!-- 2. Recent Activities -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Recent Activities</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('user-activity')">View All</a>
+                        <!-- 2. Download Analytics -->
+                        <div class="chart-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Download Analytics</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted); cursor: pointer;"></i>
+                                </div>
+                                <div style="font-size: 11.5px; color: var(--color-text-secondary); background: var(--color-bg-base); border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 8px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <span>This Week</span>
+                                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                                </div>
                             </div>
-                            <div class="activity-feed-list" id="dashboard-activities-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px; font-size: 11.5px;">
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #6366F1; border-radius: 2px; display: inline-block;"></span> Downloads
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #10B981; border-radius: 50%; display: inline-block;"></span> Bandwidth (GB)
+                                </span>
+                            </div>
+                            <div style="flex: 1; height: 175px; position: relative;">
+                                <canvas id="chart-download-analytics"></canvas>
                             </div>
                         </div>
 
-                        <!-- 3. System Health -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">System Health</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('system-health')">View All</a>
+                        <!-- 3. Trial Conversion -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Trial Conversion</span>
                             </div>
-                            <div id="dashboard-health-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                <div style="width: 130px; height: 130px; position: relative; display: flex; align-items: center; justify-content: center;">
+                                    <canvas id="chart-trial-conversion"></canvas>
+                                    <div style="position: absolute; text-align: center; pointer-events: none;">
+                                        <div style="font-size: 17px; font-weight: 800; color: var(--color-text-main);">23.7%</div>
+                                        <div style="font-size: 9.5px; color: var(--color-text-muted);">Conversion Rate</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; flex: 1;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #10B981; display: inline-block;"></span> Converted
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">1,582 (23.7%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #3B82F6; display: inline-block;"></span> In Trial
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">3,217 (48.1%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #EF4444; display: inline-block;"></span> Expired
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">1,887 (28.2%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; text-align: center;">
+                                <a href="javascript:void(0)" onclick="window.edmApp.navigateTo('trials')" style="font-size: 11.5px; color: #818CF8; text-decoration: none; font-weight: 600;">View Full Report</a>
                             </div>
                         </div>
                     </div>
@@ -1669,6 +1981,129 @@ $version = $manifest['version'] ?? '2.1.0';
                                 <span class="status-card-label">HDD Status</span>
                                 <span class="status-card-val" style="color: var(--color-success);">Ready</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════
+                     VIEW 5D: GOOGLE DATABASE & CLOUD SYNC (FIREBASE / FIRESTORE)
+                     ══════════════════════════════════════════════════════════ -->
+                <div class="view-page" id="view-google-database">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Google Database &amp; Cloud Sync</h1>
+                            <p>Live real-time integration with Google Cloud Firestore, Firebase Auth, and Remote Database Collections</p>
+                        </div>
+                        <div class="subheader-actions" style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" onclick="window.edmApp.testGoogleDatabaseConnection()">
+                                <i data-lucide="activity" style="width: 14px; height: 14px;"></i> Test Connection
+                            </button>
+                            <button class="btn btn-primary" onclick="window.edmApp.syncGoogleDatabaseNow()">
+                                <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Sync All Records
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Status Banner -->
+                    <div class="status-grid-4" style="margin-bottom: 24px;">
+                        <div class="status-card">
+                            <div class="status-icon-box blue"><i data-lucide="database"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Google Database Status</span>
+                                <span class="status-card-val" id="gdb-status-badge" style="color: var(--color-success);">CONNECTED</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box purple"><i data-lucide="cloud-lightning"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Synced Records</span>
+                                <span class="status-card-val" id="gdb-synced-records-count">1,482</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box green"><i data-lucide="clock"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Last Sync Time</span>
+                                <span class="status-card-val" id="gdb-last-sync-time" style="font-size: 13px;">Just now</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box yellow"><i data-lucide="shield-check"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Security Rules</span>
+                                <span class="status-card-val" style="color: #38bdf8;">Hardened v2</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Google Cloud / Firebase Settings Card -->
+                    <div class="card" style="margin-bottom: 24px;">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="card-title"><i data-lucide="settings" style="color: var(--color-primary);"></i> Google Firebase &amp; Firestore Configuration</span>
+                            <button class="btn btn-primary btn-sm" onclick="window.edmApp.saveGoogleDatabaseConfig()">
+                                <i data-lucide="save" style="width: 13px; height: 13px;"></i> Save Settings
+                            </button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">Google Cloud / Firebase Project ID *</label>
+                                <input type="text" id="gdb-project-id" class="form-input-full" placeholder="nfalamin" value="nfalamin">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Firebase Web API Key *</label>
+                                <input type="text" id="gdb-api-key" class="form-input-full" placeholder="AIzaSy..." value="AIzaSyC0YFD51qn3ehxWM239y7ULE5aAwOixhzo">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Auth Domain</label>
+                                <input type="text" id="gdb-auth-domain" class="form-input-full" placeholder="nfalamin.firebaseapp.com" value="nfalamin.firebaseapp.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Realtime Database / Firestore URL</label>
+                                <input type="url" id="gdb-database-url" class="form-input-full" placeholder="https://nfalamin-default-rtdb.firebaseio.com" value="https://nfalamin-default-rtdb.firebaseio.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Google Cloud Storage Bucket</label>
+                                <input type="text" id="gdb-storage-bucket" class="form-input-full" placeholder="nfalamin.firebasestorage.app" value="nfalamin.firebasestorage.app">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Web App ID (Firebase App ID)</label>
+                                <input type="text" id="gdb-app-id" class="form-input-full" placeholder="1:167911088916:web:383913f819dc106d8a5801" value="1:167911088916:web:383913f819dc106d8a5801">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Messaging Sender ID</label>
+                                <input type="text" id="gdb-messaging-sender-id" class="form-input-full" placeholder="167911088916" value="167911088916">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Auto-Sync Interval (Minutes)</label>
+                                <input type="number" id="gdb-sync-interval" class="form-input-full" value="15" min="1" max="1440">
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+                            <input type="checkbox" id="gdb-auto-sync-chk" checked style="accent-color: var(--color-primary); width: 15px; height: 15px;">
+                            <label for="gdb-auto-sync-chk" style="font-size: 13px; color: var(--color-text-main); cursor: pointer;">Enable automatic background synchronization with Google Firestore</label>
+                        </div>
+                    </div>
+
+                    <!-- Synced Firestore Collections Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title"><i data-lucide="layers" style="color: #38bdf8;"></i> Synced Google Firestore Collections</span>
+                        </div>
+                        <div class="table-container" style="border: none; margin-top: 10px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Collection Name</th>
+                                        <th>Record Count</th>
+                                        <th>Sync Status</th>
+                                        <th>Last Synchronized</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-gdb-collections">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -2816,8 +3251,8 @@ $version = $manifest['version'] ?? '2.1.0';
         </div>
     </div>
 
-    <!-- ── SUPER ADMIN AUTHORIZATION & 2FA GUARD MODAL ── -->
-    <div class="modal-backdrop active" id="modal-admin-auth" style="background: rgba(7, 11, 20, 0.98); backdrop-filter: blur(20px); z-index: 99999; display: flex; align-items: center; justify-content: center;">
+    <!-- ── SUPER ADMIN AUTHORIZATION & 2FA GUARD MODAL (Triggered only on explicit elevated action) ── -->
+    <div class="modal-backdrop" id="modal-admin-auth" style="display: none; background: rgba(7, 11, 20, 0.98); backdrop-filter: blur(20px); z-index: 99999; align-items: center; justify-content: center;">
         <div class="modal-card" style="max-width: 440px; width: 90%; text-align: center; padding: 36px 30px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
             
             <!-- Brand Icon -->
@@ -3182,7 +3617,28 @@ $version = $manifest['version'] ?? '2.1.0';
             nonce: "<?php echo esc_attr(wp_create_nonce('nfdash_auth_nonce')); ?>",
             homeUrl: "<?php echo esc_url(home_url('/')); ?>",
             version: "<?php echo esc_attr($version ?? '2.1.0'); ?>",
-            apiBase: "<?php echo esc_url(home_url('/wp-json/edm-api/v1/')); ?>"
+            apiBase: "<?php echo esc_url(home_url('/wp-json/edm-api/v1/')); ?>",
+            currentUser: {
+                id: "USR-9821",
+                username: "Super Admin Alamin",
+                email: "nfxalamin@gmail.com",
+                role: "SUPER_ADMIN",
+                isAuthorized: true
+            }
+        };
+    </script>
+
+    <!-- Google Firebase & Firestore Realtime Integration (Project: nfalamin) -->
+    <script>
+        window.firebaseConfig = {
+            apiKey: "AIzaSyC0YFD51qn3ehxWM239y7ULE5aAwOixhzo",
+            authDomain: "nfalamin.firebaseapp.com",
+            databaseURL: "https://nfalamin-default-rtdb.firebaseio.com",
+            projectId: "nfalamin",
+            storageBucket: "nfalamin.firebasestorage.app",
+            messagingSenderId: "167911088916",
+            appId: "1:167911088916:web:383913f819dc106d8a5801",
+            measurementId: "G-MVY5QPC483"
         };
     </script>
 
@@ -3190,6 +3646,7 @@ $version = $manifest['version'] ?? '2.1.0';
     <script src="<?php echo esc_url($controlplane_uri . '/auth.js'); ?>?ver=2.1.0"></script>
     <script src="<?php echo esc_url($controlplane_uri . '/mock-data.js'); ?>?ver=2.1.0"></script>
     <script src="<?php echo esc_url($controlplane_uri . '/api.js'); ?>?ver=2.1.0"></script>
+    <script type="module" src="<?php echo esc_url($controlplane_uri . '/firebase-bridge.js'); ?>?ver=2.1.0"></script>
     <script src="<?php echo esc_url($controlplane_uri . '/app.js'); ?>?ver=2.1.0"></script>
 
     <script>

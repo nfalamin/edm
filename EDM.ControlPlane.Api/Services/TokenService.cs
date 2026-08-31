@@ -30,8 +30,10 @@ namespace EDM.ControlPlane.Api.Services
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             
-            // Get or fallback to safe development key
-            string jwtSecret = _configuration["Jwt:SecretKey"] ?? "EDM_Development_Super_Secret_Key_For_Jwt_Signing_2026_Minimum_256_Bits!";
+            // Get or fallback to safe development key (unified with Program.cs)
+            string jwtSecret = Environment.GetEnvironmentVariable("EDM_JWT_SECRET") 
+                ?? _configuration["Jwt:SecretKey"] 
+                ?? "EDM_Development_Super_Secret_Key_For_Jwt_Signing_2026_Minimum_256_Bits!";
             _signingKeyBytes = Encoding.UTF8.GetBytes(jwtSecret);
             _issuer = _configuration["Jwt:Issuer"] ?? "EDM.ControlPlane";
             _audience = _configuration["Jwt:Audience"] ?? "EDM.Clients";

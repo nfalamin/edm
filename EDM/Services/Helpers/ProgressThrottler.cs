@@ -31,7 +31,7 @@ namespace EDM.Services.Helpers
             Action<Action>? dispatchAction = null)
         {
             _targetAction = targetAction ?? throw new ArgumentNullException(nameof(targetAction));
-            _throttleInterval = throttleInterval ?? TimeSpan.FromMilliseconds(100);
+            _throttleInterval = throttleInterval ?? TimeSpan.FromMilliseconds(40);
             _isTerminalPredicate = isTerminalPredicate;
             _dispatchAction = dispatchAction ?? (action => action());
             _throttleTimer = new System.Threading.Timer(OnTimerTick, null, Timeout.Infinite, Timeout.Infinite);

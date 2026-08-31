@@ -138,7 +138,7 @@ namespace EDM.Models
             set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
         }
 
-        /// <summary>Optional HTTP Basic-auth username for links behind a login wall (IDM calls this "Authorization").</summary>
+        /// <summary>Optional HTTP Basic-auth username for links behind a login wall (HTTP Authorization).</summary>
         public string AuthUsername { get => _authUsername; set { _authUsername = value ?? string.Empty; OnPropertyChanged(nameof(AuthUsername)); } }
         /// <summary>Optional HTTP Basic-auth password. Kept in memory only for the lifetime of this item; not persisted to history in plain text.</summary>
         [JsonIgnore]

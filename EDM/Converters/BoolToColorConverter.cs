@@ -14,7 +14,7 @@ namespace EDM.Converters
     /// </summary>
     public class BoolToColorConverter : IValueConverter
     {
-        // IDM-inspired Active Download Gradient: Deep Neon Blue
+        // EDM Turbo Active Download Gradient: Deep Neon Blue
         private static readonly LinearGradientBrush ActiveBrush = new LinearGradientBrush
         {
             StartPoint = new System.Windows.Point(0, 0),

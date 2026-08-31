@@ -468,6 +468,20 @@ namespace EDM.ViewModels
                             RecalculateMetrics();
                         });
                     }
+
+                    // Persist final completed state directly to SQLite history database
+                    BackgroundTaskManager.FireAndForget($"HistoryComplete_{item.Id}", async () =>
+                    {
+                        try
+                        {
+                            var historyService = (App.ServiceProvider?.GetService(typeof(HistoryService)) as HistoryService) ?? new HistoryService();
+                            await historyService.SaveDownloadAsync(item).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogException("[DownloadManagerViewModel] Failed to persist completed state to DB", ex);
+                        }
+                    });
                 }
                 catch (OperationCanceledException)
                 {
@@ -747,18 +761,74 @@ namespace EDM.ViewModels
                         }
                     }
 
+                    int previousActive = ActiveDownloadsCount;
                     TotalDownloadsCount = total;
                     ActiveDownloadsCount = active;
                     CompletedDownloadsCount = completed;
                     TotalSizeDownloaded = sumBytes > 0 ? SizeFormatter.FormatBytes(sumBytes, "0 B") : "0 B";
 
                     DownloadMetricsService.Instance.SetActiveDownloadsCount(active);
+                    UpdateDownloadSpeed();
+
+                    if (previousActive > 0 && active == 0)
+                    {
+                        CheckAndTriggerScheduledShutdown();
+                    }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error in RecalculateMetrics: {ex.Message}");
                 }
             });
+        }
+
+        private void CheckAndTriggerScheduledShutdown()
+        {
+            try
+            {
+                var settings = new EDM.Services.SettingsService();
+                string? shutdownVal = settings.GetSetting("ShutdownOnQueueComplete");
+                if (string.Equals(shutdownVal, "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Reset setting so it doesn't trigger repeatedly on manual downloads
+                    settings.SetSetting("ShutdownOnQueueComplete", "false");
+
+                    string? actionVal = settings.GetSetting("ScheduledPowerAction");
+                    EDM.Services.PowerAction action = actionVal switch
+                    {
+                        "Sleep" => EDM.Services.PowerAction.Sleep,
+                        "Hibernate" => EDM.Services.PowerAction.Hibernate,
+                        "ExitApplication" => EDM.Services.PowerAction.ExitApplication,
+                        _ => EDM.Services.PowerAction.Shutdown
+                    };
+
+                    int grace = 30;
+                    if (int.TryParse(settings.GetSetting("ScheduledGracePeriodSeconds"), out int g) && g > 0)
+                    {
+                        grace = g;
+                    }
+
+                    EDM.Services.LoggingService.Log($"[DownloadManagerViewModel] Queue finished downloading! Triggering power action: {action} with {grace}s grace period.");
+
+                    var app = System.Windows.Application.Current;
+                    app?.Dispatcher?.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            var countdownDialog = new Views.PowerActionCountdownDialog(action, grace);
+                            countdownDialog.Show();
+                        }
+                        catch (Exception ex)
+                        {
+                            EDM.Services.LoggingService.LogException("[DownloadManagerViewModel] Failed to open PowerActionCountdownDialog", ex);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                EDM.Services.LoggingService.LogException("[DownloadManagerViewModel] CheckAndTriggerScheduledShutdown failed", ex);
+            }
         }
 
         public static string FormatBytes(long bytes)
@@ -774,20 +844,22 @@ namespace EDM.ViewModels
 
         /// <summary>
         /// Calculates and updates current aggregated download speed from live active downloads.
-        /// Zero mock/random values — accurately sums active transfer rates.
+        /// Zero mock/random values — accurately sums active transfer rates in real-time.
         /// </summary>
         public void UpdateDownloadSpeed()
         {
-            Dispatcher.CurrentDispatcher?.BeginInvoke(() =>
+            var app = System.Windows.Application.Current;
+            var dispatcher = app?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+            dispatcher?.InvokeAsync(() =>
             {
                 try
                 {
-                    if (AllDownloads != null && AllDownloads.Any(d => d.Status != null && d.Status.Contains("Downloading")))
+                    if (AllDownloads != null && AllDownloads.Any(d => d.Status != null && d.Status.Contains("Downloading", StringComparison.OrdinalIgnoreCase)))
                     {
                         double totalBytesPerSec = 0;
-                        foreach (var item in AllDownloads.Where(d => d.Status != null && d.Status.Contains("Downloading")))
+                        foreach (var item in AllDownloads.Where(d => d.Status != null && d.Status.Contains("Downloading", StringComparison.OrdinalIgnoreCase)))
                         {
-                            if (!string.IsNullOrWhiteSpace(item.TransferRate) && item.TransferRate != "0 B/s")
+                            if (!string.IsNullOrWhiteSpace(item.TransferRate) && item.TransferRate != "0 B/s" && item.TransferRate != "--")
                             {
                                 totalBytesPerSec += ParseSpeedToBytesPerSecond(item.TransferRate);
                             }
@@ -847,21 +919,19 @@ namespace EDM.ViewModels
 
         /// <summary>
         /// Update network status and bandwidth information
-        /// In production, would check actual network connectivity and available bandwidth
         /// </summary>
         public void UpdateNetworkStatus()
         {
-            Dispatcher.CurrentDispatcher?.BeginInvoke(() =>
+            var app = System.Windows.Application.Current;
+            var dispatcher = app?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+            dispatcher?.InvokeAsync(() =>
             {
                 try
                 {
-                    // Check if any downloads are active
                     bool hasActive = ActiveDownloadsCount > 0;
-
-                    // Simulate connection status (in real app, would use actual network APIs)
                     ConnectionStatus = hasActive ? "High Speed Connection" : "Connected";
                     BandwidthStatus = hasActive ? "Unlimited Bandwidth" : "Idle";
-                    MaxSpeedLimit = "Unlimited"; // Could be loaded from settings
+                    MaxSpeedLimit = "Unlimited";
                 }
                 catch (Exception ex)
                 {
@@ -874,19 +944,20 @@ namespace EDM.ViewModels
         /// Start periodic metrics updates (for real-time dashboard)
         /// Call this from Dashboard.xaml.cs when the view loads
         /// </summary>
-        public async Task StartMetricsUpdates(int updateIntervalMs = 500, CancellationToken cancellationToken = default)
+        public async Task StartMetricsUpdates(int updateIntervalMs = 150, CancellationToken cancellationToken = default)
         {
             try
             {
-                // Initial calculation
                 RecalculateMetrics();
+                UpdateDownloadSpeed();
                 UpdateNetworkStatus();
 
-                // Periodic updates
+                // High-FPS Periodic updates (150ms for responsive live metrics)
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     await Task.Delay(updateIntervalMs, cancellationToken);
                     RecalculateMetrics();
+                    UpdateDownloadSpeed();
                     UpdateNetworkStatus();
                 }
             }

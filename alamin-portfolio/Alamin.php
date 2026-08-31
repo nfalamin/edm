@@ -294,11 +294,7 @@ CRITICAL RULES: ONLY answer ApexDL project questions. Follow a strict 7-stage li
     
     let DEEPSEEK_API_KEY = localStorage.getItem(KEYS.deepseekApi) || localStorage.getItem(KEYS.api) || '';
     
-    // আপনার এপিআই কীটি এখানে ডিফল্ট এবং লোকাল স্টোরেজে যুক্ত করা হলো
-    let GEMINI_API_KEY = localStorage.getItem(KEYS.geminiApi) || 'AQ.Ab8RN6JAai_oiiuZ7onPysnwOSDV1jCx5KbjUfGbQ814ifZBLw';
-    if (!localStorage.getItem(KEYS.geminiApi)) {
-        localStorage.setItem(KEYS.geminiApi, GEMINI_API_KEY);
-    }
+    let GEMINI_API_KEY = localStorage.getItem(KEYS.geminiApi) || '';
 
     let selectedModel = localStorage.getItem(KEYS.model) || 'gemini'; 
     let SYSTEM_PROMPT = localStorage.getItem(KEYS.system) || '';

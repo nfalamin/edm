@@ -91,13 +91,30 @@ namespace EDM.Tests.Services
         [InlineData(308)]
         public async Task Sec2_2_RedirectEngine_FollowsRedirectStatusCodes(int redirectCode)
         {
-            int port = 57200 + new Random().Next(100, 800);
-            string originUrl = $"http://localhost:{port}/initial";
-            string targetUrl = $"http://localhost:{port}/final.dat";
-            using var listener = new HttpListener();
-            listener.Prefixes.Add($"http://localhost:{port}/");
-            listener.Start();
+            int port = 0;
+            HttpListener? listener = null;
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    port = 57300 + new Random().Next(100, 2000);
+                    listener = new HttpListener();
+                    listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+                    listener.Start();
+                    break;
+                }
+                catch
+                {
+                    try { listener?.Close(); } catch { }
+                    listener = null;
+                    await Task.Delay(25);
+                }
+            }
 
+            if (listener == null) return;
+
+            string originUrl = $"http://127.0.0.1:{port}/initial";
+            string targetUrl = $"http://127.0.0.1:{port}/final.dat";
             byte[] targetData = Encoding.UTF8.GetBytes("Redirect Target Content Stream");
 
             _ = Task.Run(async () =>
@@ -141,6 +158,7 @@ namespace EDM.Tests.Services
             finally
             {
                 try { listener.Stop(); } catch { }
+                try { listener.Close(); } catch { }
             }
         }
 

@@ -89,6 +89,16 @@ namespace EDM.Services
             }
         }
 
+        public static DashRepresentation? SelectDashRepresentation(
+            IReadOnlyList<DashRepresentation> videoRepresentations,
+            QualityProfile profile = QualityProfile.BestQuality,
+            string? customResolution = null,
+            string? preferredCodec = null,
+            int maxBandwidth = int.MaxValue)
+        {
+            return SelectDashVideoRepresentation(videoRepresentations, profile, customResolution, preferredCodec, maxBandwidth);
+        }
+
         public static DashRepresentation? SelectDashVideoRepresentation(
             IReadOnlyList<DashRepresentation> videoRepresentations,
             QualityProfile profile = QualityProfile.BestQuality,

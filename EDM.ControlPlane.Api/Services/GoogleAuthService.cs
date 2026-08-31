@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 
 namespace EDM.ControlPlane.Api.Services
 {
@@ -18,6 +21,10 @@ namespace EDM.ControlPlane.Api.Services
     {
         private readonly IConfiguration _configuration;
         private readonly string? _expectedClientId;
+        private static readonly HttpClient _httpClient = new();
+        private static IList<SecurityKey>? _cachedSigningKeys;
+        private static DateTime _keysExpiryUtc = DateTime.MinValue;
+        private static readonly object _keysLock = new();
 
         public GoogleAuthService(IConfiguration configuration)
         {
@@ -25,57 +32,89 @@ namespace EDM.ControlPlane.Api.Services
             _expectedClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? _configuration["Google:ClientId"];
         }
 
-        public Task<GoogleUserPayload?> ValidateGoogleTokenAsync(string idToken)
+        public async Task<GoogleUserPayload?> ValidateGoogleTokenAsync(string idToken)
         {
-            if (string.IsNullOrWhiteSpace(idToken)) return Task.FromResult<GoogleUserPayload?>(null);
+            if (string.IsNullOrWhiteSpace(idToken)) return null;
 
             try
             {
+                var keys = await GetGoogleSigningKeysAsync();
+                if (keys == null || keys.Count == 0) return null;
+
                 var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(idToken)) return Task.FromResult<GoogleUserPayload?>(null);
+                if (!handler.CanReadToken(idToken)) return null;
 
-                var jwt = handler.ReadJwtToken(idToken);
-
-                // Verify issuer
-                if (jwt.Issuer != "accounts.google.com" && jwt.Issuer != "https://accounts.google.com")
+                var validationParameters = new TokenValidationParameters
                 {
-                    return Task.FromResult<GoogleUserPayload?>(null);
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKeys = keys,
+                    ValidateIssuer = true,
+                    ValidIssuers = new[] { "accounts.google.com", "https://accounts.google.com" },
+                    ValidateAudience = !string.IsNullOrWhiteSpace(_expectedClientId),
+                    ValidAudience = _expectedClientId,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(2)
+                };
+
+                ClaimsPrincipal principal = handler.ValidateToken(idToken, validationParameters, out SecurityToken validatedToken);
+                if (validatedToken == null) return null;
+
+                string email = principal.FindFirst(ClaimTypes.Email)?.Value 
+                    ?? principal.FindFirst("email")?.Value 
+                    ?? string.Empty;
+                string name = principal.FindFirst(ClaimTypes.Name)?.Value 
+                    ?? principal.FindFirst("name")?.Value 
+                    ?? string.Empty;
+                string sub = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                    ?? principal.FindFirst("sub")?.Value 
+                    ?? string.Empty;
+                
+                string? emailVerifiedStr = principal.FindFirst("email_verified")?.Value;
+                bool emailVerified = bool.TryParse(emailVerifiedStr, out bool ev) && ev;
+
+                if (string.IsNullOrWhiteSpace(email) || !emailVerified)
+                {
+                    return null;
                 }
 
-                // Verify expiry
-                if (jwt.ValidTo < DateTime.UtcNow)
-                {
-                    return Task.FromResult<GoogleUserPayload?>(null);
-                }
-
-                // Verify audience if configured
-                if (!string.IsNullOrWhiteSpace(_expectedClientId))
-                {
-                    bool audMatch = false;
-                    foreach (var aud in jwt.Audiences)
-                    {
-                        if (string.Equals(aud, _expectedClientId, StringComparison.OrdinalIgnoreCase))
-                        {
-                            audMatch = true;
-                            break;
-                        }
-                    }
-                    if (!audMatch) return Task.FromResult<GoogleUserPayload?>(null);
-                }
-
-                string email = jwt.Payload.TryGetValue("email", out var eVal) ? eVal?.ToString() ?? "" : "";
-                string name = jwt.Payload.TryGetValue("name", out var nVal) ? nVal?.ToString() ?? "" : "";
-                string sub = jwt.Subject ?? "";
-                bool emailVerified = jwt.Payload.TryGetValue("email_verified", out var evVal) &&
-                    (evVal is bool b ? b : bool.TryParse(evVal?.ToString(), out var b2) && b2);
-
-                if (string.IsNullOrWhiteSpace(email)) return Task.FromResult<GoogleUserPayload?>(null);
-
-                return Task.FromResult<GoogleUserPayload?>(new GoogleUserPayload(email.ToLowerInvariant().Trim(), name, sub, emailVerified));
+                return new GoogleUserPayload(email.ToLowerInvariant().Trim(), name, sub, emailVerified);
             }
             catch
             {
-                return Task.FromResult<GoogleUserPayload?>(null);
+                return null;
+            }
+        }
+
+        private static async Task<IList<SecurityKey>> GetGoogleSigningKeysAsync()
+        {
+            lock (_keysLock)
+            {
+                if (_cachedSigningKeys != null && DateTime.UtcNow < _keysExpiryUtc)
+                {
+                    return _cachedSigningKeys;
+                }
+            }
+
+            try
+            {
+                string jwksJson = await _httpClient.GetStringAsync("https://www.googleapis.com/oauth2/v3/certs");
+                var keySet = new JsonWebKeySet(jwksJson);
+                var keys = keySet.GetSigningKeys();
+
+                lock (_keysLock)
+                {
+                    _cachedSigningKeys = keys;
+                    _keysExpiryUtc = DateTime.UtcNow.AddHours(24);
+                }
+
+                return keys;
+            }
+            catch
+            {
+                lock (_keysLock)
+                {
+                    return _cachedSigningKeys ?? Array.Empty<SecurityKey>();
+                }
             }
         }
     }

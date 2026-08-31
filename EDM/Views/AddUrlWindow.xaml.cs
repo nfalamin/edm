@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using EDM.Models;
+using EDM.NativeMessaging;
 using EDM.Services;
 using EDM.Services.Helpers;
 using EDM.ViewModels;
@@ -98,6 +99,132 @@ namespace EDM.Views
                 UrlTextBox.SelectAll();
                 UpdatePlaceholder();
                 TriggerAutoAnalyze();
+            }
+        }
+
+        private string _handoffCookies = string.Empty;
+        private string _handoffReferer = string.Empty;
+        private string _handoffUserAgent = string.Empty;
+        private string _handoffAuthHeader = string.Empty;
+        private string _handoffVideoUrl = string.Empty;
+        private string _handoffAudioUrl = string.Empty;
+        private bool _handoffRequiresFfmpegMerge = false;
+        private string _handoffQuality = string.Empty;
+        private long _handoffEstimatedSize = 0;
+
+        /// <summary>
+        /// Populates the dialog from a browser extension Native Messaging handoff,
+        /// auto-detecting category, target subfolder, and setting focus on Start Download.
+        /// </summary>
+        public void PrefillFromHandoff(IpcHandoffPayload payload, DownloadManagerViewModel? viewModel = null)
+        {
+            _viewModel = viewModel ?? (System.Windows.Application.Current?.MainWindow?.DataContext as DownloadManagerViewModel);
+            if (payload == null) return;
+
+            string url = (payload.Url ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                UrlTextBox.Text = url;
+                UpdatePlaceholder();
+            }
+
+            _handoffCookies = payload.Cookies ?? string.Empty;
+            _handoffReferer = payload.Referer ?? payload.PageUrl ?? string.Empty;
+            _handoffUserAgent = payload.UserAgent ?? string.Empty;
+            _handoffAuthHeader = payload.AuthHeader ?? string.Empty;
+            _handoffVideoUrl = payload.VideoUrl ?? string.Empty;
+            _handoffAudioUrl = payload.AudioUrl ?? string.Empty;
+            _handoffRequiresFfmpegMerge = payload.RequiresFfmpegMerge;
+            _handoffQuality = payload.Quality ?? string.Empty;
+            _handoffEstimatedSize = payload.EstimatedSizeBytes ?? 0;
+
+            string suggestedFileName = !string.IsNullOrWhiteSpace(payload.Filename)
+                ? payload.Filename
+                : (!string.IsNullOrWhiteSpace(payload.Title) ? payload.Title : string.Empty);
+
+            if (string.IsNullOrWhiteSpace(suggestedFileName) && !string.IsNullOrWhiteSpace(url))
+            {
+                try
+                {
+                    var uri = new Uri(url);
+                    suggestedFileName = Path.GetFileName(uri.LocalPath);
+                }
+                catch { }
+            }
+
+            if (!string.IsNullOrWhiteSpace(suggestedFileName))
+            {
+                suggestedFileName = FileNamingHelper.SanitizeFileName(suggestedFileName);
+                FileNameTextBox.Text = suggestedFileName;
+                _lastAutoFilename = suggestedFileName;
+            }
+
+            // Auto-detect Category based on file extension
+            string ext = Path.GetExtension(suggestedFileName).TrimStart('.').ToLowerInvariant();
+            string categoryName = CategorizeExtension(ext);
+            SelectCategoryByName(categoryName);
+
+            // Set destination folder to category folder
+            string subFolder = categoryName switch
+            {
+                "Video" => "Video",
+                "Audio" => "Audio",
+                "Documents" => "Documents",
+                "Programs" => "Programs",
+                "Compressed" => "Compressed",
+                _ => "Others"
+            };
+            string targetFolder = Path.Combine(_baseDownloadFolder, subFolder);
+            try
+            {
+                if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
+                SavePathTextBox.Text = targetFolder;
+            }
+            catch
+            {
+                SavePathTextBox.Text = _baseDownloadFolder;
+            }
+
+            // Bring window to front over browser
+            this.Topmost = true;
+            this.Show();
+            this.Activate();
+            this.Focus();
+            this.Topmost = false;
+
+            StartDownloadButton.Focus();
+        }
+
+        private static string CategorizeExtension(string ext)
+        {
+            if (string.IsNullOrWhiteSpace(ext)) return "General";
+            switch (ext.ToLowerInvariant())
+            {
+                case "zip": case "rar": case "7z": case "tar": case "gz": case "bz2": case "xz": case "iso": case "cab": case "dmg":
+                    return "Compressed";
+                case "exe": case "msi": case "apk": case "bin": case "appx":
+                    return "Programs";
+                case "mp4": case "mkv": case "webm": case "avi": case "mov": case "wmv": case "flv": case "ts":
+                    return "Video";
+                case "mp3": case "m4a": case "aac": case "flac": case "wav": case "wma": case "ogg": case "opus":
+                    return "Audio";
+                case "pdf": case "doc": case "docx": case "xls": case "xlsx": case "ppt": case "pptx": case "txt": case "epub":
+                    return "Documents";
+                default:
+                    return "General";
+            }
+        }
+
+        private void SelectCategoryByName(string categoryName)
+        {
+            if (CategoryComboBox == null) return;
+            foreach (var item in CategoryComboBox.Items)
+            {
+                if (item is ComboBoxItem cbi && string.Equals(cbi.Content?.ToString(), categoryName, StringComparison.OrdinalIgnoreCase))
+                {
+                    CategoryComboBox.SelectedItem = cbi;
+                    return;
+                }
             }
         }
 
@@ -638,8 +765,20 @@ namespace EDM.Views
                 TransferRate = "0 B/s"
             };
 
-            // Attach authentication credentials if provided (via dashboard auth manager)
-            // Note: auth fields moved to Download Dashboard → site logins manager
+            // Attach handoff metadata from browser extension if available
+            if (!string.IsNullOrWhiteSpace(_handoffCookies)) newDownload.Cookies = _handoffCookies;
+            if (!string.IsNullOrWhiteSpace(_handoffReferer)) newDownload.Referer = _handoffReferer;
+            if (!string.IsNullOrWhiteSpace(_handoffUserAgent)) newDownload.UserAgent = _handoffUserAgent;
+            if (!string.IsNullOrWhiteSpace(_handoffAuthHeader)) newDownload.AuthHeader = _handoffAuthHeader;
+            if (!string.IsNullOrWhiteSpace(_handoffVideoUrl)) newDownload.VideoUrl = _handoffVideoUrl;
+            if (!string.IsNullOrWhiteSpace(_handoffAudioUrl)) newDownload.AudioUrl = _handoffAudioUrl;
+            if (_handoffRequiresFfmpegMerge) newDownload.RequiresFfmpegMerge = true;
+            if (!string.IsNullOrWhiteSpace(_handoffQuality)) newDownload.Quality = _handoffQuality;
+            if (_handoffEstimatedSize > 0 && newDownload.EstimatedSizeBytes <= 0)
+            {
+                newDownload.EstimatedSizeBytes = _handoffEstimatedSize;
+                newDownload.Size = FormatBytes(_handoffEstimatedSize);
+            }
 
             // Attach selected MediaVariantOption if analyzed
             if (QualityComboBox.SelectedItem is ComboBoxItem qItem && qItem.Tag is MediaVariantOption v)

@@ -266,7 +266,7 @@
 
         <div class="settings-group">
             <label>🧠 সিস্টেম প্রম্পট (PDL Core Persona)</label>
-            <textarea id="sysPromptInput" rows="6" style="font-size:12px;">You are "PDL Core" (Powerfull Download Manager), a world-class AI Software Architect and Senior Systems Engineer. Your absolute core expertise lies in building advanced, ultra-fast download managers like IDM for PC and Android. 
+            <textarea id="sysPromptInput" rows="6" style="font-size:12px;">You are "PDL Core" (Powerfull Download Manager), a world-class AI Software Architect and Senior Systems Engineer. Your absolute core expertise lies in building advanced, ultra-fast download accelerators and multi-threaded engines for PC and Android. 
 Expertise: HTML5/CSS3/JS, Chrome Extensions (V3), Native Messaging, C++/C#/Java/Python, HTTP/HTTPS, Multi-threading, File Chunking, SQLite, HLS/m3u8, Android SDK.
 CRITICAL RULES: ONLY answer ApexDL project questions. Follow a strict 7-stage lifecycle. Never skip stages. Provide optimized, production-ready code. Tone: Professional, technical, peer-to-peer architect.</textarea>
             <button class="btn-save btn-sm" onclick="saveSystemPrompt()">আপডেট করুন</button>
@@ -294,11 +294,7 @@ CRITICAL RULES: ONLY answer ApexDL project questions. Follow a strict 7-stage li
     
     let DEEPSEEK_API_KEY = localStorage.getItem(KEYS.deepseekApi) || localStorage.getItem(KEYS.api) || '';
     
-    // আপনার এপিআই কীটি এখানে ডিফল্ট এবং লোকাল স্টোরেজে যুক্ত করা হলো
-    let GEMINI_API_KEY = localStorage.getItem(KEYS.geminiApi) || 'AQ.Ab8RN6JAai_oiiuZ7onPysnwOSDV1jCx5KbjUfGbQ814ifZBLw';
-    if (!localStorage.getItem(KEYS.geminiApi)) {
-        localStorage.setItem(KEYS.geminiApi, GEMINI_API_KEY);
-    }
+    let GEMINI_API_KEY = localStorage.getItem(KEYS.geminiApi) || '';
 
     let selectedModel = localStorage.getItem(KEYS.model) || 'gemini'; 
     let SYSTEM_PROMPT = localStorage.getItem(KEYS.system) || '';
@@ -319,7 +315,7 @@ CRITICAL RULES: ONLY answer ApexDL project questions. Follow a strict 7-stage li
 
     // Default Prompt if empty
     if(!SYSTEM_PROMPT) {
-        SYSTEM_PROMPT = `You are "PDL Core" (Powerfull Download Manager), a world-class AI Software Architect and Senior Systems Engineer. Your absolute core expertise lies in building advanced, ultra-fast download managers like IDM for PC and Android. 
+        SYSTEM_PROMPT = `You are "PDL Core" (Powerfull Download Manager), a world-class AI Software Architect and Senior Systems Engineer. Your absolute core expertise lies in building advanced, ultra-fast download accelerators and multi-threaded engines for PC and Android. 
 Expertise: HTML5/CSS3/JS, Chrome Extensions (V3), Native Messaging, C++/C#/Java/Python, HTTP/HTTPS, Multi-threading, File Chunking, SQLite, HLS/m3u8, Android SDK.
 CRITICAL RULES: ONLY answer ApexDL project questions. Follow a strict 7-stage lifecycle. Never skip stages. Provide optimized, production-ready code. Tone: Professional, technical, peer-to-peer architect.`;
         localStorage.setItem(KEYS.system, SYSTEM_PROMPT);

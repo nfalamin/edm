@@ -718,6 +718,13 @@ namespace EDM.Services
                         _items.Clear();
                         foreach (var item in loadedItems)
                         {
+                            // Filter out any stale mock/benchmark test artifacts
+                            if (string.IsNullOrWhiteSpace(item.DownloadId) ||
+                                item.DownloadId.StartsWith("bench_job_", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
                             if (item.State == QueueItemState.Downloading || item.State == QueueItemState.Starting)
                             {
                                 item.State = QueueItemState.Paused;

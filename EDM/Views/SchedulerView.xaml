@@ -68,7 +68,42 @@
                 <Border Background="#131B2E" BorderBrush="#222F48" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
                     <StackPanel>
                         <TextBlock Text="⚙️ Post-Completion Automation" FontSize="15" FontWeight="SemiBold" Foreground="#3B82F6" Margin="0,0,0,12"/>
-                        <CheckBox x:Name="ShutdownPcCheckBox" Content="Shut down computer when queue finishes downloading" FontSize="13" Foreground="#FFFFFF" Margin="0,0,0,8"/>
+                        
+                        <CheckBox x:Name="ShutdownPcCheckBox" Content="Turn off computer when queue finishes downloading" FontSize="13" Foreground="#FFFFFF" Margin="0,0,0,10" Checked="ShutdownPcCheckBox_Changed" Unchecked="ShutdownPcCheckBox_Changed"/>
+
+                        <!-- Sub-options for Power Action -->
+                        <Grid x:Name="PowerOptionsPanel" Margin="22,0,0,10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="Power Action:" VerticalAlignment="Center" FontSize="12" Foreground="#94A3B8" Margin="0,0,10,0"/>
+                                <ComboBox x:Name="PowerActionComboBox" Width="180" Height="28" SelectedIndex="0" FontSize="12">
+                                    <ComboBoxItem Content="Shutdown Computer"/>
+                                    <ComboBoxItem Content="Sleep (Low Power)"/>
+                                    <ComboBoxItem Content="Hibernate"/>
+                                    <ComboBoxItem Content="Exit EDM Only"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <Button Grid.Row="0" Grid.Column="1" x:Name="TestPowerActionBtn" Content="⚡ Test Countdown Alert" Click="TestPowerActionBtn_Click" Height="28" Padding="12,0" Background="#334155" Foreground="#38BDF8" BorderThickness="0" FontSize="11.5" Cursor="Hand"/>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
+                                <TextBlock Text="Grace Period:" VerticalAlignment="Center" FontSize="12" Foreground="#94A3B8" Margin="0,0,10,0"/>
+                                <ComboBox x:Name="GracePeriodComboBox" Width="180" Height="28" SelectedIndex="1" FontSize="12">
+                                    <ComboBoxItem Content="15 Seconds (Fast)"/>
+                                    <ComboBoxItem Content="30 Seconds (Default)"/>
+                                    <ComboBoxItem Content="60 Seconds (Safe)"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
                         <CheckBox x:Name="ScanAvCheckBox" Content="Automatically scan files with Windows Defender after download" IsChecked="True" FontSize="13" Foreground="#FFFFFF"/>
                     </StackPanel>
                 </Border>

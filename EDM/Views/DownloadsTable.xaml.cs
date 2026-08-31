@@ -447,6 +447,28 @@ namespace EDM.Views
         }
 
         /// <summary>
+        /// Context Menu: Refresh Download Address - Updates the download URL for expired links and resumes
+        /// </summary>
+        private void MenuItem_RefreshAddress(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as System.Windows.Controls.MenuItem;
+            var contextMenu = menuItem?.Parent as System.Windows.Controls.ContextMenu;
+            if (contextMenu?.PlacementTarget is Border border && border.Tag is DownloadItem download)
+            {
+                try
+                {
+                    var refreshWin = new RefreshAddressWindow(download, _viewModel);
+                    refreshWin.Owner = Window.GetWindow(this);
+                    refreshWin.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.LogException("[DownloadsTable] MenuItem_RefreshAddress failed", ex);
+                }
+            }
+        }
+
+        /// <summary>
         /// Context Menu: Force Start - Moves download to front of queue and starts immediately
         /// </summary>
         private void MenuItem_ForceStart(object sender, RoutedEventArgs e)

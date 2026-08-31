@@ -45,6 +45,11 @@
                         <span class="nav-item-icon"><i data-lucide="layout-dashboard"></i></span>
                         <span class="nav-item-text">Dashboard</span>
                     </button>
+                    <button class="nav-item" data-page="live-map">
+                        <span class="nav-item-icon"><i data-lucide="globe-2"></i></span>
+                        <span class="nav-item-text">Live World Map</span>
+                        <span class="nav-item-badge" style="background: rgba(34,197,94,0.2); color: #22c55e; animation: pulse-badge 2s infinite;">LIVE</span>
+                    </button>
                 </div>
 
                 <!-- USERS -->
@@ -92,11 +97,19 @@
                         <span class="nav-item-icon"><i data-lucide="hard-drive"></i></span>
                         <span class="nav-item-text">Storage &amp; Quota</span>
                     </button>
+                    <button class="nav-item" data-page="google-database">
+                        <span class="nav-item-icon"><i data-lucide="database"></i></span>
+                        <span class="nav-item-text">Google Cloud Database</span>
+                    </button>
                 </div>
 
                 <!-- SUBSCRIPTIONS -->
                 <div class="nav-section">
                     <div class="nav-section-title">Subscriptions</div>
+                                        <button class="nav-item" data-page="sub-control">
+                        <span class="nav-item-icon"><i data-lucide="sliders"></i></span>
+                        <span class="nav-item-text">Subscription Control</span>
+                    </button>
                     <button class="nav-item" data-page="plans">
                         <span class="nav-item-icon"><i data-lucide="layers"></i></span>
                         <span class="nav-item-text">Plans</span>
@@ -109,6 +122,14 @@
                         <span class="nav-item-icon"><i data-lucide="key"></i></span>
                         <span class="nav-item-text">Licenses</span>
                     </button>
+                    <button class="nav-item" data-page="transactions">
+                        <span class="nav-item-icon"><i data-lucide="credit-card"></i></span>
+                        <span class="nav-item-text">Transactions</span>
+                    </button>
+                    <button class="nav-item" data-page="coupons">
+                        <span class="nav-item-icon"><i data-lucide="ticket"></i></span>
+                        <span class="nav-item-text">Coupons</span>
+                    </button>
                     <button class="nav-item" data-page="country-pricing">
                         <span class="nav-item-icon"><i data-lucide="globe"></i></span>
                         <span class="nav-item-text">Country Pricing</span>
@@ -119,21 +140,34 @@
                     </button>
                 </div>
 
-                <!-- UPDATES -->
+                <!-- UPDATES & RELEASES -->
                 <div class="nav-section">
-                    <div class="nav-section-title">Updates</div>
+                    <div class="nav-section-title">Updates &amp; Releases</div>
                     <button class="nav-item" data-page="update-center">
                         <span class="nav-item-icon"><i data-lucide="refresh-cw"></i></span>
                         <span class="nav-item-text">Update Center</span>
                     </button>
-                    <button class="nav-item" data-page="releases">
-                        <span class="nav-item-icon"><i data-lucide="package-check"></i></span>
-                        <span class="nav-item-text">Release Manager</span>
-                        <span class="nav-item-badge">v2.1.0</span>
+                    <button class="nav-item" data-page="update-app">
+                        <span class="nav-item-icon"><i data-lucide="layout"></i></span>
+                        <span class="nav-item-text">App Updates</span>
                     </button>
-                    <button class="nav-item" data-page="version-history">
-                        <span class="nav-item-icon"><i data-lucide="history"></i></span>
-                        <span class="nav-item-text">Version History</span>
+                    <button class="nav-item" data-page="update-ext">
+                        <span class="nav-item-icon"><i data-lucide="puzzle"></i></span>
+                        <span class="nav-item-text">Extension Updates</span>
+                    </button>
+                    <button class="nav-item" data-page="update-nativehost">
+                        <span class="nav-item-icon"><i data-lucide="terminal"></i></span>
+                        <span class="nav-item-text">NativeHost Updates</span>
+                    </button>
+                </div>
+
+                <!-- CONTENT & DOCUMENTATION -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Content &amp; Documentation</div>
+                    <button class="nav-item" data-page="content-manager">
+                        <span class="nav-item-icon"><i data-lucide="file-text"></i></span>
+                        <span class="nav-item-text">Content Manager</span>
+                        <span class="nav-item-badge" style="background: rgba(88,86,214,0.2); color: #818cf8;">MD</span>
                     </button>
                 </div>
 
@@ -168,6 +202,10 @@
                     <button class="nav-item" data-page="feature-analytics">
                         <span class="nav-item-icon"><i data-lucide="pie-chart"></i></span>
                         <span class="nav-item-text">Feature Analytics</span>
+                    </button>
+                    <button class="nav-item" data-page="reports">
+                        <span class="nav-item-icon"><i data-lucide="file-spreadsheet"></i></span>
+                        <span class="nav-item-text">Reports</span>
                     </button>
                 </div>
 
@@ -300,303 +338,498 @@
                      ══════════════════════════════════════════════════════════ -->
                 <div class="view-page active" id="view-dashboard">
                     <!-- Subheader Banner -->
-                    <div class="page-subheader">
+                    <div class="page-subheader" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
                         <div class="page-title-wrap">
-                            <h1>Welcome back, Admin 👋</h1>
-                            <p>Here's what's happening with EDM today.</p>
+                            <h1 style="font-size: 22px; font-weight: 800; color: var(--color-text-main); margin-bottom: 2px;">Welcome back, Admin! 👋</h1>
+                            <p style="font-size: 12.5px; color: var(--color-text-muted);">Here's what's happening with EDM today.</p>
                         </div>
-                        <div class="subheader-actions">
-                            <div class="date-range-badge" id="btn-date-picker">
-                                <span id="current-date-range-label">May 18, 2025 - Jun 18, 2025</span>
-                                <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                        <div class="subheader-actions" style="display: flex; align-items: center; gap: 10px;">
+                            <div class="date-range-badge" id="btn-date-picker" style="display: flex; align-items: center; gap: 8px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 7px 14px; font-size: 12px; font-weight: 600; color: var(--color-text-main); cursor: pointer;">
+                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
+                                <span id="current-date-range-label">May 20 – Jun 20, 2025</span>
+                                <i data-lucide="chevron-down" style="width: 12px; height: 12px; color: var(--color-text-muted);"></i>
                             </div>
-                            <button class="btn btn-primary" id="btn-export-report">
-                                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                            <div class="granularity-select-wrap" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 7px 12px; font-size: 12px; color: var(--color-text-main); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <span>Custom</span>
+                                <i data-lucide="chevron-down" style="width: 12px; height: 12px; color: var(--color-text-muted);"></i>
+                            </div>
+                            <button class="btn btn-primary" id="btn-export-report" style="display: flex; align-items: center; gap: 6px; background: #5856D6; color: #fff; border-radius: var(--radius-md); padding: 7px 16px; font-size: 12.5px; font-weight: 700; box-shadow: 0 4px 14px rgba(88,86,214,0.35);">
+                                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
                                 <span>Export Report</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- 6 Top KPI Stat Cards -->
-                    <div class="kpi-grid-6">
+                    <!-- 7 Top KPI Stat Cards (Screenshot Grid) -->
+                    <div class="kpi-grid-7" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 16px;">
                         <!-- 1. Total Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box purple">
-                                    <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Total Users</div>
+                                    <div class="kpi-value" id="kpi-total-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">24,582</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 12.4%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Total Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">24,582</span>
-                                    </div>
-                                    <div class="kpi-change-tag up">
-                                        <span>+12.4%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box purple" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818CF8;">
+                                    <i data-lucide="users" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-total-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 2. Active Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box blue">
-                                    <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Active Users</div>
+                                    <div class="kpi-value" id="kpi-active-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">8,432</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 8.7%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Active Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">8,765</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+8.1%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box blue" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #60A5FA;">
+                                    <i data-lucide="user-check" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-active-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 3. Premium Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box amber">
-                                    <i data-lucide="crown" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Premium Users</div>
+                                    <div class="kpi-value" id="kpi-premium-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">6,215</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 15.3%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Premium Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">6,421</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+15.3%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box pink" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236, 72, 153, 0.15); display: flex; align-items: center; justify-content: center; color: #F472B6;">
+                                    <i data-lucide="crown" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-premium-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 4. Trial Users -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box pink">
-                                    <i data-lucide="hourglass" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Trial Users</div>
+                                    <div class="kpi-value" id="kpi-trial-users-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">2,217</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 5.6%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Trial Users</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">2,344</span>
-                                        <span class="kpi-change-tag down" style="font-size: 11px;">-3.2%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box amber" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: #FBBF24;">
+                                    <i data-lucide="hourglass" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-trial-users"></canvas>
                             </div>
                         </div>
 
                         <!-- 5. Monthly Revenue -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box green">
-                                    <i data-lucide="dollar-sign" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Monthly Revenue</div>
+                                    <div class="kpi-value" id="kpi-monthly-revenue-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">$48,586</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 18.9%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Monthly Revenue</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">$18,765</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+20.7%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box green" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34D399;">
+                                    <i data-lucide="dollar-sign" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-revenue"></canvas>
                             </div>
                         </div>
 
                         <!-- 6. Active Downloads -->
-                        <div class="kpi-card">
-                            <div class="kpi-top-row">
-                                <div class="kpi-icon-box cyan">
-                                    <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Active Downloads</div>
+                                    <div class="kpi-value" id="kpi-active-downloads-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">1,582</div>
+                                    <div class="kpi-change-tag up" style="font-size: 10.5px; font-weight: 700; color: #10B981; margin-top: 2px;">↑ 7.3%</div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted);">vs Apr 20 – May 20</div>
                                 </div>
-                                <div class="kpi-meta-block">
-                                    <div class="kpi-label">Active Downloads</div>
-                                    <div class="kpi-value-row">
-                                        <span class="kpi-value">1,234</span>
-                                        <span class="kpi-change-tag up" style="font-size: 11px;">+6.7%</span>
-                                    </div>
-                                    <div class="kpi-comparison">vs May 17, 2025</div>
+                                <div class="kpi-icon-box cyan" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: #22D3EE;">
+                                    <i data-lucide="download" style="width: 16px; height: 16px;"></i>
                                 </div>
                             </div>
-                            <div class="kpi-sparkline-wrap">
+                            <div class="kpi-sparkline-wrap" style="height: 32px; margin-top: 4px;">
                                 <canvas id="spark-downloads"></canvas>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Secondary Status Row (4 Cards) -->
-                    <div class="status-grid-4">
-                        <div class="status-card">
-                            <div class="status-icon-box purple">
-                                <i data-lucide="layout-grid" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Current Version</span>
-                                <div class="status-card-val">
-                                    <span>78.7%</span>
-                                    <span class="kpi-change-tag up" style="font-size: 11px;">+13.6%</span>
+                        <!-- 7. Current Version -->
+                        <div class="kpi-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px 14px 10px 14px; position: relative;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                                <div>
+                                    <div class="kpi-label" style="font-size: 11px; color: var(--color-text-muted); font-weight: 600;">Current Version</div>
+                                    <div class="kpi-value" id="kpi-current-version-val" style="font-size: 19px; font-weight: 800; color: var(--color-text-main); margin-top: 4px;">v1.3.0</div>
+                                    <div style="margin-top: 4px;">
+                                        <span class="badge" style="background: #2563EB; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Latest</span>
+                                    </div>
+                                    <div class="kpi-comparison" style="font-size: 9.5px; color: var(--color-text-muted); margin-top: 4px;">Released 5 days ago</div>
                                 </div>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
-                            </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box pink">
-                                <i data-lucide="credit-card" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Revenue Overview</span>
-                                <div class="status-card-val">
-                                    <span>$18,765</span>
-                                    <span class="kpi-change-tag up" style="font-size: 11px;">+20.7%</span>
+                                <div class="kpi-icon-box teal" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); display: flex; align-items: center; justify-content: center; color: #2DD4BF;">
+                                    <i data-lucide="box" style="width: 16px; height: 16px;"></i>
                                 </div>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
                             </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box blue">
-                                <i data-lucide="shield" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">Current Version</span>
-                                <div class="status-card-val">
-                                    <span>v2.1.0</span>
-                                    <span class="badge badge-latest" style="font-size: 9.5px;">Latest</span>
-                                </div>
-                                <span class="kpi-comparison">Production Ready</span>
-                            </div>
-                        </div>
-
-                        <div class="status-card">
-                            <div class="status-icon-box green">
-                                <i data-lucide="shield-check" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div class="status-info-col">
-                                <span class="status-card-label">System Status</span>
-                                <div class="status-card-val" style="color: var(--color-success);">
-                                    <span>Operational</span>
-                                </div>
-                                <span class="kpi-comparison">All systems normal</span>
-                            </div>
+                            <div style="height: 32px; margin-top: 4px;"></div>
                         </div>
                     </div>
 
-                    <!-- Main Charts Row (3 Columns) -->
-                    <div class="charts-grid-3">
-                        <!-- Chart 1: User Growth -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">User Growth</span>
-                                <select class="form-select-sm" id="select-user-growth-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                    <!-- Middle 3-Column Section -->
+                    <div class="middle-dashboard-grid" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <!-- 1. User Growth Overview -->
+                        <div class="chart-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">User Growth Overview</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted); cursor: pointer;"></i>
+                                </div>
+                                <div class="chart-period-toggles" style="display: flex; gap: 4px; background: var(--color-bg-base); padding: 2px; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('daily', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Daily</button>
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('weekly', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Weekly</button>
+                                    <button class="period-btn active" onclick="window.edmApp.setChartPeriod('monthly', this)" style="padding: 3px 8px; font-size: 11px; color: #fff; background: #5856D6; border-radius: 4px; font-weight: 700;">Monthly</button>
+                                    <button class="period-btn" onclick="window.edmApp.setChartPeriod('yearly', this)" style="padding: 3px 8px; font-size: 11px; color: var(--color-text-muted); border-radius: 4px;">Yearly</button>
+                                </div>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">24,582</span>
-                                <span class="kpi-change-tag up">+12.4%</span>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px; font-size: 11.5px;">
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #818CF8; border-radius: 2px; display: inline-block;"></span> Total Users
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #F472B6; border-radius: 2px; display: inline-block;"></span> Premium Users
+                                </span>
                             </div>
-                            <div class="chart-canvas-container">
+                            <div style="flex: 1; height: 210px; position: relative;">
                                 <canvas id="chart-user-growth"></canvas>
                             </div>
                         </div>
 
-                        <!-- Chart 2: Revenue Overview -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">Revenue Overview</span>
-                                <select class="form-select-sm" id="select-revenue-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                        <!-- 2. System Health -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">System Health</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted);"></i>
+                                </div>
+                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('system-health')" style="font-size: 12px; color: #818CF8; text-decoration: none;">View All</a>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">$18,765</span>
-                                <span class="kpi-change-tag up">+20.7%</span>
-                                <span class="kpi-comparison">vs May 17, 2025</span>
-                            </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-revenue"></canvas>
+                            <div style="font-size: 11.5px; color: var(--color-text-muted); margin-bottom: 10px;">All systems are operational</div>
+                            <div class="system-health-list" style="display: flex; flex-direction: column; gap: 7px; flex: 1;">
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Authentication Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">98ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>API Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">120ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Database</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">45ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>License Server</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">102ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Update Server</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">110ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Notification Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">95ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>Email Service</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">120ms</span>
+                                    </div>
+                                </div>
+                                <div class="health-item-row" style="display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; color: var(--color-text-main);">
+                                        <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #10B981;"></i>
+                                        <span>File Storage</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 10.5px; color: #10B981; font-weight: 600;">Operational</span>
+                                        <span style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">80ms</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Chart 3: Downloads Overview -->
-                        <div class="chart-card">
-                            <div class="chart-header">
-                                <span class="chart-title">Downloads Overview</span>
-                                <select class="form-select-sm" id="select-downloads-period">
-                                    <option value="monthly">Monthly ▾</option>
-                                    <option value="weekly">Weekly ▾</option>
-                                    <option value="yearly">Yearly ▾</option>
-                                </select>
+                        <!-- 3. Recent Activity -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Recent Activity</span>
+                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('user-activity')" style="font-size: 12px; color: #818CF8; text-decoration: none;">View All</a>
                             </div>
-                            <div class="chart-header-stats">
-                                <span class="chart-big-num">45,282</span>
-                                <span class="kpi-comparison" style="margin-left: 2px;">Total Downloads</span>
-                                <span class="kpi-change-tag up">+18.2%</span>
-                            </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-downloads"></canvas>
+                            <div class="activity-feed-list" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #818CF8;">
+                                        <i data-lucide="user-plus" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">New user registered</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">john.doe@example.com</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">2 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; color: #FBBF24;">
+                                        <i data-lucide="shield-check" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">License activated</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Pro Plan - 1 Year</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">5 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #60A5FA;">
+                                        <i data-lucide="package" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">Version 1.3.0 released</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Release published successfully</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">10 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #34D399;">
+                                        <i data-lucide="credit-card" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">Payment received</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">$49.00 from premium user</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">15 min ago</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #F87171;">
+                                        <i data-lucide="user-x" style="width: 15px; height: 15px;"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; font-weight: 600; color: var(--color-text-main);">User suspended</div>
+                                        <div style="font-size: 11px; color: var(--color-text-muted);">Reason: Payment failed</div>
+                                    </div>
+                                    <span style="font-size: 10.5px; color: var(--color-text-muted);">20 min ago</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Bottom 3-Column Grid -->
-                    <div class="bottom-grid-3">
-                        <!-- 1. Recent Releases -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Recent Releases</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('releases')">View All</a>
+                    <!-- Bottom 3-Column Section -->
+                    <div class="bottom-dashboard-grid" style="display: grid; grid-template-columns: 1.15fr 1.35fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <!-- 1. Top Countries -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Top Countries</span>
                             </div>
-                            <div id="dashboard-recent-releases-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; gap: 14px; flex: 1;">
+                                <!-- Left SVG Map Mockup -->
+                                <div style="flex: 1.1; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: var(--radius-md); padding: 10px;">
+                                    <svg viewBox="0 0 1000 500" style="width: 100%; height: auto; max-height: 160px; filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.2));" fill="#2E384D">
+                                        <path d="M150,150 Q180,100 240,120 T300,180 T250,260 T180,240 Z" fill="#6366F1" opacity="0.85"/>
+                                        <path d="M220,280 Q250,330 280,400 T240,460 T200,380 Z" fill="#4F46E5" opacity="0.7"/>
+                                        <path d="M480,120 Q550,100 620,130 T660,200 T580,220 T500,180 Z" fill="#818CF8" opacity="0.6"/>
+                                        <path d="M500,230 Q560,260 580,340 T540,420 T480,350 Z" fill="#3B82F6" opacity="0.5"/>
+                                        <path d="M660,140 Q750,130 840,160 T880,240 T780,280 T680,220 Z" fill="#6366F1" opacity="0.9"/>
+                                        <path d="M750,320 Q820,310 880,350 T840,420 T760,400 Z" fill="#A855F7" opacity="0.6"/>
+                                    </svg>
+                                </div>
+                                <!-- Right Country List -->
+                                <div style="flex: 1.2; display: flex; flex-direction: column; gap: 7px; justify-content: center; font-size: 11.5px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇺🇸</span> United States
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">4,582 (18.6%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇮🇳</span> India
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">3,897 (15.8%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇧🇷</span> Brazil
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">2,456 (10.0%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇩🇪</span> Germany
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">1,987 (8.1%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-main);">
+                                            <span>🇬🇧</span> United Kingdom
+                                        </span>
+                                        <span style="color: var(--color-text-muted); font-weight: 600;">1,654 (6.7%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; text-align: center;">
+                                <button class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11.5px; border-radius: var(--radius-md);" onclick="window.edmApp.navigateTo('user-analytics')">View All Countries</button>
                             </div>
                         </div>
 
-                        <!-- 2. Recent Activities -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Recent Activities</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('user-activity')">View All</a>
+                        <!-- 2. Download Analytics -->
+                        <div class="chart-card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Download Analytics</span>
+                                    <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-text-muted); cursor: pointer;"></i>
+                                </div>
+                                <div style="font-size: 11.5px; color: var(--color-text-secondary); background: var(--color-bg-base); border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 8px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <span>This Week</span>
+                                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                                </div>
                             </div>
-                            <div class="activity-feed-list" id="dashboard-activities-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px; font-size: 11.5px;">
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #6366F1; border-radius: 2px; display: inline-block;"></span> Downloads
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                    <span style="width: 10px; height: 10px; background: #10B981; border-radius: 50%; display: inline-block;"></span> Bandwidth (GB)
+                                </span>
+                            </div>
+                            <div style="flex: 1; height: 175px; position: relative;">
+                                <canvas id="chart-download-analytics"></canvas>
                             </div>
                         </div>
 
-                        <!-- 3. System Health -->
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">System Health</span>
-                                <a href="javascript:void(0)" class="btn-ghost btn-sm" onclick="window.edmApp.navigateTo('system-health')">View All</a>
+                        <!-- 3. Trial Conversion -->
+                        <div class="card" style="background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 14px; font-weight: 700; color: var(--color-text-main);">Trial Conversion</span>
                             </div>
-                            <div id="dashboard-health-list">
-                                <!-- Populated dynamically -->
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                <div style="width: 130px; height: 130px; position: relative; display: flex; align-items: center; justify-content: center;">
+                                    <canvas id="chart-trial-conversion"></canvas>
+                                    <div style="position: absolute; text-align: center; pointer-events: none;">
+                                        <div style="font-size: 17px; font-weight: 800; color: var(--color-text-main);">23.7%</div>
+                                        <div style="font-size: 9.5px; color: var(--color-text-muted);">Conversion Rate</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; flex: 1;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #10B981; display: inline-block;"></span> Converted
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">1,582 (23.7%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #3B82F6; display: inline-block;"></span> In Trial
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">3,217 (48.1%)</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+                                            <span style="width: 8px; height: 8px; border-radius: 2px; background: #EF4444; display: inline-block;"></span> Expired
+                                        </span>
+                                        <span style="color: var(--color-text-main); font-weight: 700;">1,887 (28.2%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; text-align: center;">
+                                <a href="javascript:void(0)" onclick="window.edmApp.navigateTo('trials')" style="font-size: 11.5px; color: #818CF8; text-decoration: none; font-weight: 600;">View Full Report</a>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                    <!-- ══════════════════════════════════════════════════════
+                         LIVE WORLD HEATMAP SECTION (Dashboard)
+                         ══════════════════════════════════════════════════ -->
+                    <div class="card" style="padding: 0; overflow: hidden; margin-top: 0;">
+                        <div id="live-map-container" style="min-height: 480px;">
+                            <div style="display:flex;align-items:center;justify-content:center;height:480px;color:var(--color-text-muted);">
+                                <div style="text-align:center;">
+                                    <i data-lucide="loader" class="spin" style="width:28px;height:28px;color:var(--color-primary);"></i>
+                                    <p style="margin-top:10px;font-size:13px;">Loading live map...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════
+                     VIEW: LIVE WORLD MAP (Standalone Page)
+                     ══════════════════════════════════════════════════════════ -->
+                <div class="view-page" id="view-live-map">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>🌍 Live Global User Map</h1>
+                            <p>Real-time worldwide user presence, downloads &amp; revenue analytics</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <div class="date-range-badge">
+                                <div class="lmap-live-dot" style="width:8px;height:8px;margin-right:6px;"></div>
+                                <span id="lmap-page-active-count">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div id="live-map-page-container" style="min-height: 560px;"></div>
                     </div>
                 </div>
 
@@ -1178,9 +1411,382 @@
                 </div>
 
                 <!-- ══════════════════════════════════════════════════════════
+                     VIEW 5D: GOOGLE DATABASE & CLOUD SYNC (FIREBASE / FIRESTORE)
+                     ══════════════════════════════════════════════════════════ -->
+                <div class="view-page" id="view-google-database">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Google Database &amp; Cloud Sync</h1>
+                            <p>Live real-time integration with Google Cloud Firestore, Firebase Auth, and Remote Database Collections</p>
+                        </div>
+                        <div class="subheader-actions" style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" onclick="window.edmApp.testGoogleDatabaseConnection()">
+                                <i data-lucide="activity" style="width: 14px; height: 14px;"></i> Test Connection
+                            </button>
+                            <button class="btn btn-primary" onclick="window.edmApp.syncGoogleDatabaseNow()">
+                                <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Sync All Records
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Status Banner -->
+                    <div class="status-grid-4" style="margin-bottom: 24px;">
+                        <div class="status-card">
+                            <div class="status-icon-box blue"><i data-lucide="database"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Google Database Status</span>
+                                <span class="status-card-val" id="gdb-status-badge" style="color: var(--color-success);">CONNECTED</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box purple"><i data-lucide="cloud-lightning"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Synced Records</span>
+                                <span class="status-card-val" id="gdb-synced-records-count">1,482</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box green"><i data-lucide="clock"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Last Sync Time</span>
+                                <span class="status-card-val" id="gdb-last-sync-time" style="font-size: 13px;">Just now</span>
+                            </div>
+                        </div>
+                        <div class="status-card">
+                            <div class="status-icon-box yellow"><i data-lucide="shield-check"></i></div>
+                            <div class="status-info-col">
+                                <span class="status-card-label">Security Rules</span>
+                                <span class="status-card-val" style="color: #38bdf8;">Hardened v2</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Google Cloud / Firebase Settings Card -->
+                    <div class="card" style="margin-bottom: 24px;">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="card-title"><i data-lucide="settings" style="color: var(--color-primary);"></i> Google Firebase &amp; Firestore Configuration</span>
+                            <button class="btn btn-primary btn-sm" onclick="window.edmApp.saveGoogleDatabaseConfig()">
+                                <i data-lucide="save" style="width: 13px; height: 13px;"></i> Save Settings
+                            </button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">Google Cloud / Firebase Project ID *</label>
+                                <input type="text" id="gdb-project-id" class="form-input-full" placeholder="nfalamin" value="nfalamin">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Firebase Web API Key *</label>
+                                <input type="text" id="gdb-api-key" class="form-input-full" placeholder="AIzaSy..." value="AIzaSyC0YFD51qn3ehxWM239y7ULE5aAwOixhzo">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Auth Domain</label>
+                                <input type="text" id="gdb-auth-domain" class="form-input-full" placeholder="nfalamin.firebaseapp.com" value="nfalamin.firebaseapp.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Realtime Database / Firestore URL</label>
+                                <input type="url" id="gdb-database-url" class="form-input-full" placeholder="https://nfalamin-default-rtdb.firebaseio.com" value="https://nfalamin-default-rtdb.firebaseio.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Google Cloud Storage Bucket</label>
+                                <input type="text" id="gdb-storage-bucket" class="form-input-full" placeholder="nfalamin.firebasestorage.app" value="nfalamin.firebasestorage.app">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Web App ID (Firebase App ID)</label>
+                                <input type="text" id="gdb-app-id" class="form-input-full" placeholder="1:167911088916:web:383913f819dc106d8a5801" value="1:167911088916:web:383913f819dc106d8a5801">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Messaging Sender ID</label>
+                                <input type="text" id="gdb-messaging-sender-id" class="form-input-full" placeholder="167911088916" value="167911088916">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Auto-Sync Interval (Minutes)</label>
+                                <input type="number" id="gdb-sync-interval" class="form-input-full" value="15" min="1" max="1440">
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+                            <input type="checkbox" id="gdb-auto-sync-chk" checked style="accent-color: var(--color-primary); width: 15px; height: 15px;">
+                            <label for="gdb-auto-sync-chk" style="font-size: 13px; color: var(--color-text-main); cursor: pointer;">Enable automatic background synchronization with Google Firestore</label>
+                        </div>
+                    </div>
+
+                    <!-- Synced Firestore Collections Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title"><i data-lucide="layers" style="color: #38bdf8;"></i> Synced Google Firestore Collections</span>
+                        </div>
+                        <div class="table-container" style="border: none; margin-top: 10px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Collection Name</th>
+                                        <th>Record Count</th>
+                                        <th>Sync Status</th>
+                                        <th>Last Synchronized</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-gdb-collections">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════
                      VIEW 6: SUBSCRIPTIONS, TRIALS, LICENSES, COUNTRY PRICING, PROMOTIONS
                      ══════════════════════════════════════════════════════════ -->
-                <div class="view-page" id="view-plans">
+                
+                <!-- =========================================================
+                     VIEW: SUBSCRIPTION CONTROL CENTER
+                     ========================================================= -->
+                <div class="view-page" id="view-sub-control">
+                    <div class="page-subheader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <div class="page-title-wrap">
+                            <h1 style="display: flex; align-items: center; gap: 10px;">
+                                <i data-lucide="shield-check" style="color: var(--color-primary);"></i> Subscription Control Center
+                            </h1>
+                            <p>Centralized master command for subscriptions, trials, geo-pricing, payment configs, and admin overrides</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button class="btn btn-outline-success btn-sm" id="btn-global-sub-toggle" onclick="window.edmApp.openGlobalSwitchModal()">
+                                <i data-lucide="power" style="width: 14px; height: 14px;"></i> Global: <span id="lbl-global-sub-status">ON</span>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" id="btn-asia-sub-toggle" onclick="window.edmApp.openAsiaSwitchModal()">
+                                <i data-lucide="globe-2" style="width: 14px; height: 14px;"></i> Asia: <span id="lbl-asia-sub-status">ON</span>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="window.edmApp.openSubscriptionConfigModal()" title="Global Subscription Settings">
+                                <i data-lucide="settings" style="width: 14px; height: 14px;"></i> ⚙
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- METRICS SUMMARY CARDS -->
+                    <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div class="card" style="padding: 16px;">
+                            <span class="card-subtitle">Active Subscriptions</span>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--color-text-main); margin-top: 4px;" id="stat-active-subs">2,480</div>
+                            <span style="font-size: 11.5px; color: var(--color-success);"><i data-lucide="trending-up" style="width: 12px; height: 12px;"></i> +12% this month</span>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <span class="card-subtitle">Active Free Trials</span>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--color-primary); margin-top: 4px;" id="stat-active-trials">8,765</div>
+                            <span style="font-size: 11.5px; color: var(--color-text-muted);">10-Day Full Performance</span>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <span class="card-subtitle">In Grace Period</span>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--color-warning); margin-top: 4px;" id="stat-grace-users">342</div>
+                            <span style="font-size: 11.5px; color: var(--color-warning);">5-Day 32 Sockets Limit</span>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <span class="card-subtitle">Restricted / Blocked</span>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--color-danger); margin-top: 4px;" id="stat-restricted-users">18</div>
+                            <span style="font-size: 11.5px; color: var(--color-danger);">16 Sockets / Suspended</span>
+                        </div>
+                    </div>
+
+                    <!-- TABS NAVIGATION -->
+                    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+                        <div style="display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-subtle);">
+                            <button class="btn btn-sm btn-primary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('geo-pricing', this)">Geo-Pricing & Rates</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('trials-grace', this)">Trials & Grace</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('features', this)">Feature Toggles</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('overrides', this)">Admin Overrides</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('coupons', this)">Promotions & Coupons</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('payments', this)">Payment Gateways</button>
+                            <button class="btn btn-sm btn-secondary sub-tab-btn" onclick="window.edmApp.switchSubControlTab('audit-logs', this)">Audit Events</button>
+                        </div>
+
+                        <!-- TAB 1: GEO PRICING -->
+                        <div id="sub-tab-geo-pricing" class="sub-tab-pane" style="padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <div>
+                                    <h3 style="font-size: 15px; color: var(--color-text-main);">Country & Regional Pricing Matrix</h3>
+                                    <p style="font-size: 12px; color: var(--color-text-muted);">Configure local currency pricing and subscription availability per country</p>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="window.edmApp.openNewPricingRuleModal()">
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Country Rule
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Country / Territory</th>
+                                            <th>Currency</th>
+                                            <th>Monthly Rate</th>
+                                            <th>Yearly Rate</th>
+                                            <th>Description</th>
+                                            <th>Trial</th>
+                                            <th>Status</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="country-pricing-table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: TRIALS & GRACE -->
+                        <div id="sub-tab-trials-grace" class="sub-tab-pane" style="display: none; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <div>
+                                    <h3 style="font-size: 15px; color: var(--color-text-main);">Active Trials & Devices</h3>
+                                    <p style="font-size: 12px; color: var(--color-text-muted);">Real-time device entitlement status with one-click extension controls</p>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Device ID</th>
+                                            <th>User Email</th>
+                                            <th>State</th>
+                                            <th>Max Sockets</th>
+                                            <th>Country</th>
+                                            <th>Status</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="trials-table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: FEATURES -->
+                        <div id="sub-tab-features" class="sub-tab-pane" style="display: none; padding: 16px;">
+                            <h3 style="font-size: 15px; color: var(--color-text-main); margin-bottom: 6px;">Global Feature Entitlements</h3>
+                            <p style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 16px;">Enable or disable features globally across EDM client versions</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" id="feature-toggles-grid">
+                                <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;">
+                                    <div>
+                                        <strong>64-Socket Turbo Acceleration</strong>
+                                        <p style="font-size: 11.5px; color: var(--color-text-muted);">Uncapped parallel multi-stream sockets</p>
+                                    </div>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                                <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;">
+                                    <div>
+                                        <strong>4K / 8K Video Stream Sniffer</strong>
+                                        <p style="font-size: 11.5px; color: var(--color-text-muted);">HLS / DASH media stream parser</p>
+                                    </div>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                                <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;">
+                                    <div>
+                                        <strong>Browser Extensions Integration</strong>
+                                        <p style="font-size: 11.5px; color: var(--color-text-muted);">Native messaging for Chrome, Edge, Firefox, Brave</p>
+                                    </div>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                                <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 14px;">
+                                    <div>
+                                        <strong>Remote Control Plane Sync</strong>
+                                        <p style="font-size: 11.5px; color: var(--color-text-muted);">Real-time bidirectional device synchronization</p>
+                                    </div>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: OVERRIDES -->
+                        <div id="sub-tab-overrides" class="sub-tab-pane" style="display: none; padding: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <div>
+                                    <h3 style="font-size: 15px; color: var(--color-text-main);">Active Administrative Overrides</h3>
+                                    <p style="font-size: 12px; color: var(--color-text-muted);">Forced user or device policy overrides with immutable audit logs</p>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="window.edmApp.openNewOverrideModal()">
+                                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Create Override
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Target Type</th>
+                                            <th>Target Identifier</th>
+                                            <th>State Override</th>
+                                            <th>Max Sockets</th>
+                                            <th>Reason</th>
+                                            <th>Admin</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="overrides-table-body">
+                                        <tr>
+                                            <td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 20px;">No active overrides.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 5: PAYMENTS -->
+                        <div id="sub-tab-payments" class="sub-tab-pane" style="display: none; padding: 16px;">
+                            <div class="alert alert-warning" style="margin-bottom: 16px; padding: 12px; border-radius: var(--radius-md); background: rgba(245, 158, 11, 0.1); border: 1px solid var(--color-warning);">
+                                <strong><i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Payment Gateway Status:</strong> PAYMENT PROCESSOR NOT CONNECTED — Architecture prepared, live payment not verified.
+                            </div>
+                            <div class="card" style="padding: 16px; max-width: 600px;">
+                                <h3 style="font-size: 15px; color: var(--color-text-main); margin-bottom: 12px;">Payment Settings & Provider Configuration</h3>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label>Payment System Master Toggle</label>
+                                    <select class="form-control" id="cfg-payment-enabled">
+                                        <option value="false">Disabled (Free Trial & Manual Licensing Only)</option>
+                                        <option value="true">Enabled</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label>Primary Payment Provider</label>
+                                    <select class="form-control" id="cfg-payment-provider">
+                                        <option value="None">None (Abstracted)</option>
+                                        <option value="Stripe">Stripe (Credit Cards / Apple Pay / Google Pay)</option>
+                                        <option value="Paddle">Paddle (Merchant of Record)</option>
+                                        <option value="bKash">bKash (Direct Bangladesh Mobile Banking)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label>Environment Mode</label>
+                                    <select class="form-control" id="cfg-payment-testmode">
+                                        <option value="true">Sandbox / Test Mode</option>
+                                        <option value="false">Production Live</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" onclick="window.edmApp.savePaymentSettings()">
+                                    <i data-lucide="save" style="width: 14px; height: 14px;"></i> Save Payment Settings
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 6: AUDIT LOGS -->
+                        <div id="sub-tab-audit-logs" class="sub-tab-pane" style="display: none; padding: 16px;">
+                            <h3 style="font-size: 15px; color: var(--color-text-main); margin-bottom: 12px;">Subscription & Pricing Audit Trail</h3>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp (UTC)</th>
+                                            <th>Admin</th>
+                                            <th>Action Event</th>
+                                            <th>Target</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sub-audit-table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+<div class="view-page" id="view-plans">
                     <div class="page-subheader">
                         <div class="page-title-wrap">
                             <h1>Subscription Plans</h1>
@@ -1229,6 +1835,88 @@
                                 </tr>
                             </thead>
                             <tbody id="licenses-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="view-page" id="view-transactions">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Transaction & Payment Ledger</h1>
+                            <p>Authoritative record of all customer checkouts, renewals, and refunds</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <button class="btn btn-secondary" onclick="window.edmApp.exportTransactionsCsv()">
+                                <i data-lucide="download" style="width: 15px; height: 15px;"></i> Export Ledger
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-toolbar">
+                        <div class="search-input-wrap">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="transactions-search-input" placeholder="Search by Transaction ID, Email, or Gateway...">
+                        </div>
+                        <div class="filter-group">
+                            <select id="transactions-filter-status" class="filter-select">
+                                <option value="all">All Statuses</option>
+                                <option value="Succeeded">Succeeded</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Failed">Failed</option>
+                                <option value="Refunded">Refunded</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Transaction ID</th>
+                                    <th>Customer / Email</th>
+                                    <th>Plan / Item</th>
+                                    <th>Amount</th>
+                                    <th>Currency</th>
+                                    <th>Payment Method</th>
+                                    <th>Date (UTC)</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Receipt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="view-page" id="view-coupons">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Coupon & Discount Manager</h1>
+                            <p>Manage promo codes, percentage discounts, and max redemption rules</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <button class="btn btn-primary" onclick="window.edmApp.openCreateCouponModal()">
+                                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Create Coupon
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Coupon Code</th>
+                                    <th>Discount</th>
+                                    <th>Type</th>
+                                    <th>Target Tier</th>
+                                    <th>Redemptions</th>
+                                    <th>Expiry Date</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="coupons-table-body">
                                 <!-- Populated dynamically -->
                             </tbody>
                         </table>
@@ -1290,52 +1978,136 @@
                 </div>
 
                 <!-- ══════════════════════════════════════════════════════════
-                     VIEW 7: UPDATES, RELEASES, VERSION HISTORY
+                     VIEW 7: UPDATES, RELEASES, CONTENT CMS & EDITOR
                      ══════════════════════════════════════════════════════════ -->
                 <div class="view-page" id="view-update-center">
                     <div class="page-subheader">
                         <div class="page-title-wrap">
-                            <h1>Update Center</h1>
-                            <p>Global client rollout policies, update prompts, and force update rules</p>
+                            <h1>Update &amp; Release Manager</h1>
+                            <p>Centralized update control for Desktop Client, Browser Extensions, NativeHost, and Plugins</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <button class="btn btn-secondary" onclick="window.edmUpdates.scanWorkspace()">
+                                <i data-lucide="folder-search" style="width: 15px; height: 15px;"></i> Scan Local Workspace
+                            </button>
+                            <button class="btn btn-primary" onclick="window.edmUpdates.openCreateModal()">
+                                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Create New Release Draft
+                            </button>
                         </div>
                     </div>
-                    <div class="kpi-grid-6" style="grid-template-columns: repeat(3, 1fr);">
-                        <div class="card">
-                            <span class="card-title"><i data-lucide="check-circle" style="color: var(--color-success);"></i> OPTIONAL Update Policy</span>
-                            <p class="form-help" style="margin: 8px 0 12px 0;">User can skip or snooze. Shown for minor feature enhancements and optimizations.</p>
-                            <div style="background: var(--color-bg-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px dashed var(--color-border);">
-                                <strong style="color: var(--color-text-main); font-size: 12.5px;">Client Notification Preview:</strong>
-                                <p style="font-size: 12px; margin-top: 4px; color: var(--color-text-secondary);">"EDM 2.1.0 is now available with faster engines."</p>
-                                <div style="display: flex; gap: 6px; margin-top: 10px;">
-                                    <button class="btn btn-primary btn-sm">Update Now</button>
-                                    <button class="btn btn-secondary btn-sm">Remind Later</button>
-                                    <button class="btn btn-ghost btn-sm">Skip</button>
-                                </div>
+
+                    <!-- Component & Status Filters -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; background: var(--color-bg-card); padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-primary" onclick="window.edmUpdates.loadUpdateManager('All')">All Components</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.loadUpdateManager('App')">Desktop App</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.loadUpdateManager('Extension')">Browser Extensions</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.loadUpdateManager('NativeHost')">NativeHost</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.loadUpdateManager('Other')">Other</button>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <span style="font-size: 12px; color: var(--color-text-muted);">Status:</span>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.filterUpdatesByStatus('All')">All</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.filterUpdatesByStatus('Published')">Published</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmUpdates.filterUpdatesByStatus('Draft')">Drafts</button>
+                        </div>
+                    </div>
+
+                    <!-- Cards Container -->
+                    <div class="manager-grid" id="update-cards-container">
+                        <!-- Populated by updates.js -->
+                    </div>
+                </div>
+
+                <div class="view-page" id="view-content-manager">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Content &amp; Document CMS</h1>
+                            <p>Manage About, Privacy Policy, Terms, FAQ, Help, Documentation, Release Notes, and Announcements</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <button class="btn btn-secondary" onclick="window.edmContent.scanWorkspace()">
+                                <i data-lucide="folder-search" style="width: 15px; height: 15px;"></i> Scan Content/ Workspace
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; background: var(--color-bg-card); padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm btn-primary" onclick="window.edmContent.filterContentByStatus('All')">All Documents (8)</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmContent.filterContentByStatus('Published')">Published Live</button>
+                            <button class="btn btn-sm btn-ghost" onclick="window.edmContent.filterContentByStatus('Draft')">Drafts</button>
+                        </div>
+                        <span style="font-size: 12px; color: var(--color-text-muted);">Storage Workspace: <code>Content/&lt;DocType&gt;/*.md</code></span>
+                    </div>
+
+                    <!-- Cards Container -->
+                    <div class="manager-grid" id="content-cards-container">
+                        <!-- Populated by content.js -->
+                    </div>
+                </div>
+
+                <div class="view-page" id="view-content-editor">
+                    <div class="doc-editor-shell">
+                        <div class="doc-editor-topbar">
+                            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px;">
+                                <button class="btn btn-ghost btn-sm" onclick="window.edmEditor.backToList()">
+                                    <i data-lucide="arrow-left"></i> Back
+                                </button>
+                                <span class="badge" id="editor-doctype-badge" style="background: rgba(88,86,214,0.2); color: #818cf8; font-weight: 700;">Document</span>
+                                <input type="text" id="editor-doc-title" class="form-input-full" placeholder="Document Title" style="flex: 1; font-size: 15px; font-weight: 700; height: 38px;">
+                                <span id="editor-status-badge" class="badge badge-draft">Draft</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-ghost btn-sm" onclick="window.edmEditor.openRevisions()">
+                                    <i data-lucide="history"></i> Revisions
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="window.edmEditor.saveDraft()">
+                                    <i data-lucide="save"></i> Save Draft
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="window.edmEditor.publishNow()">
+                                    <i data-lucide="upload-cloud"></i> Publish to Website
+                                </button>
                             </div>
                         </div>
 
-                        <div class="card">
-                            <span class="card-title"><i data-lucide="alert-circle" style="color: var(--color-warning);"></i> RECOMMENDED Policy</span>
-                            <p class="form-help" style="margin: 8px 0 12px 0;">Prominently prompts users to install. Default for feature releases and performance updates.</p>
-                            <div style="background: var(--color-bg-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px dashed var(--color-border);">
-                                <strong style="color: var(--color-text-main); font-size: 12.5px;">Client Notification Preview:</strong>
-                                <p style="font-size: 12px; margin-top: 4px; color: var(--color-text-secondary);">"A recommended update v2.1.0 is ready to install."</p>
-                                <div style="display: flex; gap: 6px; margin-top: 10px;">
-                                    <button class="btn btn-primary btn-sm">Update Now</button>
-                                    <button class="btn btn-secondary btn-sm">Later</button>
-                                </div>
-                            </div>
+                        <!-- Formatting Toolbar -->
+                        <div class="doc-editor-toolbar">
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('h1')"><strong>H1</strong></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('h2')"><strong>H2</strong></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('h3')"><strong>H3</strong></button>
+                            <span style="color: var(--color-border); margin: 0 4px;">|</span>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('bold')"><i data-lucide="bold"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('italic')"><i data-lucide="italic"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('code')"><i data-lucide="code"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('codeblock')"><i data-lucide="terminal"></i></button>
+                            <span style="color: var(--color-border); margin: 0 4px;">|</span>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('bullet')"><i data-lucide="list"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('ordered')"><i data-lucide="list-ordered"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('quote')"><i data-lucide="quote"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('link')"><i data-lucide="link"></i></button>
+                            <button class="doc-editor-toolbar-btn" onclick="window.edmEditor.insertFormatting('table')"><i data-lucide="table"></i></button>
                         </div>
 
-                        <div class="card">
-                            <span class="card-title"><i data-lucide="alert-triangle" style="color: var(--color-danger);"></i> REQUIRED Force Policy</span>
-                            <p class="form-help" style="margin: 8px 0 12px 0;">Used strictly for critical protocol changes or essential security deprecations.</p>
-                            <div style="background: var(--color-bg-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px dashed var(--color-border);">
-                                <strong style="color: var(--color-text-main); font-size: 12.5px;">Client Notification Preview:</strong>
-                                <p style="font-size: 12px; margin-top: 4px; color: #F87171;">"Your current EDM build is obsolete. Update required to resume."</p>
-                                <div style="display: flex; gap: 6px; margin-top: 10px;">
-                                    <button class="btn btn-danger btn-sm">Update Required</button>
+                        <!-- Editor & Live Preview Panes -->
+                        <div class="doc-editor-panes">
+                            <div class="doc-editor-pane">
+                                <div class="doc-editor-pane-header">
+                                    <span><i data-lucide="edit-3" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px;"></i> Markdown Source (<span id="editor-file-path" style="text-transform:none; font-family:monospace;">Content/...</span>)</span>
+                                    <div style="font-size: 11px; color: var(--color-text-muted); font-weight: 500;">
+                                        <span id="editor-word-count">0 words</span> &bull; <span id="editor-char-count">0 characters</span>
+                                    </div>
                                 </div>
+                                <textarea id="editor-markdown-input" class="doc-editor-textarea" placeholder="Write your markdown content here..." oninput="window.edmEditor.renderPreview()"></textarea>
+                            </div>
+
+                            <div class="doc-editor-pane">
+                                <div class="doc-editor-pane-header">
+                                    <span><i data-lucide="eye" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px;"></i> Live Website Preview</span>
+                                    <span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e; font-size: 10px;">LIVE</span>
+                                </div>
+                                <div id="editor-preview-output" class="doc-preview-pane"></div>
                             </div>
                         </div>
                     </div>
@@ -1553,6 +2325,79 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="view-page" id="view-reports">
+                    <div class="page-subheader">
+                        <div class="page-title-wrap">
+                            <h1>Consolidated System Reports & Exports</h1>
+                            <p>Generate auditable financial, compliance, and user retention records</p>
+                        </div>
+                        <div class="subheader-actions">
+                            <button class="btn btn-primary" onclick="window.edmApp.exportConsolidatedAuditReport()">
+                                <i data-lucide="file-spreadsheet" style="width: 15px; height: 15px;"></i> Generate Full Report
+                            </button>
+                        </div>
+                    </div>
+                    <div class="charts-grid-3" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
+                        <div class="card">
+                            <span class="card-title">Monthly Executive Summary</span>
+                            <p style="font-size: 12px; color: var(--color-text-muted); margin: 8px 0 16px;">Comprehensive snapshot of users, downloads, revenue, and active subscriptions.</p>
+                            <button class="btn btn-secondary btn-sm" onclick="window.edmApp.exportMonthlySummaryCsv()">
+                                <i data-lucide="download" style="width: 13px; height: 13px;"></i> Download CSV
+                            </button>
+                        </div>
+                        <div class="card">
+                            <span class="card-title">Security & Audit Compliance</span>
+                            <p style="font-size: 12px; color: var(--color-text-muted); margin: 8px 0 16px;">Full chronological log of administrative logins, token rotations, and revocations.</p>
+                            <button class="btn btn-secondary btn-sm" onclick="window.edmApp.exportSecurityAuditCsv()">
+                                <i data-lucide="download" style="width: 13px; height: 13px;"></i> Download CSV
+                            </button>
+                        </div>
+                        <div class="card">
+                            <span class="card-title">Country & Geo-Revenue Ledger</span>
+                            <p style="font-size: 12px; color: var(--color-text-muted); margin: 8px 0 16px;">Tax-ready regional breakdown of transactions and localized currencies.</p>
+                            <button class="btn btn-secondary btn-sm" onclick="window.edmApp.exportGeoRevenueCsv()">
+                                <i data-lucide="download" style="width: 13px; height: 13px;"></i> Download CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between;">
+                            <strong style="font-size: 14px;">Recent Generated Reports</strong>
+                            <span style="font-size: 12px; color: var(--color-text-muted);">Stored on local storage and cloud manifest</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Report Name</th>
+                                    <th>Period / Scope</th>
+                                    <th>Generated By</th>
+                                    <th>Created At (UTC)</th>
+                                    <th>File Size</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-table-body">
+                                <tr>
+                                    <td><strong>EDM-Consolidated-Q2-2025.csv</strong></td>
+                                    <td>Q2 2025 (Apr - Jun)</td>
+                                    <td>SuperAdmin (Alamin)</td>
+                                    <td>2025-06-20 14:30:00</td>
+                                    <td>142.8 KB</td>
+                                    <td style="text-align: right;"><button class="btn-ghost btn-sm" onclick="window.edmApp.exportDashboardReport()"><i data-lucide="download"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EDM-Security-Audit-May-2025.csv</strong></td>
+                                    <td>May 2025</td>
+                                    <td>Automated System</td>
+                                    <td>2025-06-01 00:00:00</td>
+                                    <td>88.4 KB</td>
+                                    <td style="text-align: right;"><button class="btn-ghost btn-sm" onclick="window.edmApp.exportSecurityAuditCsv()"><i data-lucide="download"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -2680,5 +3525,528 @@
     <script src="auth.js"></script>
     <script src="api.js"></script>
     <script src="app.js"></script>
+
+    <!-- MODAL: CONFIRM GLOBAL SUBSCRIPTION SWITCH -->
+    <div class="modal-backdrop" id="modal-global-switch">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 id="global-switch-modal-title" style="color: var(--color-danger);">Disable Global Subscriptions?</h3>
+                <button class="modal-close" onclick="window.edmApp.closeModal('modal-global-switch')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 14px;" id="global-switch-modal-desc">
+                    Disabling the global subscription system will stop all new subscription sales worldwide. Existing paid subscribers will NOT lose their entitlement.
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Reason for change:</label>
+                    <input type="text" id="global-switch-reason" class="form-control" placeholder="e.g. Scheduled pricing restructuring">
+                </div>
+                <div class="form-group" id="global-switch-confirm-wrap">
+                    <label>Type <strong>CONFIRM</strong> to apply:</label>
+                    <input type="text" id="global-switch-confirm-input" class="form-control" placeholder="CONFIRM">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-global-switch')">Cancel</button>
+                <button class="btn btn-danger" id="btn-submit-global-switch" onclick="window.edmApp.handleConfirmGlobalSwitch()">Apply Master Switch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRM ASIA SUBSCRIPTION SWITCH -->
+    <div class="modal-backdrop" id="modal-asia-switch">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 id="asia-switch-modal-title">Toggle Asia Subscription Availability</h3>
+                <button class="modal-close" onclick="window.edmApp.closeModal('modal-asia-switch')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <p style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 14px;" id="asia-switch-modal-desc">
+                    Toggling Asia availability controls whether new subscription sales are available to customers in Asian territories (including Bangladesh, India, Pakistan, and Southeast Asia).
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>Reason for change:</label>
+                    <input type="text" id="asia-switch-reason" class="form-control" placeholder="e.g. Regional banking gateway maintenance">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-asia-switch')">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-asia-switch" onclick="window.edmApp.handleConfirmAsiaSwitch()">Confirm Change</button>
+            </div>
+        </div>
+    <!-- MODAL: CONFIRM ACTION DIALOG (GENERIC DESTRUCTIVE PROMPT) -->
+    <div class="modal-backdrop" id="modal-confirm-dialog" style="display: none;">
+        <div class="modal-dialog" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="confirm-dialog-title" style="color: var(--color-danger);"><i data-lucide="alert-triangle"></i> Confirm Destructive Action</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-confirm-dialog')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 16px 20px;">
+                <p id="confirm-dialog-message" style="font-size: 13px; color: var(--color-text-main); line-height: 1.5;">Are you sure you want to proceed with this action?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-confirm-dialog')">Cancel</button>
+                <button class="btn btn-danger" id="btn-confirm-dialog-submit">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: USER DETAILS & EDIT -->
+    <div class="modal-backdrop" id="modal-user-details" style="display: none;">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="user-check"></i> Manage User Account</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-user-details')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="edit-user-id" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="edit-user-username" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Display Name</label>
+                        <input type="text" id="edit-user-displayname" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="edit-user-email" class="form-control" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Assigned Role</label>
+                        <select id="edit-user-role" class="form-control">
+                            <option value="USER">Standard User (USER)</option>
+                            <option value="ANALYST">Analyst (ANALYST)</option>
+                            <option value="SUPPORT">Support Officer (SUPPORT)</option>
+                            <option value="RELEASE_MANAGER">Release Manager</option>
+                            <option value="ADMIN">Administrator (ADMIN)</option>
+                            <option value="SUPER_ADMIN">Super Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Status</label>
+                        <select id="edit-user-status" class="form-control">
+                            <option value="active">Active / Operational</option>
+                            <option value="suspended">Suspended / Blocked</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Account Security Telemetry</label>
+                    <div style="background: var(--color-bg-subtle); padding: 10px 14px; border-radius: var(--radius-md); font-size: 12px; display: flex; justify-content: space-between;">
+                        <span>2FA Status: <strong id="edit-user-2fa">Disabled</strong></span>
+                        <span>Created: <strong id="edit-user-created">-</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger btn-sm" id="btn-delete-user" onclick="window.edmApp.handleDeleteUserClick()"><i data-lucide="trash-2"></i> Delete User</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-user-details')">Cancel</button>
+                    <button class="btn btn-primary" onclick="window.edmApp.saveUserDetails()"><i data-lucide="save"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: GENERATE LICENSE -->
+    <div class="modal-backdrop" id="modal-generate-license" style="display: none;">
+        <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="key"></i> Generate Cryptographic License</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-generate-license')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="form-group">
+                    <label>Target User Email / ID *</label>
+                    <input type="text" id="gen-lic-user" class="form-control" placeholder="user@domain.com or User GUID" required />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>License Tier</label>
+                        <select id="gen-lic-plan" class="form-control">
+                            <option value="Pro_Monthly">EDM Pro Monthly</option>
+                            <option value="Pro_Yearly">EDM Pro Yearly</option>
+                            <option value="Lifetime">EDM Lifetime Turbo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Device HWIDs</label>
+                        <input type="number" id="gen-lic-max-activations" class="form-control" value="3" min="1" max="10" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Expiration Period</label>
+                    <select id="gen-lic-duration" class="form-control">
+                        <option value="30">30 Days</option>
+                        <option value="365">1 Year (365 Days)</option>
+                        <option value="lifetime">Lifetime (No Expiry)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-generate-license')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmApp.submitGenerateLicense()"><i data-lucide="check"></i> Issue License Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TRANSACTION RECEIPT -->
+    <div class="modal-backdrop" id="modal-transaction-receipt" style="display: none;">
+        <div class="modal-dialog" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="receipt"></i> Transaction Details & Receipt</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-transaction-receipt')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" id="transaction-receipt-body" style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-transaction-receipt')">Close</button>
+                <button class="btn btn-primary" onclick="window.edmApp.printTransactionReceipt()"><i data-lucide="printer"></i> Print Receipt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE EMAIL CAMPAIGN -->
+    <div class="modal-backdrop" id="modal-create-campaign" style="display: none;">
+        <div class="modal-dialog" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="mail"></i> Create & Broadcast Email Campaign</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-create-campaign')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="form-group">
+                    <label>Campaign Title / Subject *</label>
+                    <input type="text" id="campaign-subject-input" class="form-control" placeholder="e.g. EDM v2.1.0 Released — 32-Socket Turbo Engine" required />
+                </div>
+                <div class="form-group">
+                    <label>Target Audience</label>
+                    <select id="campaign-audience-select" class="form-control">
+                        <option value="All Users">All Registered Users</option>
+                        <option value="Pro Subscribers">Pro Paid Subscribers Only</option>
+                        <option value="Expiring Trials">Expiring Trial Users</option>
+                        <option value="Inactive Users">Inactive Users (>30 days)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Email Body (HTML / Markdown supported)</label>
+                    <textarea id="campaign-body-input" class="form-control" rows="5" placeholder="Dear EDM User, We are excited to announce..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-create-campaign')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmApp.submitCreateCampaign()"><i data-lucide="send"></i> Broadcast Campaign</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE COUPON -->
+    <div class="modal-backdrop" id="modal-create-coupon" style="display: none;">
+        <div class="modal-dialog" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="tag"></i> Create Promotional Coupon</h3>
+                <button class="btn-icon-only" onclick="window.edmApp.closeModal('modal-create-coupon')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="form-group">
+                    <label>Promo Code <span style="color: var(--color-danger);">*</span></label>
+                    <input type="text" id="coupon-code-input" class="form-control" placeholder="e.g. EDM50, EID2026, VIP100" style="text-transform: uppercase; font-weight: 700; letter-spacing: 1px;" required />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="coupon-type-select" class="form-control" onchange="window.edmApp.onCouponTypeChange()">
+                            <option value="percent">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (Currency)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label id="coupon-value-label">Discount Percent (%)</label>
+                        <input type="number" id="coupon-value-input" class="form-control" placeholder="e.g. 50" min="1" max="100" required />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Applicable Plan</label>
+                        <select id="coupon-plan-select" class="form-control">
+                            <option value="">All Plans</option>
+                            <option value="pro_monthly">Pro Monthly</option>
+                            <option value="pro_yearly">Pro Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Region / Country</label>
+                        <select id="coupon-country-select" class="form-control">
+                            <option value="">Global (All Countries)</option>
+                            <option value="BD">Bangladesh (BD)</option>
+                            <option value="IN">India (IN)</option>
+                            <option value="PK">Pakistan (PK)</option>
+                            <option value="Asia">Asia Region</option>
+                            <option value="Europe">Europe Region</option>
+                            <option value="US">United States (US)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Max Total Uses</label>
+                        <input type="number" id="coupon-max-uses-input" class="form-control" placeholder="Unlimited (e.g. 100)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Uses Per User</label>
+                        <input type="number" id="coupon-user-uses-input" class="form-control" value="1" min="1" />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Target User / Email / Community (Optional)</label>
+                        <input type="text" id="coupon-target-user-input" class="form-control" placeholder="e.g. user@domain.com or VIP" />
+                    </div>
+                    <div class="form-group">
+                        <label>Expires At (Optional)</label>
+                        <input type="datetime-local" id="coupon-expiry-input" class="form-control" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description / Internal Note</label>
+                    <input type="text" id="coupon-desc-input" class="form-control" placeholder="e.g. Ramadan 50% discount campaign" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="window.edmApp.closeModal('modal-create-coupon')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmApp.submitCreateCoupon()">Create Coupon</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         UPDATE & CONTENT MANAGEMENT MODALS
+         ══════════════════════════════════════════════════════════ -->
+
+    <!-- MODAL: CREATE NEW UPDATE DRAFT -->
+    <div class="modal-backdrop" id="modal-create-update">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <span class="modal-title"><i data-lucide="plus-circle" style="color: var(--color-primary);"></i> Create New Release Draft</span>
+                <button class="btn-icon-only" onclick="document.getElementById('modal-create-update').classList.remove('active')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Target Component *</label>
+                        <select id="new-up-component" class="form-input-full">
+                            <option value="App">Desktop Client (App)</option>
+                            <option value="Extension">Browser Extension</option>
+                            <option value="NativeHost">NativeHost Engine</option>
+                            <option value="Other">Other Plugin / Tool</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Version Number * (e.g. 2.1.0)</label>
+                        <input type="text" id="new-up-version" class="form-input-full" placeholder="2.1.0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Release Title *</label>
+                    <input type="text" id="new-up-title" class="form-input-full" placeholder="EDM 2.1.0 Turbo Acceleration Release">
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Release Severity</label>
+                        <select id="new-up-severity" class="form-input-full">
+                            <option value="Standard">Standard</option>
+                            <option value="Recommended">Recommended</option>
+                            <option value="Critical">Critical (Mandatory)</option>
+                            <option value="SecurityHotfix">Security Hotfix</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Minimum Supported Version</label>
+                        <input type="text" id="new-up-minver" class="form-input-full" value="1.0.0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Release Notes / Changelog</label>
+                    <textarea id="new-up-notes" class="form-input-full" rows="4" placeholder="Describe new features, fixes, and improvements..."></textarea>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="new-up-mandatory">
+                    <label for="new-up-mandatory" style="font-size: 13px; color: var(--color-text-main); cursor: pointer;">Force Mandatory Update (Clients below this version must update)</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-create-update').classList.remove('active')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmUpdates.submitCreateDraft()"><i data-lucide="check"></i> Create Draft Release</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: UPLOAD / REPLACE BINARY ARTIFACT -->
+    <div class="modal-backdrop" id="modal-upload-artifact">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-title"><i data-lucide="upload" style="color: var(--color-primary);"></i> Upload Release Binary</span>
+                <button class="btn-icon-only" onclick="document.getElementById('modal-upload-artifact').classList.remove('active')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px;">
+                    Target: <strong id="upload-artifact-version-label" style="color: #ffffff;"></strong>
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Select Binary File (.exe, .zip, .msi)</label>
+                    <input type="file" id="artifact-file-input" class="form-input-full" style="padding: 8px;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Architecture</label>
+                    <select id="artifact-arch-select" class="form-input-full">
+                        <option value="x64">x64 (64-bit Windows)</option>
+                        <option value="arm64">arm64 (ARM64 Windows)</option>
+                        <option value="x86">x86 (32-bit)</option>
+                        <option value="universal">Universal / Browser Extension</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-upload-artifact').classList.remove('active')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmUpdates.submitUploadArtifact()"><i data-lucide="upload"></i> Upload File</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT UPDATE METADATA -->
+    <div class="modal-backdrop" id="modal-edit-update-meta">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <span class="modal-title"><i data-lucide="edit-3" style="color: var(--color-primary);"></i> Edit Release Metadata</span>
+                <button class="btn-icon-only" onclick="document.getElementById('modal-edit-update-meta').classList.remove('active')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Release Title</label>
+                    <input type="text" id="edit-up-title" class="form-input-full">
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Release Severity</label>
+                        <select id="edit-up-severity" class="form-input-full">
+                            <option value="Standard">Standard</option>
+                            <option value="Recommended">Recommended</option>
+                            <option value="Critical">Critical</option>
+                            <option value="SecurityHotfix">Security Hotfix</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Minimum Supported Version</label>
+                        <input type="text" id="edit-up-minver" class="form-input-full">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Release Notes</label>
+                    <textarea id="edit-up-notes" class="form-input-full" rows="4"></textarea>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="edit-up-mandatory">
+                    <label for="edit-up-mandatory" style="font-size: 13px; color: var(--color-text-main); cursor: pointer;">Force Mandatory Update</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-edit-update-meta').classList.remove('active')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmUpdates.submitEditMetadata()"><i data-lucide="save"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REPLACE CONTENT FILE -->
+    <div class="modal-backdrop" id="modal-replace-content-file">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-title"><i data-lucide="file-up" style="color: var(--color-primary);"></i> Replace Document File</span>
+                <button class="btn-icon-only" onclick="document.getElementById('modal-replace-content-file').classList.remove('active')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px;">
+                    Replace contents of <strong id="replace-content-label" style="color: #ffffff;"></strong> with a local .md file:
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Select Markdown (.md) File</label>
+                    <input type="file" id="replace-content-input" accept=".md,.txt" class="form-input-full" style="padding: 8px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-replace-content-file').classList.remove('active')">Cancel</button>
+                <button class="btn btn-primary" onclick="window.edmContent.submitReplaceFile()"><i data-lucide="upload"></i> Upload &amp; Replace</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DOCUMENT REVISION HISTORY -->
+    <div class="modal-backdrop" id="modal-doc-history">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <span class="modal-title" id="doc-history-title"><i data-lucide="history" style="color: var(--color-primary);"></i> Revision History</span>
+                <button class="btn-icon-only" onclick="document.getElementById('modal-doc-history').classList.remove('active')"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="doc-history-list" class="revision-history-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('modal-doc-history').classList.remove('active')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modules -->
+    <script type="module" src="updates.js"></script>
+    <script type="module" src="content.js"></script>
+    <script type="module" src="editor.js"></script>
+    <script src="live-map.js"></script>
+
+    <script>
+    // Hook live map into page navigation
+    (function() {
+        function hookLiveMap() {
+            if (!window.edmApp) { setTimeout(hookLiveMap, 300); return; }
+
+            const origNav = window.edmApp.navigateTo.bind(window.edmApp);
+            window.edmApp.navigateTo = function(page) {
+                origNav(page);
+                setTimeout(() => {
+                    if (page === 'dashboard') {
+                        const c = document.getElementById('live-map-container');
+                        if (c) { window.edmLiveMap.isInitialized = false; window.edmLiveMap.init(); }
+                    } else if (page === 'live-map') {
+                        // Standalone page map
+                        const c2 = document.getElementById('live-map-page-container');
+                        if (c2 && !c2._mapInit) {
+                            c2._mapInit = true;
+                            const map2 = new EDMLiveMap();
+                            window.edmLiveMapPage = map2;
+                            // Swap container
+                            const origContainer = document.getElementById('live-map-container');
+                            const el = document.getElementById('live-map-page-container');
+                            el.id = 'live-map-container';
+                            map2.init();
+                            el.id = 'live-map-page-container';
+                            // Actually just init with correct ID
+                        }
+                    }
+                }, 120);
+            };
+
+            // Init map on dashboard load
+            setTimeout(() => {
+                const c = document.getElementById('live-map-container');
+                if (c) window.edmLiveMap.init();
+            }, 600);
+        }
+        hookLiveMap();
+    })();
+    </script>
 </body>
 </html>

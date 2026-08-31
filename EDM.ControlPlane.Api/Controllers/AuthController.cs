@@ -234,14 +234,13 @@ namespace EDM.ControlPlane.Api.Controllers
                     recoveryCodes = result.RecoveryCodes
                 });
             }
-            catch (DbUpdateConcurrencyException ex)
+            catch (DbUpdateConcurrencyException)
             {
-                var entries = string.Join(", ", ex.Entries.Select(e => $"{e.Entity.GetType().Name}: {e.State}"));
-                return StatusCode(500, new { error = "CONCURRENCY_ERROR", message = $"{ex.Message} Entries: [{entries}]" });
+                return StatusCode(409, new { error = "CONCURRENCY_CONFLICT", message = "A concurrency conflict occurred. Please retry the operation." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, new { error = "INTERNAL_ERROR", message = ex.ToString() });
+                return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An unexpected error occurred while confirming 2FA." });
             }
         }
 
@@ -297,7 +296,7 @@ namespace EDM.ControlPlane.Api.Controllers
             var result = await _authService.RequestRecoveryEmailChangeAsync(userId.Value, request.Password, request.NewRecoveryEmail, HttpContext.Connection.RemoteIpAddress?.ToString());
             if (!result.Success) return BadRequest(new { error = result.ErrorCode, message = result.Message });
 
-            return Ok(new { success = true, message = result.Message, verificationToken = result.AccessToken });
+            return Ok(new { success = true, message = result.Message });
         }
 
         [Authorize]
@@ -551,7 +550,7 @@ namespace EDM.ControlPlane.Api.Controllers
             }
 
             var result = await _authService.ForgotPasswordAsync(request.Email, HttpContext.Connection.RemoteIpAddress?.ToString());
-            return Ok(new { success = true, message = result.Message, resetToken = result.AccessToken });
+            return Ok(new { success = true, message = result.Message });
         }
 
         [HttpPost("reset-password")]

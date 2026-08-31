@@ -304,7 +304,7 @@ namespace EDM.Services
                 if (app.MainWindow?.DataContext is ViewModels.DownloadManagerViewModel vm)
                 {
                     var item = vm.AllDownloads.FirstOrDefault(d => d.Id.ToString("N") == queuedItem.DownloadId);
-                    if (item != null && (item.Status == "Queued" || item.Status == "Waiting" || item.Status == "Paused" || item.Status == "Retrying"))
+                    if (item != null && (item.Status == "Queued" || item.Status == "Waiting" || item.Status == "Retrying"))
                     {
                         _ = vm.StartDownloadProcessAsync(item);
                     }

@@ -29,7 +29,7 @@ namespace EDM.Services
     }
 
     /// <summary>
-    /// IDM-style Safe Archive Preview & In-Memory ZIP Inspector.
+    /// EDM Native Safe Archive Preview & In-Memory ZIP Inspector.
     /// Provides zero-extraction directory listing, decompression ratio calculation,
     /// and ZipSlip path traversal inspection.
     /// </summary>

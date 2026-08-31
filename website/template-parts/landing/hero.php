@@ -13,63 +13,235 @@ $version = edm_get_latest_version();
 $download_url = edm_get_download_url();
 ?>
 <!-- ══════════════════════════════════════════════════════════════
-     HERO SECTION (CONVERSION & SPEED FOCUS)
+     HERO SECTION (SAAS 2-COLUMN DUAL-THEME ENGINE)
      ══════════════════════════════════════════════════════════════ -->
 <section class="hero-section" id="hero">
-    <div class="hero-glow-bg"></div>
-    <div class="container">
-        <div class="hero-content">
-            <!-- Floating Platform Pills -->
-            <div class="floating-pills-wrap">
-                <div class="floating-pill"><i data-lucide="monitor" style="width: 13px; height: 13px; color: #38BDF8;"></i> Windows 11 / 10 / 8.1 / 7</div>
-                <div class="floating-pill"><i data-lucide="cpu" style="width: 13px; height: 13px; color: #10B981;"></i> 32-Socket Turbo</div>
-                <div class="floating-pill"><i data-lucide="video" style="width: 13px; height: 13px; color: #EC4899;"></i> 4K / 8K Video Ripper</div>
-                <div class="floating-pill"><i data-lucide="puzzle" style="width: 13px; height: 13px; color: #F59E0B;"></i> Chrome & Edge MV3</div>
-            </div>
+    <!-- Ambient Dynamic Glow Layers -->
+    <div class="hero-ambient-glows">
+        <div class="hero-glow-blob hero-glow-cyan"></div>
+        <div class="hero-glow-blob hero-glow-purple"></div>
+        <div class="hero-grid-mesh"></div>
+    </div>
 
-            <div class="hero-pill-badge">
-                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+    <div class="container hero-container-grid">
+        <!-- LEFT COLUMN: Content & CTAs -->
+        <div class="hero-col-left">
+            <!-- Badge / Tagline -->
+            <div class="hero-pill-badge" id="hero-badge">
+                <span class="pill-dot"></span>
                 <span id="hero-pill-text"><?php printf(esc_html__('Exclusive Download Manager • Production Build v%s', 'edm-theme'), esc_html($version)); ?></span>
             </div>
 
+            <!-- Hero Heading with vibrant neon gradient -->
             <h1 class="hero-title">
-                <?php esc_html_e('The Fastest Download Manager for Windows', 'edm-theme'); ?><br>
-                <span class="gradient-text"><?php esc_html_e('Engineered for Unmatched Speed & Control', 'edm-theme'); ?></span>
+                EXCLUSIVE<br>
+                DOWNLOAD<br>
+                <span class="gradient-text">MANAGER</span>
             </h1>
 
+            <!-- Hero Subtitle -->
             <p class="hero-subtitle">
-                <?php esc_html_e('Turbocharge your files, high-bitrate video streams, and large archives with 32 concurrent socket connections, crash-proof durable resume, and zero-click browser auto-interception.', 'edm-theme'); ?>
+                <?php esc_html_e('Experience lightning-fast, secure, and organized downloads. The ultimate solution for high-speed file management on all devices. Neon accent.', 'edm-theme'); ?>
             </p>
 
-            <!-- URL Sniffer Search Capsule -->
-            <div class="url-sniffer-capsule">
-                <i data-lucide="link" style="width: 18px; height: 18px; color: var(--edm-primary-light); margin-left: 6px;"></i>
-                <input type="text" id="url-sniffer-input" class="sniffer-input" placeholder="<?php esc_attr_e('Paste any download link, YouTube/Vimeo video URL, or ISO link to test 32x sniffer...', 'edm-theme'); ?>">
-                <button type="button" class="btn btn-primary" onclick="if(window.edmSite) window.edmSite.handleSniffUrl();">
-                    <i data-lucide="zap" style="width: 14px; height: 14px;"></i>
-                    <span><?php esc_html_e('Sniff & Turbo Download', 'edm-theme'); ?></span>
-                </button>
+            <!-- Main Hero CTA Action Block -->
+            <div class="hero-action-block">
+                <a href="<?php echo esc_url($download_url); ?>" class="hero-pill-cta hero-download-btn" id="hero-primary-download" download>
+                    <span class="btn-content">
+                        <span class="cta-text"><?php esc_html_e('DOWNLOAD NOW', 'edm-theme'); ?></span>
+                        <i data-lucide="arrow-up-right" class="cta-arrow"></i>
+                    </span>
+                </a>
+                <div class="hero-os-badges">
+                    <span class="os-label"><?php esc_html_e('Available on', 'edm-theme'); ?></span>
+                    <span class="os-badge"><i data-lucide="monitor"></i> Windows</span>
+                    <span class="os-badge"><i data-lucide="laptop"></i> macOS</span>
+                    <span class="os-badge"><i data-lucide="terminal"></i> Linux</span>
+                </div>
             </div>
 
-            <!-- Call to Action Buttons -->
-            <div class="hero-cta-group">
-                <a href="<?php echo esc_url($download_url); ?>" class="btn btn-primary btn-lg" download>
-                    <i data-lucide="download" style="width: 18px; height: 18px;"></i>
-                    <span><?php esc_html_e('Download EDM for Windows', 'edm-theme'); ?></span>
-                </a>
-                <a href="<?php echo esc_url(home_url('/features/')); ?>" class="btn btn-secondary btn-lg">
-                    <i data-lucide="sliders" style="width: 18px; height: 18px; color: var(--edm-primary-light);"></i>
-                    <span><?php esc_html_e('Explore Features', 'edm-theme'); ?></span>
-                </a>
+            <!-- Secondary Feature Chips Sub-Grid -->
+            <div class="hero-chips-subgrid">
+                <div class="hero-chip-item">
+                    <div class="chip-icon-wrap chip-cyan"><i data-lucide="zap"></i></div>
+                    <div class="chip-text">
+                        <strong><?php esc_html_e('32x Socket Turbo', 'edm-theme'); ?></strong>
+                        <span><?php esc_html_e('Parallel dynamic streams', 'edm-theme'); ?></span>
+                    </div>
+                </div>
+                <div class="hero-chip-item">
+                    <div class="chip-icon-wrap chip-purple"><i data-lucide="video"></i></div>
+                    <div class="chip-text">
+                        <strong><?php esc_html_e('4K/8K Media Sniffer', 'edm-theme'); ?></strong>
+                        <span><?php esc_html_e('Auto-grab M3U8 & DASH', 'edm-theme'); ?></span>
+                    </div>
+                </div>
+                <div class="hero-chip-item">
+                    <div class="chip-icon-wrap chip-green"><i data-lucide="shield-check"></i></div>
+                    <div class="chip-text">
+                        <strong><?php esc_html_e('Atomic Resume WAL', 'edm-theme'); ?></strong>
+                        <span><?php esc_html_e('Zero corrupted downloads', 'edm-theme'); ?></span>
+                    </div>
+                </div>
+                <div class="hero-chip-item">
+                    <div class="chip-icon-wrap chip-pink"><i data-lucide="sparkles"></i></div>
+                    <div class="chip-text">
+                        <strong><?php esc_html_e('100% Ad-Free', 'edm-theme'); ?></strong>
+                        <span><?php esc_html_e('Open & clean engine', 'edm-theme'); ?></span>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <!-- Compatibility Footnote -->
-            <div class="hero-compatibility-row">
-                <span><i data-lucide="check-circle" style="width: 13px; height: 13px; color: var(--edm-green); display: inline-block; vertical-align: middle;"></i> <?php esc_html_e('Windows 11 / 10 / 8.1 / 7 (64-bit & ARM64)', 'edm-theme'); ?></span>
-                <span>•</span>
-                <span><?php esc_html_e('Installer Size:', 'edm-theme'); ?> <strong>19.8 MB</strong></span>
-                <span>•</span>
-                <span><?php esc_html_e('SHA-256 Verified Clean', 'edm-theme'); ?></span>
+        <!-- RIGHT COLUMN: Interactive & Animated Dashboard Showcase -->
+        <div class="hero-col-right">
+            <div class="hero-mockup-wrapper">
+                <!-- Sleek Monitor / Window Frame -->
+                <div class="hero-mockup-frame">
+                    <!-- Top Window Bar -->
+                    <div class="mockup-topbar">
+                        <div class="mockup-brand-group">
+                            <span class="mockup-logo-badge">EXDM</span>
+                            <span class="mockup-status-dot"></span>
+                            <span class="mockup-version-tag"><?php esc_html_e('Live Engine', 'edm-theme'); ?></span>
+                        </div>
+                        <div class="mockup-window-controls">
+                            <span class="ctrl-btn ctrl-min"></span>
+                            <span class="ctrl-btn ctrl-max"></span>
+                            <span class="ctrl-btn ctrl-close"></span>
+                        </div>
+                    </div>
+
+                    <!-- Inner Mockup Container (Sidebar + Main View) -->
+                    <div class="mockup-inner-body">
+                        <!-- Mini Icon Sidebar -->
+                        <aside class="mockup-sidebar">
+                            <button class="side-btn active" title="Active Downloads"><i data-lucide="layout-grid"></i></button>
+                            <button class="side-btn" title="Download Manager"><i data-lucide="download"></i></button>
+                            <button class="side-btn" title="History &amp; Schedules"><i data-lucide="clock"></i></button>
+                            <button class="side-btn" title="Engine Settings"><i data-lucide="settings"></i></button>
+                            <div class="sidebar-spacer"></div>
+                            <button class="side-btn" title="Exit / Switch"><i data-lucide="log-out"></i></button>
+                        </aside>
+
+                        <!-- Mockup Main Content Area -->
+                        <div class="mockup-main-pane">
+                            <!-- Real-Time Speed Graph Header -->
+                            <div class="mockup-graph-header">
+                                <div class="graph-title-group">
+                                    <h4 class="graph-title"><?php esc_html_e('Real-time Speed Graph', 'edm-theme'); ?></h4>
+                                    <div class="graph-legend">
+                                        <span class="legend-item legend-cyan"><span class="legend-dot"></span> <?php esc_html_e('Download', 'edm-theme'); ?></span>
+                                        <span class="legend-item legend-purple"><span class="legend-dot"></span> <?php esc_html_e('Speed', 'edm-theme'); ?></span>
+                                    </div>
+                                </div>
+                                <div class="graph-live-speed">
+                                    <span class="speed-num" id="hero-live-speed-num">112.4</span>
+                                    <span class="speed-unit">MB/s</span>
+                                </div>
+                            </div>
+
+                            <!-- Real-Time Speed Waveform Canvas Container -->
+                            <div class="mockup-canvas-wrapper">
+                                <div class="graph-y-axis">
+                                    <span>150 MB/s</span>
+                                    <span>120 MB/s</span>
+                                    <span>80 MB/s</span>
+                                    <span>40 MB/s</span>
+                                    <span>0 MB/s</span>
+                                </div>
+                                <div class="canvas-container">
+                                    <canvas id="hero-speed-canvas" width="560" height="90"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Tabs & Download Status Bar -->
+                            <div class="mockup-tabs-bar">
+                                <div class="mockup-tabs">
+                                    <span class="tab-item active"><?php esc_html_e('Active', 'edm-theme'); ?></span>
+                                    <span class="tab-item"><?php esc_html_e('Queued', 'edm-theme'); ?></span>
+                                    <span class="tab-item"><?php esc_html_e('Completed', 'edm-theme'); ?></span>
+                                </div>
+                                <div class="mockup-task-stats">
+                                    <span class="stats-bytes">8.4 GB / 12.0 GB (88%)</span>
+                                    <span class="stats-count">• 4 <?php esc_html_e('Files Downloading', 'edm-theme'); ?></span>
+                                </div>
+                            </div>
+
+                            <!-- Active Task List -->
+                            <div class="mockup-task-list">
+                                <!-- Task 1: Ubuntu ISO -->
+                                <div class="mockup-task-item" data-task="ubuntu">
+                                    <div class="task-icon task-icon-iso">
+                                        <i data-lucide="disc"></i>
+                                    </div>
+                                    <div class="task-info">
+                                        <div class="task-header-row">
+                                            <span class="task-name">Ubuntu 23.04 ISO</span>
+                                            <div class="task-metrics">
+                                                <span class="task-speed text-cyan">24.8 MB/s</span>
+                                                <span class="task-time">Completed 70 min 23s</span>
+                                            </div>
+                                        </div>
+                                        <div class="task-progress-track">
+                                            <div class="task-progress-fill fill-cyan" style="width: 78%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="task-actions">
+                                        <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                        <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Task 2: GameUpdate.zip -->
+                                <div class="mockup-task-item" data-task="game">
+                                    <div class="task-icon task-icon-zip">
+                                        <i data-lucide="archive"></i>
+                                    </div>
+                                    <div class="task-info">
+                                        <div class="task-header-row">
+                                            <span class="task-name">GameUpdate.zip</span>
+                                            <div class="task-metrics">
+                                                <span class="task-speed text-purple">112 MB/s</span>
+                                                <span class="task-time">File name 56 min 11s</span>
+                                            </div>
+                                        </div>
+                                        <div class="task-progress-track">
+                                            <div class="task-progress-fill fill-gradient" style="width: 56%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="task-actions">
+                                        <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                        <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Task 3: Project_Assets.rar -->
+                                <div class="mockup-task-item" data-task="assets">
+                                    <div class="task-icon task-icon-rar">
+                                        <i data-lucide="folder-archive"></i>
+                                    </div>
+                                    <div class="task-info">
+                                        <div class="task-header-row">
+                                            <span class="task-name">Project_Assets.rar</span>
+                                            <div class="task-metrics">
+                                                <span class="task-speed text-cyan">12.3 MB/s</span>
+                                                <span class="task-time">Completed 60 min 5s</span>
+                                            </div>
+                                        </div>
+                                        <div class="task-progress-track">
+                                            <div class="task-progress-fill fill-cyan" style="width: 91%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="task-actions">
+                                        <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                        <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

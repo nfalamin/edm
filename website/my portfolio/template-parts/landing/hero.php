@@ -21,11 +21,12 @@ $download_url = edm_get_download_url();
         <div class="hero-content">
             <!-- Floating Platform Pills -->
             <div class="floating-pills-wrap">
-                <div class="floating-pill" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #10B981;"><i data-lucide="users" style="width: 13px; height: 13px;"></i> 10,000+ Active Users</div>
-                <div class="floating-pill" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #F59E0B;"><i data-lucide="star" style="width: 13px; height: 13px;"></i> 4.9/5 ★ (1,840+ Reviews)</div>
-                <div class="floating-pill"><i data-lucide="monitor" style="width: 13px; height: 13px; color: #38BDF8;"></i> Windows 11 / 10 / 8.1 / 7</div>
+                <div class="floating-pill" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.35); color: #38BDF8;"><i data-lucide="download-cloud" style="width: 13px; height: 13px;"></i> 10,000+ Downloads</div>
+                <div class="floating-pill" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #10B981;"><i data-lucide="users" style="width: 13px; height: 13px;"></i> 9,651+ Active Users</div>
+                <div class="floating-pill" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #F59E0B;"><i data-lucide="star" style="width: 13px; height: 13px;"></i> 4.98/5.0 ★ (Verified Reviews)</div>
+                <div class="floating-pill"><i data-lucide="monitor" style="width: 13px; height: 13px; color: #38BDF8;"></i> Windows 11 / 10</div>
                 <div class="floating-pill"><i data-lucide="cpu" style="width: 13px; height: 13px; color: #10B981;"></i> 32-Socket Turbo</div>
-                <div class="floating-pill"><i data-lucide="video" style="width: 13px; height: 13px; color: #EC4899;"></i> 4K / 8K Video Ripper</div>
+                <div class="floating-pill"><i data-lucide="video" style="width: 13px; height: 13px; color: #EC4899;"></i> 4K / 8K Video Sniffer</div>
                 <div class="floating-pill"><i data-lucide="puzzle" style="width: 13px; height: 13px; color: #F59E0B;"></i> Chrome & Edge MV3</div>
             </div>
 

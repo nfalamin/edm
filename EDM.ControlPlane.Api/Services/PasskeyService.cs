@@ -139,7 +139,13 @@ namespace EDM.ControlPlane.Api.Services
         public bool VerifyAssertion(string clientDataJson, string authenticatorData, string signature, string storedPublicKey, uint lastSignCount, out uint newSignCount)
         {
             newSignCount = lastSignCount + 1;
-            if (string.IsNullOrWhiteSpace(clientDataJson) || string.IsNullOrWhiteSpace(signature)) return false;
+            if (string.IsNullOrWhiteSpace(clientDataJson) || 
+                string.IsNullOrWhiteSpace(signature) || 
+                string.IsNullOrWhiteSpace(authenticatorData) || 
+                string.IsNullOrWhiteSpace(storedPublicKey))
+            {
+                return false;
+            }
 
             try
             {
@@ -149,11 +155,57 @@ namespace EDM.ControlPlane.Api.Services
 
                 string type = root.GetProperty("type").GetString() ?? "";
                 string challenge = root.GetProperty("challenge").GetString() ?? "";
+                string origin = root.TryGetProperty("origin", out var orgElem) ? orgElem.GetString() ?? "" : "";
 
                 if (type != "webauthn.get") return false;
                 if (!ValidateChallenge(challenge)) return false;
 
-                return true;
+                // Validate origin matches RP
+                if (!string.IsNullOrWhiteSpace(_rpId) && _rpId != "localhost")
+                {
+                    if (!origin.Contains(_rpId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                }
+
+                // Verify cryptographic signature: signature is over (authenticatorData || SHA256(clientDataJson))
+                byte[] authDataBytes = ConvertFromBase64Url(authenticatorData);
+                byte[] clientDataHash;
+                using (var sha = SHA256.Create())
+                {
+                    clientDataHash = sha.ComputeHash(clientDataBytes);
+                }
+
+                byte[] signedData = new byte[authDataBytes.Length + clientDataHash.Length];
+                Buffer.BlockCopy(authDataBytes, 0, signedData, 0, authDataBytes.Length);
+                Buffer.BlockCopy(clientDataHash, 0, signedData, authDataBytes.Length, clientDataHash.Length);
+
+                byte[] sigBytes = ConvertFromBase64Url(signature);
+
+                // Attempt ECDsa / RSA verification with stored public key bytes
+                try
+                {
+                    byte[] pubKeyBytes = Convert.FromBase64String(storedPublicKey.Replace('-', '+').Replace('_', '/'));
+                    using var ecdsa = ECDsa.Create();
+                    ecdsa.ImportSubjectPublicKeyInfo(pubKeyBytes, out _);
+                    return ecdsa.VerifyData(signedData, sigBytes, HashAlgorithmName.SHA256);
+                }
+                catch
+                {
+                    // Fallback to RSA if ECDSA fails to parse
+                    try
+                    {
+                        byte[] pubKeyBytes = Convert.FromBase64String(storedPublicKey.Replace('-', '+').Replace('_', '/'));
+                        using var rsa = RSA.Create();
+                        rsa.ImportSubjectPublicKeyInfo(pubKeyBytes, out _);
+                        return rsa.VerifyData(signedData, sigBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
             }
             catch
             {

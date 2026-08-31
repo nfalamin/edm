@@ -236,6 +236,19 @@ namespace EDM.ControlPlane.Api.Services
 
             var identifier = usernameOrEmail.Trim().ToLowerInvariant();
 
+            // Prune expired trackers to prevent memory leaks
+            if (_failedLoginTrackers.Count > 1000)
+            {
+                var now = DateTime.UtcNow;
+                foreach (var kvp in _failedLoginTrackers)
+                {
+                    if (kvp.Value.LockoutUntil < now && kvp.Value.FailedAttempts == 0)
+                    {
+                        _failedLoginTrackers.TryRemove(kvp.Key, out _);
+                    }
+                }
+            }
+
             // Check account lockout
             if (_failedLoginTrackers.TryGetValue(identifier, out var tracker) && tracker.LockoutUntil > DateTime.UtcNow)
             {
@@ -1133,8 +1146,7 @@ namespace EDM.ControlPlane.Api.Services
 
             return new AuthResult(
                 Success: true,
-                Message: "Recovery email change initiated. Verification token has been dispatched to the requested address.",
-                AccessToken: plaintextToken);
+                Message: "Recovery email change initiated. Verification token has been dispatched to the requested address.");
         }
 
         public async Task<AuthResult> ConfirmRecoveryEmailChangeAsync(Guid userId, string token, string? rawIp = null)
@@ -1240,11 +1252,9 @@ namespace EDM.ControlPlane.Api.Services
                 correlationId: Guid.NewGuid().ToString("N"),
                 rawIpAddress: rawIp);
 
-            // Return reset token for local test/dev environments
             return new AuthResult(
                 Success: true,
-                Message: "If an account matches that email address, password reset instructions have been dispatched.",
-                AccessToken: plaintextToken);
+                Message: "If an account matches that email address, password reset instructions have been dispatched.");
         }
 
         public async Task<AuthResult> ResetPasswordAsync(string resetToken, string newPassword, string? twoFactorCode = null, bool isRecoveryCode = false, string? rawIp = null)

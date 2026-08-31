@@ -206,6 +206,7 @@
                                     <MenuItem Header="▶ Resume / Start" Click="MenuItem_Resume"/>
                                     <MenuItem Header="⏸ Pause" Click="MenuItem_Pause"/>
                                     <MenuItem Header="🔄 Retry / Redownload" Click="MenuItem_Redownload"/>
+                                    <MenuItem Header="🔄 Refresh Download Address" Click="MenuItem_RefreshAddress"/>
                                     <MenuItem Header="⏹ Cancel / Stop" Click="MenuItem_Cancel"/>
                                     <MenuItem Header="🗑 Delete" Click="MenuItem_Delete"/>
                                     <Separator Background="{DynamicResource BorderBrush}"/>

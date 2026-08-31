@@ -78,7 +78,7 @@ if (!defined('ABSPATH')) {
                     </span>
                 </div>
                 <p style="font-size: 14px; color: var(--edm-text-main); line-height: 1.6; margin-bottom: 18px; font-style: italic;">
-                    "Clean UI, native .NET 10 Win32 engine with zero bloat. IDM had an outdated 1998 interface; EDM brings the modern Fluent dark luxury aesthetic with real 32-stream socket capability. 10/10 recommended!"
+                    "Clean UI, native .NET 10 Win32 engine with zero bloat. Legacy utilities had outdated interfaces; EDM brings the modern Fluent dark luxury aesthetic with real 32-stream socket capability. 10/10 recommended!"
                 </p>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #10B981, #06B6D4); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 15px;">DK</div>

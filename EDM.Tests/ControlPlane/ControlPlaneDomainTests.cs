@@ -138,6 +138,7 @@ namespace EDM.Tests.ControlPlane
                 Title = "EDM 2.5.0 High Speed",
                 ReleaseNotes = "Ultra speed update.",
                 IsMandatory = true,
+                IsPublished = true,
                 Severity = ReleaseSeverity.Critical,
                 PublishedAtUtc = DateTime.UtcNow
             };

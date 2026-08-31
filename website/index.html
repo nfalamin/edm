@@ -59,11 +59,11 @@
                 <a href="#pricing" class="nav-link">Pricing</a>
                 <a href="#changelog" class="nav-link">Changelog</a>
                 <a href="#faq" class="nav-link">FAQ</a>
-                <a href="/edm-admin/#file-manager" class="nav-link" target="_blank">
+                <a href="my portfolio/controlplane/index.html#file-manager" class="nav-link" target="_blank">
                     <i data-lucide="folder-sync" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i>
                     Cloud Files
                 </a>
-                <a href="/edm-admin" class="nav-link nav-link-admin" target="_blank">
+                <a href="my portfolio/controlplane/index.html" class="nav-link nav-link-admin" target="_blank">
                     <i data-lucide="shield-check" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i>
                     Admin Console
                 </a>
@@ -71,6 +71,9 @@
 
             <!-- Header Action Controls -->
             <div class="header-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-theme-toggle" title="Toggle Dark / Light Theme" onclick="if(window.edmSite) window.edmSite.toggleTheme();" style="width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--edm-radius-full);">
+                    <i data-lucide="sun" id="theme-icon" style="width: 16px; height: 16px;"></i>
+                </button>
                 <a href="#download" class="btn btn-primary btn-sm" id="header-cta-btn">
                     <i data-lucide="download" style="width: 14px; height: 14px;"></i>
                     <span>Download Free</span>
@@ -80,61 +83,237 @@
     </header>
 
     <!-- ══════════════════════════════════════════════════════════════
-         3. HERO SECTION
+         3. HERO SECTION (SAAS 2-COLUMN DUAL-THEME ENGINE)
          ══════════════════════════════════════════════════════════════ -->
     <section class="hero-section" id="hero">
-        <div class="hero-glow-blob blob-1"></div>
-        <div class="hero-glow-blob blob-2"></div>
-        <div class="container hero-container">
-            
-            <div class="hero-pill-badge">
-                <span class="pill-dot"></span>
-                <span id="hero-pill-text">Exclusive Download Manager • Production Turbo Build</span>
-            </div>
+        <!-- Ambient Dynamic Glow Layers -->
+        <div class="hero-ambient-glows">
+            <div class="hero-glow-blob hero-glow-cyan"></div>
+            <div class="hero-glow-blob hero-glow-purple"></div>
+            <div class="hero-grid-mesh"></div>
+        </div>
 
-            <h1 class="hero-title">
-                The Fastest Download Engine <br>
-                <span class="gradient-text">Engineered for Unmatched Speed &amp; Control</span>
-            </h1>
+        <div class="container hero-container-grid">
+            <!-- LEFT COLUMN: Content & CTAs -->
+            <div class="hero-col-left">
+                <!-- Badge / Tagline -->
+                <div class="hero-pill-badge" id="hero-badge">
+                    <span class="pill-dot"></span>
+                    <span id="hero-pill-text">Exclusive Download Manager • Production Turbo Build</span>
+                </div>
 
-            <p class="hero-subtitle">
-                Supercharge your downloads with 32-socket parallel stream acceleration, automated browser media sniffing, and resilient resume logic built directly on high-performance C# Win32 architecture.
-            </p>
+                <!-- Hero Heading with vibrant neon gradient -->
+                <h1 class="hero-title">
+                    EXCLUSIVE<br>
+                    DOWNLOAD<br>
+                    <span class="gradient-text">MANAGER</span>
+                </h1>
 
-            <div class="hero-cta-group">
-                <a href="/api/v1/releases/latest/download" class="btn btn-primary btn-xl hero-download-btn" id="hero-primary-download" download>
-                    <i data-lucide="download" style="width: 22px; height: 22px;"></i>
-                    <div class="btn-text-block">
-                        <span class="btn-label-primary">Download EDM for Windows</span>
-                        <span class="btn-label-sub" id="hero-download-subtext">Free · 64-bit Native · Real-Time Hash Verified</span>
+                <!-- Hero Subtitle -->
+                <p class="hero-subtitle">
+                    Experience lightning-fast, secure, and organized downloads. The ultimate solution for high-speed file management on all devices. Neon accent.
+                </p>
+
+                <!-- Main Hero CTA Action Block -->
+                <div class="hero-action-block">
+                    <a href="/api/v1/releases/latest/download" class="hero-pill-cta hero-download-btn" id="hero-primary-download" download>
+                        <span class="btn-content">
+                            <span class="cta-text">DOWNLOAD NOW</span>
+                            <i data-lucide="arrow-up-right" class="cta-arrow"></i>
+                        </span>
+                    </a>
+                    <div class="hero-os-badges">
+                        <span class="os-label">Available on</span>
+                        <span class="os-badge"><i data-lucide="monitor"></i> Windows</span>
+                        <span class="os-badge"><i data-lucide="laptop"></i> macOS</span>
+                        <span class="os-badge"><i data-lucide="terminal"></i> Linux</span>
                     </div>
-                </a>
-                <a href="#how-it-works" class="btn btn-secondary btn-xl">
-                    <i data-lucide="cpu" style="width: 20px; height: 20px;"></i>
-                    <span>Explore Architecture</span>
-                </a>
+                </div>
+
+                <!-- Secondary Feature Chips Sub-Grid -->
+                <div class="hero-chips-subgrid">
+                    <div class="hero-chip-item">
+                        <div class="chip-icon-wrap chip-cyan"><i data-lucide="zap"></i></div>
+                        <div class="chip-text">
+                            <strong>32x Socket Turbo</strong>
+                            <span>Parallel dynamic streams</span>
+                        </div>
+                    </div>
+                    <div class="hero-chip-item">
+                        <div class="chip-icon-wrap chip-purple"><i data-lucide="video"></i></div>
+                        <div class="chip-text">
+                            <strong>4K/8K Media Sniffer</strong>
+                            <span>Auto-grab M3U8 & DASH</span>
+                        </div>
+                    </div>
+                    <div class="hero-chip-item">
+                        <div class="chip-icon-wrap chip-green"><i data-lucide="shield-check"></i></div>
+                        <div class="chip-text">
+                            <strong>Atomic Resume WAL</strong>
+                            <span>Zero corrupted downloads</span>
+                        </div>
+                    </div>
+                    <div class="hero-chip-item">
+                        <div class="chip-icon-wrap chip-pink"><i data-lucide="sparkles"></i></div>
+                        <div class="chip-text">
+                            <strong>100% Ad-Free</strong>
+                            <span>Open & clean engine</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Trust Bar / Key Guarantees -->
-            <div class="hero-trust-bar">
-                <div class="trust-item">
-                    <i data-lucide="shield-check" style="color: var(--edm-green);"></i>
-                    <span>100% Virus &amp; Adware Free</span>
-                </div>
-                <div class="trust-item">
-                    <i data-lucide="gauge" style="color: var(--edm-blue);"></i>
-                    <span>Up to 32x Parallel Sockets</span>
-                </div>
-                <div class="trust-item">
-                    <i data-lucide="refresh-cw" style="color: var(--edm-amber);"></i>
-                    <span>Atomic Resume &amp; Integrity Check</span>
-                </div>
-                <div class="trust-item">
-                    <i data-lucide="puzzle" style="color: var(--edm-pink);"></i>
-                    <span>Chrome, Edge &amp; Firefox Sniffer</span>
+            <!-- RIGHT COLUMN: Interactive & Animated Dashboard Showcase -->
+            <div class="hero-col-right">
+                <div class="hero-mockup-wrapper">
+                    <!-- Sleek Monitor / Window Frame -->
+                    <div class="hero-mockup-frame">
+                        <!-- Top Window Bar -->
+                        <div class="mockup-topbar">
+                            <div class="mockup-brand-group">
+                                <span class="mockup-logo-badge">EXDM</span>
+                                <span class="mockup-status-dot"></span>
+                                <span class="mockup-version-tag">Live Engine</span>
+                            </div>
+                            <div class="mockup-window-controls">
+                                <span class="ctrl-btn ctrl-min"></span>
+                                <span class="ctrl-btn ctrl-max"></span>
+                                <span class="ctrl-btn ctrl-close"></span>
+                            </div>
+                        </div>
+
+                        <!-- Inner Mockup Container (Sidebar + Main View) -->
+                        <div class="mockup-inner-body">
+                            <!-- Mini Icon Sidebar -->
+                            <aside class="mockup-sidebar">
+                                <button class="side-btn active" title="Active Downloads"><i data-lucide="layout-grid"></i></button>
+                                <button class="side-btn" title="Download Manager"><i data-lucide="download"></i></button>
+                                <button class="side-btn" title="History &amp; Schedules"><i data-lucide="clock"></i></button>
+                                <button class="side-btn" title="Engine Settings"><i data-lucide="settings"></i></button>
+                                <div class="sidebar-spacer"></div>
+                                <button class="side-btn" title="Exit / Switch"><i data-lucide="log-out"></i></button>
+                            </aside>
+
+                            <!-- Mockup Main Content Area -->
+                            <div class="mockup-main-pane">
+                                <!-- Real-Time Speed Graph Header -->
+                                <div class="mockup-graph-header">
+                                    <div class="graph-title-group">
+                                        <h4 class="graph-title">Real-time Speed Graph</h4>
+                                        <div class="graph-legend">
+                                            <span class="legend-item legend-cyan"><span class="legend-dot"></span> Download</span>
+                                            <span class="legend-item legend-purple"><span class="legend-dot"></span> Speed</span>
+                                        </div>
+                                    </div>
+                                    <div class="graph-live-speed">
+                                        <span class="speed-num" id="hero-live-speed-num">112.4</span>
+                                        <span class="speed-unit">MB/s</span>
+                                    </div>
+                                </div>
+
+                                <!-- Real-Time Speed Waveform Canvas Container -->
+                                <div class="mockup-canvas-wrapper">
+                                    <div class="graph-y-axis">
+                                        <span>150 MB/s</span>
+                                        <span>120 MB/s</span>
+                                        <span>80 MB/s</span>
+                                        <span>40 MB/s</span>
+                                        <span>0 MB/s</span>
+                                    </div>
+                                    <div class="canvas-container">
+                                        <canvas id="hero-speed-canvas" width="560" height="90"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Tabs & Download Status Bar -->
+                                <div class="mockup-tabs-bar">
+                                    <div class="mockup-tabs">
+                                        <span class="tab-item active">Active</span>
+                                        <span class="tab-item">Queued</span>
+                                        <span class="tab-item">Completed</span>
+                                    </div>
+                                    <div class="mockup-task-stats">
+                                        <span class="stats-bytes">8.4 GB / 12.0 GB (88%)</span>
+                                        <span class="stats-count">• 4 Files Downloading</span>
+                                    </div>
+                                </div>
+
+                                <!-- Active Task List -->
+                                <div class="mockup-task-list">
+                                    <!-- Task 1: Ubuntu ISO -->
+                                    <div class="mockup-task-item" data-task="ubuntu">
+                                        <div class="task-icon task-icon-iso">
+                                            <i data-lucide="disc"></i>
+                                        </div>
+                                        <div class="task-info">
+                                            <div class="task-header-row">
+                                                <span class="task-name">Ubuntu 23.04 ISO</span>
+                                                <div class="task-metrics">
+                                                    <span class="task-speed text-cyan">24.8 MB/s</span>
+                                                    <span class="task-time">Completed 70 min 23s</span>
+                                                </div>
+                                            </div>
+                                            <div class="task-progress-track">
+                                                <div class="task-progress-fill fill-cyan" style="width: 78%;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="task-actions">
+                                            <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                            <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Task 2: GameUpdate.zip -->
+                                    <div class="mockup-task-item" data-task="game">
+                                        <div class="task-icon task-icon-zip">
+                                            <i data-lucide="archive"></i>
+                                        </div>
+                                        <div class="task-info">
+                                            <div class="task-header-row">
+                                                <span class="task-name">GameUpdate.zip</span>
+                                                <div class="task-metrics">
+                                                    <span class="task-speed text-purple">112 MB/s</span>
+                                                    <span class="task-time">File name 56 min 11s</span>
+                                                </div>
+                                            </div>
+                                            <div class="task-progress-track">
+                                                <div class="task-progress-fill fill-gradient" style="width: 56%;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="task-actions">
+                                            <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                            <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Task 3: Project_Assets.rar -->
+                                    <div class="mockup-task-item" data-task="assets">
+                                        <div class="task-icon task-icon-rar">
+                                            <i data-lucide="folder-archive"></i>
+                                        </div>
+                                        <div class="task-info">
+                                            <div class="task-header-row">
+                                                <span class="task-name">Project_Assets.rar</span>
+                                                <div class="task-metrics">
+                                                    <span class="task-speed text-cyan">12.3 MB/s</span>
+                                                    <span class="task-time">Completed 60 min 5s</span>
+                                                </div>
+                                            </div>
+                                            <div class="task-progress-track">
+                                                <div class="task-progress-fill fill-cyan" style="width: 91%;"></div>
+                                            </div>
+                                        </div>
+                                        <div class="task-actions">
+                                            <button type="button" class="btn-task-action btn-sim-toggle" title="Pause / Resume"><i data-lucide="pause"></i></button>
+                                            <button type="button" class="btn-task-action" title="More Options"><i data-lucide="more-vertical"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
         </div>
     </section>
 

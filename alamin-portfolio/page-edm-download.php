@@ -50,7 +50,7 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
                 <div>
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                         <span class="badge-success" style="font-size: 11px; padding: 4px 10px;">STABLE PRODUCTION RELEASE</span>
-                        <span style="font-family: var(--edm-font-mono); font-size: 13px; color: var(--edm-text-secondary);">Build v<?php echo esc_html($version); ?> • 19.8 MB</span>
+                        <span style="font-family: var(--edm-font-mono); font-size: 13px; color: var(--edm-text-secondary);">Build v<?php echo esc_html($version); ?> • <?php echo function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'; ?></span>
                     </div>
 
                     <h2 style="font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 12px;">
@@ -63,7 +63,7 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
                     <!-- Main Download Button -->
                     <a href="<?php echo esc_url($download_url); ?>" class="btn btn-primary btn-xl btn-full" download style="margin-bottom: 24px;">
                         <i data-lucide="download" style="width: 22px; height: 22px;"></i>
-                        <span><?php esc_html_e('Download EDM Setup.exe (19.8 MB)', 'edm-theme'); ?></span>
+                        <span><?php printf(esc_html__('Download EDM Setup.exe (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
                     </a>
                 </div>
 
@@ -74,7 +74,7 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
                         <span style="font-size: 12px; font-weight: 700; color: #fff;">Cryptographic SHA-256 Checksum Authority:</span>
                     </div>
                     <code style="display: block; font-family: var(--edm-font-mono); font-size: 11px; color: var(--edm-primary-light); word-break: break-all; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
-                        93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023
+                        <?php echo function_exists('edm_get_download_sha256') ? esc_html(edm_get_download_sha256()) : '93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023'; ?>
                     </code>
                 </div>
             </div>
@@ -93,23 +93,30 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
                     </p>
                     <a href="<?php echo esc_url($download_url); ?>" class="btn btn-outline btn-sm btn-full" download>
                         <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                        <span><?php esc_html_e('Download Portable Package', 'edm-theme'); ?></span>
+                        <span><?php printf(esc_html__('Download Portable Package (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
                     </a>
                 </div>
 
                 <!-- Browser Extensions Bundle -->
-                <div class="glass-panel" style="padding: 28px; border-radius: 20px; border: 1px solid var(--edm-border);">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <div class="glass-panel" style="padding: 28px; border-radius: 20px; border: 1px solid var(--edm-border); display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
                         <i data-lucide="puzzle" style="color: var(--edm-amber); width: 22px; height: 22px;"></i>
-                        <h3 style="font-size: 17px; font-weight: 800; color: #fff;">Browser Extensions Bundle</h3>
+                        <h3 style="font-size: 17px; font-weight: 800; color: #fff;">Browser Extensions</h3>
                     </div>
-                    <p style="font-size: 12.5px; color: var(--edm-text-secondary); line-height: 1.5; margin-bottom: 16px;">
-                        Chrome, Edge Chromium, and Firefox Manifest V3 packages.
-                    </p>
-                    <a href="<?php echo esc_url(home_url('/edm-extensions/')); ?>" class="btn btn-secondary btn-sm btn-full">
-                        <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
-                        <span><?php esc_html_e('View Extensions Guide', 'edm-theme'); ?></span>
-                    </a>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <a href="<?php echo function_exists('edm_get_extension_url') ? edm_get_extension_url('chrome') : '#'; ?>" class="btn btn-secondary btn-sm" style="justify-content: space-between;" download>
+                            <span><i data-lucide="chrome" style="width: 13px; height: 13px; display: inline-block; vertical-align: middle;"></i> Chrome MV3</span>
+                            <span style="font-family: var(--edm-font-mono); font-size: 10.5px; color: var(--edm-text-muted);"><?php echo function_exists('edm_get_extension_file_size') ? esc_html(edm_get_extension_file_size('chrome')) : '87.5 KB'; ?></span>
+                        </a>
+                        <a href="<?php echo function_exists('edm_get_extension_url') ? edm_get_extension_url('edge') : '#'; ?>" class="btn btn-secondary btn-sm" style="justify-content: space-between;" download>
+                            <span><i data-lucide="globe" style="width: 13px; height: 13px; display: inline-block; vertical-align: middle;"></i> Edge MV3</span>
+                            <span style="font-family: var(--edm-font-mono); font-size: 10.5px; color: var(--edm-text-muted);"><?php echo function_exists('edm_get_extension_file_size') ? esc_html(edm_get_extension_file_size('edge')) : '88.5 KB'; ?></span>
+                        </a>
+                        <a href="<?php echo function_exists('edm_get_extension_url') ? edm_get_extension_url('firefox') : '#'; ?>" class="btn btn-secondary btn-sm" style="justify-content: space-between;" download>
+                            <span><i data-lucide="compass" style="width: 13px; height: 13px; display: inline-block; vertical-align: middle;"></i> Firefox MV3</span>
+                            <span style="font-family: var(--edm-font-mono); font-size: 10.5px; color: var(--edm-text-muted);"><?php echo function_exists('edm_get_extension_file_size') ? esc_html(edm_get_extension_file_size('firefox')) : '88.5 KB'; ?></span>
+                        </a>
+                    </div>
                 </div>
 
             </div>

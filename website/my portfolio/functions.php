@@ -274,15 +274,33 @@ add_action('init', 'portfolio_register_testimonial_cpt');
 // ─────────────────────────────────────────────────────────────
 // 5. HELPER FUNCTIONS & ROUTE DETECTORS
 // ─────────────────────────────────────────────────────────────
-function portfolio_get_profile_image() {
-    $custom_img = get_theme_mod('hero_profile_photo');
-    if (!empty($custom_img)) {
-        return esc_url($custom_img);
-    }
-    if (file_exists(get_template_directory() . '/nf.png')) {
+if ( ! function_exists( 'portfolio_get_profile_image' ) ) {
+    function portfolio_get_profile_image() {
+        $custom_img = get_theme_mod('hero_profile_photo');
+        if (!empty($custom_img)) {
+            return esc_url($custom_img);
+        }
+        $themeDir = get_template_directory();
+        $candidates = [
+            'nf.png',
+            'Assets/images/nf.png',
+            'assets/images/nf.png',
+            'Assets/images/profile.png',
+            'assets/images/profile.png'
+        ];
+        foreach ($candidates as $cand) {
+            if (file_exists($themeDir . '/' . $cand)) {
+                return esc_url(get_template_directory_uri() . '/' . $cand);
+            }
+        }
         return esc_url(get_template_directory_uri() . '/nf.png');
     }
-    return esc_url(get_template_directory_uri() . '/Assets/images/nf.png');
+}
+
+if ( ! function_exists( 'portfolio_get_hero_portrait_image' ) ) {
+    function portfolio_get_hero_portrait_image() {
+        return portfolio_get_profile_image();
+    }
 }
 
 function edm_get_latest_version() {
@@ -355,6 +373,43 @@ function edm_get_extension_url($browser = 'chrome') {
         return esc_url(get_template_directory_uri() . '/downloads/edm-edge-extension-v1.0.0.zip');
     }
     return esc_url(get_template_directory_uri() . '/downloads/edm-chrome-extension-v1.0.0.zip');
+}
+
+function edm_get_portable_url() {
+    $custom_url = get_theme_mod('edm_portable_url', '');
+    if (!empty($custom_url)) {
+        return esc_url($custom_url);
+    }
+
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $zipFiles = glob($downloadsDir . '/*portable*.zip');
+        if (!empty($zipFiles)) {
+            usort($zipFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            return esc_url(get_template_directory_uri() . '/downloads/' . basename($zipFiles[0]));
+        }
+    }
+
+    return esc_url(get_template_directory_uri() . '/downloads/EDM-v2.1.0-Portable.zip');
+}
+
+function edm_get_portable_file_size() {
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $zipFiles = glob($downloadsDir . '/*portable*.zip');
+        if (!empty($zipFiles)) {
+            usort($zipFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            $size = filesize($zipFiles[0]);
+            if ($size > 0) {
+                return size_format($size, 1);
+            }
+        }
+    }
+    return '19.2 MB';
 }
 
 function edm_get_cv_url() {
@@ -460,38 +515,23 @@ function edm_get_cv_file_size() {
     return '1.2 MB';
 }
 
-function portfolio_get_hero_portrait_image() {
-    $themeDir = get_template_directory();
-    $candidates = [
-        'nf.png',
-        'Assets/images/nf.png',
-        'Assets/images/profile.png'
-    ];
-    foreach ($candidates as $cand) {
-        if (file_exists($themeDir . '/' . $cand)) {
-            return esc_url(get_template_directory_uri() . '/' . $cand);
+if ( ! function_exists( 'portfolio_get_about_chair_image' ) ) {
+    function portfolio_get_about_chair_image() {
+        $themeDir = get_template_directory();
+        $candidates = [
+            'Assets/images/nf011.png',
+            'assets/images/nf011.png',
+            'nf011.png',
+            'Assets/images/chair.png',
+            'assets/images/chair.png'
+        ];
+        foreach ($candidates as $cand) {
+            if (file_exists($themeDir . '/' . $cand)) {
+                return esc_url(get_template_directory_uri() . '/' . $cand);
+            }
         }
+        return esc_url(get_template_directory_uri() . '/Assets/images/nf011.png');
     }
-    return esc_url(get_template_directory_uri() . '/nf.png');
-}
-
-function portfolio_get_about_chair_image() {
-    $themeDir = get_template_directory();
-    $candidates = [
-        'Assets/images/nf011.png',
-        'nf011.png',
-        'Assets/images/chair.png'
-    ];
-    foreach ($candidates as $cand) {
-        if (file_exists($themeDir . '/' . $cand)) {
-            return esc_url(get_template_directory_uri() . '/' . $cand);
-        }
-    }
-    return esc_url(get_template_directory_uri() . '/Assets/images/nf011.png');
-}
-
-function portfolio_get_profile_image() {
-    return portfolio_get_hero_portrait_image();
 }
 
 function edm_get_contact_email() {
@@ -644,16 +684,20 @@ function portfolio_enqueue_assets() {
             null
         );
 
-        // Lucide Icons
+        // Lucide Icons & Font Awesome
         wp_enqueue_script( 'lucide-icons', 'https://unpkg.com/lucide@latest', [], null, true );
+        wp_enqueue_style( 'font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', [], '6.4.0' );
+        wp_enqueue_script( 'tailwind-cdn', 'https://cdn.tailwindcss.com', [], null, false );
 
-        // EDM Landing CSS
+        // EDM Landing CSS (Fail-safe paths)
         wp_enqueue_style( 'edm-global-style', $theme_uri . '/assets/css/global.css', [], $theme_version );
         wp_enqueue_style( 'edm-landing-style', $theme_uri . '/assets/css/landing.css', [ 'edm-global-style' ], $theme_version );
         wp_enqueue_style( 'edm-responsive-style', $theme_uri . '/assets/css/responsive.css', [ 'edm-landing-style' ], $theme_version );
 
         // EDM Landing App JS
         wp_enqueue_script( 'edm-landing-app', $theme_uri . '/assets/js/landing-app.js', [ 'lucide-icons' ], $theme_version, true );
+        wp_enqueue_script( 'edm-obhijog-js', $theme_uri . '/assets/js/obhijog.js', [], $theme_version, true );
+        wp_enqueue_script( 'edm-bot-js', $theme_uri . '/assets/js/edm-support-bot.js', [], $theme_version, true );
 
         wp_localize_script( 'edm-landing-app', 'edmSiteSettings', [
             'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
@@ -670,6 +714,10 @@ function portfolio_enqueue_assets() {
     // ROUTE C: MAIN PORTFOLIO (Home, About, Services, Single)
     // ─────────────────────────────────────────────────────────
     else {
+        // Font Awesome & Lucide
+        wp_enqueue_style( 'font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', [], '6.4.0' );
+        wp_enqueue_script( 'tailwind-cdn', 'https://cdn.tailwindcss.com', [], null, false );
+
         // Portfolio Master Style
         wp_enqueue_style( 'alamin-portfolio-main-style', get_stylesheet_uri(), [], $theme_version );
         wp_enqueue_style( 'portfolio-global', $theme_uri . '/global-colors.css', [], $theme_version );
@@ -921,3 +969,191 @@ function portfolio_render_xml_sitemap() {
     }
 }
 add_action( 'init', 'portfolio_render_xml_sitemap', 1 );
+
+// ─────────────────────────────────────────────────────────────
+// 12. OFFICIAL EDM & PORTFOLIO REST API ENDPOINTS & AJAX HANDLERS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Register custom REST API routes for Feedback, Stats, and Contact
+ */
+function edm_register_rest_api_routes() {
+    register_rest_route( 'edm-api/v1', '/feedback/submit', [
+        'methods'             => 'POST',
+        'callback'            => 'edm_rest_handle_feedback_submission',
+        'permission_callback' => '__return_true',
+    ] );
+
+    register_rest_route( 'edm-api/v1', '/stats', [
+        'methods'             => 'GET',
+        'callback'            => 'edm_rest_handle_stats_query',
+        'permission_callback' => '__return_true',
+    ] );
+
+    register_rest_route( 'edm-api/v1', '/contact/submit', [
+        'methods'             => 'POST',
+        'callback'            => 'edm_rest_handle_contact_submission',
+        'permission_callback' => '__return_true',
+    ] );
+}
+add_action( 'rest_api_init', 'edm_register_rest_api_routes' );
+
+/**
+ * REST Endpoint: Submit Complaint, Bug Report, or Feature Suggestion
+ */
+function edm_rest_handle_feedback_submission( WP_REST_Request $request ) {
+    $body = $request->get_json_params();
+    if ( empty( $body ) ) {
+        $body = $request->get_params();
+    }
+
+    $name     = isset( $body['name'] ) ? mb_substr( sanitize_text_field( $body['name'] ), 0, 100 ) : '';
+    $email    = isset( $body['email'] ) ? mb_substr( sanitize_email( $body['email'] ), 0, 100 ) : '';
+    $subject  = isset( $body['subject'] ) ? mb_substr( sanitize_text_field( $body['subject'] ), 0, 200 ) : '';
+    $category = isset( $body['category'] ) ? sanitize_key( $body['category'] ) : 'bug';
+    $version  = isset( $body['version'] ) ? mb_substr( sanitize_text_field( $body['version'] ), 0, 50 ) : 'v2.1.0';
+    $details  = isset( $body['details'] ) ? mb_substr( sanitize_textarea_field( $body['details'] ), 0, 5000 ) : '';
+
+    if ( empty( $name ) || empty( $email ) || ! is_email( $email ) || empty( $subject ) || empty( $details ) ) {
+        return new WP_REST_Response( [
+            'success' => false,
+            'message' => 'Please provide name, valid email, subject, and detailed message.',
+        ], 400 );
+    }
+
+    $ticket_id = 'EDM-TK-' . wp_rand( 100000, 999999 );
+    $timestamp = gmdate( 'Y-m-d H:i:s' );
+
+    $ticket_entry = [
+        'ticket_id'   => $ticket_id,
+        'name'        => $name,
+        'email'       => $email,
+        'subject'     => $subject,
+        'category'    => $category,
+        'version'     => $version,
+        'details'     => $details,
+        'created_at'  => $timestamp,
+        'status'      => 'OPEN',
+    ];
+
+    // Store in WordPress options list
+    $existing = get_option( 'edm_support_tickets', [] );
+    if ( ! is_array( $existing ) ) {
+        $existing = [];
+    }
+    array_unshift( $existing, $ticket_entry );
+    if ( count( $existing ) > 200 ) {
+        $existing = array_slice( $existing, 0, 200 );
+    }
+    update_option( 'edm_support_tickets', $existing, false );
+
+    // Optional email notification to developer
+    $admin_email = get_option( 'admin_email', 'nfxalamin@gmail.com' );
+    $mail_subject = "[EDM Support {$ticket_id}] New {$category} submission: {$subject}";
+    $mail_body = "Ticket ID: {$ticket_id}\nName: {$name}\nEmail: {$email}\nCategory: {$category}\nVersion: {$version}\n\nDetails:\n{$details}\n\nSubmitted at: {$timestamp}";
+    @wp_mail( $admin_email, $mail_subject, $mail_body );
+
+    return new WP_REST_Response( [
+        'success'   => true,
+        'ticketId'  => $ticket_id,
+        'status'    => 'OPEN',
+        'message'   => 'Your message has been submitted successfully to EDM Technical Support.',
+        'timestamp' => $timestamp,
+    ], 200 );
+}
+
+/**
+ * REST Endpoint: Real/Static Download & Active User Statistics
+ */
+function edm_rest_handle_stats_query( WP_REST_Request $request ) {
+    return new WP_REST_Response( [
+        'success'        => true,
+        'downloads'      => '10,000+',
+        'active_users'   => '9,651+',
+        'uptime_pct'     => '99.98%',
+        'latest_version' => 'v2.1.0',
+        'sockets'        => '32 Parallel Turbo Sockets',
+        'rating'         => '4.98',
+        'total_reviews'  => 5,
+    ], 200 );
+}
+
+/**
+ * REST Endpoint: Contact Form Submission
+ */
+function edm_rest_handle_contact_submission( WP_REST_Request $request ) {
+    $body = $request->get_json_params();
+    if ( empty( $body ) ) {
+        $body = $request->get_params();
+    }
+
+    $name         = isset( $body['name'] ) ? mb_substr( sanitize_text_field( $body['name'] ), 0, 100 ) : '';
+    $email        = isset( $body['email'] ) ? mb_substr( sanitize_email( $body['email'] ), 0, 100 ) : '';
+    $phone        = isset( $body['phone'] ) ? mb_substr( sanitize_text_field( $body['phone'] ), 0, 50 ) : '';
+    $service_type = isset( $body['service_type'] ) ? mb_substr( sanitize_text_field( $body['service_type'] ), 0, 100 ) : 'General Inquiry';
+    $budget       = isset( $body['budget'] ) ? mb_substr( sanitize_text_field( $body['budget'] ), 0, 50 ) : 'Flexible';
+    $message      = isset( $body['message'] ) ? mb_substr( sanitize_textarea_field( $body['message'] ), 0, 5000 ) : '';
+
+    if ( empty( $name ) || empty( $email ) || ! is_email( $email ) || empty( $message ) ) {
+        return new WP_REST_Response( [
+            'success' => false,
+            'message' => 'Please provide your name, valid email address, and project details.',
+        ], 400 );
+    }
+
+    $entry = [
+        'name'         => $name,
+        'email'        => $email,
+        'phone'        => $phone,
+        'service_type' => $service_type,
+        'budget'       => $budget,
+        'message'      => $message,
+        'submitted_at' => gmdate( 'Y-m-d H:i:s' ),
+    ];
+
+    $inquiries = get_option( 'portfolio_contact_inquiries', [] );
+    if ( ! is_array( $inquiries ) ) {
+        $inquiries = [];
+    }
+    array_unshift( $inquiries, $entry );
+    if ( count( $inquiries ) > 200 ) {
+        $inquiries = array_slice( $inquiries, 0, 200 );
+    }
+    update_option( 'portfolio_contact_inquiries', $inquiries, false );
+
+    $admin_email = get_option( 'admin_email', 'nfxalamin@gmail.com' );
+    $mail_subject = "[Portfolio Inquiry] New Contact from {$name} ({$service_type})";
+    $mail_body = "Name: {$name}\nEmail: {$email}\nPhone: {$phone}\nService: {$service_type}\nBudget: {$budget}\n\nMessage:\n{$message}";
+    @wp_mail( $admin_email, $mail_subject, $mail_body );
+
+    return new WP_REST_Response( [
+        'success' => true,
+        'message' => 'Thank you! Your message has been sent successfully. Alamin will get back to you shortly.',
+    ], 200 );
+}
+
+/**
+ * AJAX Fallback Handlers
+ */
+function edm_ajax_submit_feedback() {
+    $raw = isset( $_POST['feedback_data'] ) ? wp_unslash( $_POST['feedback_data'] ) : '';
+    $data = json_decode( $raw, true );
+    if ( ! $data ) {
+        $data = $_POST;
+    }
+    $req = new WP_REST_Request();
+    $req->set_body_params( $data );
+    $resp = edm_rest_handle_feedback_submission( $req );
+    wp_send_json( $resp->get_data(), $resp->get_status() );
+}
+add_action( 'wp_ajax_nfdash_submit_feedback', 'edm_ajax_submit_feedback' );
+add_action( 'wp_ajax_nopriv_nfdash_submit_feedback', 'edm_ajax_submit_feedback' );
+
+function edm_ajax_submit_contact() {
+    $req = new WP_REST_Request();
+    $req->set_body_params( $_POST );
+    $resp = edm_rest_handle_contact_submission( $req );
+    wp_send_json( $resp->get_data(), $resp->get_status() );
+}
+add_action( 'wp_ajax_portfolio_submit_contact', 'edm_ajax_submit_contact' );
+add_action( 'wp_ajax_nopriv_portfolio_submit_contact', 'edm_ajax_submit_contact' );

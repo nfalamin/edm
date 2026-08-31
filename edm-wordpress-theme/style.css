@@ -1,11 +1,57 @@
 /*
-Theme Name: EDM — Exclusive Download Manager
-Theme URI: https://edm-app.com
-Author: EDM Technologies
-Author URI: https://edm-app.com
-Description: Premium dark-mode WordPress theme for Exclusive Download Manager with glassmorphism, live animations, and modern SaaS design.
+Theme Name: Alamin Portfolio & EDM Ecosystem
+Theme URI: https://nfalaminhossain.xyz/
+Author: N F Alamin Hossain
+Author URI: https://nfalaminhossain.xyz/
+Description: Ultra-Premium, Production-Ready WordPress Theme & SaaS Ecosystem combining digital marketing portfolio architecture with high-performance EDM (Exclusive Download Manager) product landing hub and private telemetry control plane dashboard.
 Version: 2.1.0
-License: Proprietary
-Text Domain: edm-theme
-Tags: dark-mode, saas, glassmorphism, download-manager, modern, premium
+Requires at least: 6.0
+Tested up to: 6.7
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: alamin-portfolio
+Tags: portfolio, software, saas, dashboard, custom-background, custom-colors, custom-header, custom-menu, featured-images, full-width-template, theme-options, translation-ready, dark-mode, responsive
 */
+
+/* ══════════════════════════════════════════════════════════════
+   PORTFOLIO MASTER BASELINE & LUXURY DEEP GRADIENTS
+   ══════════════════════════════════════════════════════════════ */
+@import url('global-colors.css');
+@import url('dark-light-mode.css');
+@import url('hero-image.css');
+@import url('components.css');
+@import url('responsive.css');
+
+html {
+    scroll-behavior: smooth;
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #050811;
+    color: #F8FAFC;
+    overflow-x: hidden;
+}
+
+/* Smooth Soft Hover Effects */
+a, button {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-premium {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-premium:hover {
+    transform: translateY(-1.5px);
+}

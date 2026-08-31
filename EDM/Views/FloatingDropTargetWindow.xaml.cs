@@ -11,11 +11,18 @@ namespace EDM.Views
     public partial class FloatingDropTargetWindow : Window
     {
         public Action<string, string>? OnUrlsDropped { get; set; }
+        public event Action? WidgetClosed;
+        private EDM.ViewModels.DownloadManagerViewModel? _viewModel;
 
         public FloatingDropTargetWindow()
         {
             InitializeComponent();
             Loaded += (s, e) => SnapToTopRightCorner();
+        }
+
+        public void SetViewModel(EDM.ViewModels.DownloadManagerViewModel viewModel)
+        {
+            _viewModel = viewModel;
         }
 
         private void SnapToTopRightCorner()
@@ -36,6 +43,7 @@ namespace EDM.Views
         private void OnCloseWidget(object sender, RoutedEventArgs e)
         {
             Hide();
+            WidgetClosed?.Invoke();
         }
 
         private void OnDragEnter(object sender, System.Windows.DragEventArgs e)
@@ -72,6 +80,51 @@ namespace EDM.Views
                 foreach (var url in urls)
                 {
                     OnUrlsDropped?.Invoke(url, queueName);
+                }
+
+                if (_viewModel != null && urls.Count > 0)
+                {
+                    foreach (var url in urls)
+                    {
+                        try
+                        {
+                            string fileName = string.Empty;
+                            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                            {
+                                fileName = System.IO.Path.GetFileName(uri.AbsolutePath);
+                            }
+                            if (string.IsNullOrWhiteSpace(fileName))
+                            {
+                                fileName = "download_" + Guid.NewGuid().ToString("N")[..8];
+                            }
+
+                            var cat = DownloadPathCategoryService.DetermineFileCategory(fileName);
+                            string catStr = cat.ToString();
+                            string baseDir = DownloadPathCategoryService.GetDefaultBasePath();
+                            string saveDir = DownloadPathCategoryService.BuildCategorizedPath(baseDir, fileName);
+                            if (!System.IO.Directory.Exists(saveDir))
+                            {
+                                System.IO.Directory.CreateDirectory(saveDir);
+                            }
+                            string savePath = System.IO.Path.Combine(saveDir, fileName);
+
+                            var item = new EDM.Models.DownloadItem
+                            {
+                                FileName = fileName,
+                                Url = url,
+                                SavePath = savePath,
+                                Category = catStr,
+                                Status = "Downloading"
+                            };
+
+                            _viewModel.AllDownloads.Insert(0, item);
+                            _ = _viewModel.StartDownloadProcessAsync(item);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.LogException("[FloatingDropTarget] Failed to start download", ex);
+                        }
+                    }
                 }
 
                 if (urls.Count > 0)

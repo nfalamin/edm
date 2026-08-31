@@ -42,7 +42,7 @@ $version = function_exists('edm_get_latest_version') ? edm_get_latest_version() 
         </div>
 
         <!-- 6 In-Depth Technical Pillars Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; margin-bottom: 64px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px; margin-bottom: 64px;" class="features-grid-layout">
             
             <!-- Pillar 1 -->
             <div class="glass-panel" style="padding: 32px 28px; border-radius: 20px; border: 1px solid var(--edm-border);">

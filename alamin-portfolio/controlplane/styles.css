@@ -72,7 +72,7 @@
 /* ══════════════════════════════════════════════════════════════
    LIGHT THEME TOKENS
    ══════════════════════════════════════════════════════════════ */
-body.light-theme {
+:root[data-theme="light"], [data-theme="light"], body.light-theme {
     --color-bg-base: #F4F6F9;
     --color-bg-sidebar: #FFFFFF;
     --color-bg-header: rgba(255, 255, 255, 0.94);
@@ -1572,4 +1572,107 @@ a:focus-visible {
 .password-eye-btn:hover {
     color: var(--color-text-main);
 }
+
+/* ── BUTTON INTERACTIVE STATES (HOVER, ACTIVE, DISABLED) ── */
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn:disabled,
+.btn[disabled],
+.btn.disabled,
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    filter: grayscale(20%);
+}
+
+/* ── LIGHT THEME HIGH CONTRAST BADGES (WCAG AA COMPLIANT) ── */
+[data-theme="light"] .badge-recommended,
+[data-theme="light"] .badge-success {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="light"] .badge-optional,
+[data-theme="light"] .badge-warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #B45309;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="light"] .badge-required,
+[data-theme="light"] .badge-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #B91C1C;
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+[data-theme="light"] .badge-latest,
+[data-theme="light"] .badge-primary {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338CA;
+    border-color: rgba(99, 102, 241, 0.35);
+}
+
+/* ── SKELETON SHIMMER, EMPTY & ERROR UX STATES ── */
+@keyframes edmShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.04) 75%);
+    background-size: 200% 100%;
+    animation: edmShimmer 1.6s infinite ease-in-out;
+    border-radius: var(--radius-sm, 6px);
+    display: inline-block;
+}
+
+[data-theme="light"] .skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.09) 50%, rgba(0, 0, 0, 0.04) 75%);
+    background-size: 200% 100%;
+}
+
+.empty-state-card,
+.error-state-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 16px;
+    gap: 10px;
+    border-radius: var(--radius-md, 8px);
+}
+
+.empty-state-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+}
+
+.error-state-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-danger, #EF4444);
+}
+
 

@@ -25,7 +25,7 @@ $site_name = get_bloginfo('name');
     <!-- Primary SEO Meta Information -->
     <title>Exclusive Download Manager (EDM) - 32-Socket Turbo Accelerator for Windows 10 & 11</title>
     <meta name="description" content="Exclusive Download Manager (EDM) is the world's premier Windows download accelerator featuring 32 concurrent sockets, 4K/8K stream sniffing, Manifest V3 browser integration, and SQLite crash-proof resume.">
-    <meta name="keywords" content="exclusive download manager, edm setup, 32 socket download accelerator, idm alternative, 4k video ripper, manifest v3 chrome extension, download manager windows 11, fastest download software">
+    <meta name="keywords" content="exclusive download manager, edm setup, 32 socket download accelerator, high-speed download manager, 4k video ripper, manifest v3 chrome extension, download manager windows 11, fastest download software">
     <meta name="author" content="Alamin Hossain">
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
@@ -53,13 +53,82 @@ $site_name = get_bloginfo('name');
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Lucide Icons -->
+    <!-- Lucide Icons & Font Awesome -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/assets/css/global.css'); ?>">
-    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/assets/css/landing.css'); ?>">
-    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/assets/css/responsive.css'); ?>">
+    <!-- Tailwind CSS CDN & Custom Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        navy: {
+                            950: '#020408',
+                            900: '#040d1a',
+                            800: '#08142d',
+                            700: '#111e35',
+                            600: '#1e293b',
+                        },
+                        gold: {
+                            DEFAULT: '#f59e0b',
+                            light: '#fbbf24',
+                            dark: '#d97706'
+                        },
+                        cyan: {
+                            DEFAULT: '#06b6d4',
+                            light: '#22d3ee',
+                            dark: '#0891b2'
+                        },
+                        edm: {
+                            primary: '#06F0FB',
+                            hover: '#25D4DC',
+                            glow: 'rgba(6, 240, 251, 0.45)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Master WordPress Stylesheet & Local Stylesheets -->
+    <link rel="stylesheet" href="<?php echo esc_url(get_stylesheet_uri()); ?>?ver=2.1.0">
+    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/Assets/css/global.css'); ?>?ver=2.1.0">
+    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/Assets/css/landing.css'); ?>?ver=2.1.0">
+    <link rel="stylesheet" href="<?php echo esc_url(get_template_directory_uri() . '/Assets/css/responsive.css'); ?>?ver=2.1.0">
+
+    <?php
+    $landing_css_file = get_template_directory() . '/Assets/css/landing.css';
+    if (!file_exists($landing_css_file)) {
+        $landing_css_file = get_template_directory() . '/assets/css/landing.css';
+    }
+    if (file_exists($landing_css_file)) {
+        echo '<style id="edm-embedded-critical-landing-css">' . file_get_contents($landing_css_file) . '</style>';
+    }
+
+    $global_css_file = get_template_directory() . '/Assets/css/global.css';
+    if (!file_exists($global_css_file)) {
+        $global_css_file = get_template_directory() . '/assets/css/global.css';
+    }
+    if (file_exists($global_css_file)) {
+        echo '<style id="edm-embedded-critical-global-css">' . file_get_contents($global_css_file) . '</style>';
+    }
+
+    $resp_css_file = get_template_directory() . '/Assets/css/responsive.css';
+    if (!file_exists($resp_css_file)) {
+        $resp_css_file = get_template_directory() . '/assets/css/responsive.css';
+    }
+    if (file_exists($resp_css_file)) {
+        echo '<style id="edm-embedded-critical-responsive-css">' . file_get_contents($resp_css_file) . '</style>';
+    }
+    ?>
 
     <!-- JSON-LD Structured Data: SoftwareApplication Schema -->
     <script type="application/ld+json">
@@ -133,7 +202,11 @@ $site_name = get_bloginfo('name');
 <body <?php body_class('edm-site-body'); ?>>
 <?php wp_body_open(); ?>
 
-<div id="page" class="site-wrapper">
+<div id="page" class="site-wrapper bg-mesh-net">
+    <!-- Ambient Side Glowing Blobs -->
+    <div class="ambient-side-glow-left"></div>
+    <div class="ambient-side-glow-right"></div>
+
     <a class="skip-link screen-reader-text" href="#primary">
         <?php esc_html_e('Skip to content', 'portfolio'); ?>
     </a>

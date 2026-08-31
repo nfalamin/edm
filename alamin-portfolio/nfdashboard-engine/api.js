@@ -170,100 +170,262 @@ class EdmApiService {
         return { status: "success", message: "Operation completed." };
     }
 
-    async getDashboardMetrics() {
-        return this._request("/admin/dashboard/summary");
+    // ══════════════════════════════════════════════════════════════
+    // DASHBOARD & ANALYTICS API METHODS
+    // ══════════════════════════════════════════════════════════════
+    async getDashboardMetrics(filters = {}) {
+        const qs = new URLSearchParams(filters).toString();
+        return this._request('/admin/dashboard/summary' + (qs ? '?' + qs : ''));
     }
 
-    async getLiveMetrics() {
-        return this._request("/admin/metrics/live");
+    async getAnalyticsData(range = '30d') {
+        return this._request(`/admin/analytics/website?range=${range}`);
     }
 
-    async getUsers(filters = {}) {
-        let url = `/admin/users?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-        return this._request(url);
+    async getUserGrowthAnalytics(period = 'monthly', range = '30d') {
+        return this._request(`/admin/analytics/user-growth?period=${period}&range=${range}`);
     }
 
-    async getDevices(filters = {}) {
-        let url = `/admin/devices?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
-        return this._request(url);
+    async getDownloadAnalytics(range = '7d') {
+        return this._request(`/admin/analytics/downloads?range=${range}`);
+    }
+
+    async getTrialConversion(range = '30d') {
+        return this._request(`/admin/analytics/trial-conversion?range=${range}`);
+    }
+
+    async getTopCountries(range = '30d') {
+        return this._request(`/admin/analytics/countries?range=${range}`);
+    }
+
+    async getSystemHealth() {
+        return this._request('/health/diagnostics');
+    }
+
+    async getRecentActivities(limit = 10) {
+        return this._request(`/admin/audit-logs?limit=${limit}`);
+    }
+
+    async getUsers(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._request('/admin/users' + (qs ? '?' + qs : ''));
+    }
+
+    async getDevices(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._request('/admin/devices' + (qs ? '?' + qs : ''));
     }
 
     async getReleases() {
-        return this._request("/admin/releases");
+        return this._request('/admin/releases');
     }
 
-    async getLicenses() {
-        return this._request("/admin/licenses");
+    async getLicenses(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._request('/admin/licenses' + (qs ? '?' + qs : ''));
     }
 
-    async getAuditLogs(filters = {}) {
-        let url = `/admin/audit-logs?page=${filters.page || 1}&pageSize=${filters.pageSize || 50}`;
-        if (filters.action) url += `&action=${encodeURIComponent(filters.action)}`;
-        return this._request(url);
+    async getSubscriptions(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._request('/admin/subscriptions' + (qs ? '?' + qs : ''));
     }
 
-    async getSubscriptions(page = 1, pageSize = 50) {
-        return this._request(`/admin/subscriptions?page=${page}&pageSize=${pageSize}`);
-    }
-
-    async getGlobalSubConfig() {
-        return this._request("/admin/subscriptions/config");
-    }
-
-    async updateGlobalSubConfig(configPayload) {
-        return this._request("/admin/subscriptions/config", "POST", configPayload);
-    }
-
-    async setGlobalSubSwitch(isEnabled, reason = "") {
-        return this._request("/admin/subscriptions/global-switch", "POST", { isEnabled, reason });
-    }
-
-    async setAsiaSubSwitch(isEnabled, reason = "") {
-        return this._request("/admin/subscriptions/asia-switch", "POST", { isEnabled, reason });
-    }
-
-    async getRegionPolicies() {
-        return this._request("/admin/subscriptions/regions");
-    }
-
-    async saveRegionPolicy(regionPayload) {
-        return this._request("/admin/subscriptions/regions", "POST", regionPayload);
-    }
-
-    async extendTrial(installationId, additionalDays = 10, reason = "Admin trial extension") {
-        return this._request(`/admin/subscriptions/${encodeURIComponent(installationId)}/extend-trial`, "POST", { additionalDays, reason });
-    }
-
-    async extendGrace(installationId, additionalDays = 5, reason = "Admin grace extension") {
-        return this._request(`/admin/subscriptions/${encodeURIComponent(installationId)}/extend-grace`, "POST", { additionalDays, reason });
-    }
-
-    async blockDevice(installationId, reason = "Manual administrator block") {
-        return this._request(`/admin/devices/${encodeURIComponent(installationId)}/block`, "POST", { reason });
-    }
-
-    async unblockDevice(installationId) {
-        return this._request(`/admin/devices/${encodeURIComponent(installationId)}/unblock`, "POST");
-    }
-
-    async blockUser(userId, reason = "Manual administrator block") {
-        return this._request(`/admin/users/${encodeURIComponent(userId)}/block`, "POST", { reason });
-    }
-
-    async unblockUser(userId) {
-        return this._request(`/admin/users/${encodeURIComponent(userId)}/unblock`, "POST");
+    async getNotifications() {
+        return this._request('/admin/notifications');
     }
 
     async getPricingRules() {
-        return this._request("/admin/pricing/rules");
+        return this._request('/admin/pricing/rules');
     }
 
-    async savePricingRule(rulePayload) {
-        return this._request("/admin/pricing/rules", "POST", rulePayload);
+    // User CRUD
+    async updateUser(id, userData) {
+        return this._request(`/admin/users/${id}`, 'PUT', userData);
+    }
+
+    async deleteUser(id) {
+        return this._request(`/admin/users/${id}`, 'DELETE');
+    }
+
+    async toggleUserStatus(id) {
+        return this._request(`/admin/users/${id}/toggle-status`, 'POST');
+    }
+
+    // Devices & Sessions
+    async revokeDevice(deviceId, reason = "Revoked by Administrator") {
+        return this._request(`/admin/devices/${deviceId}/block`, 'POST', { reason });
+    }
+
+    async revokeSession(sessionId) {
+        return this._request(`/admin/devices/sessions/${sessionId}`, 'DELETE');
+    }
+
+    // Licenses CRUD
+    async createLicense(licenseData) {
+        return this._request('/admin/licenses', 'POST', licenseData);
+    }
+
+    async revokeLicense(id) {
+        return this._request(`/admin/licenses/${id}/revoke`, 'POST');
+    }
+
+    async extendLicense(id, additionalDays = 30) {
+        return this._request(`/admin/licenses/${id}/extend`, 'POST', { additionalDays, reason: "Admin extension" });
+    }
+
+    // Plans CRUD
+    async getPlans() {
+        return this._request('/admin/plans');
+    }
+
+    async createPlan(planData) {
+        return this._request('/admin/plans', 'POST', planData);
+    }
+
+    async updatePlan(id, planData) {
+        return this._request(`/admin/plans/${id}`, 'PUT', planData);
+    }
+
+    async deletePlan(id) {
+        return this._request(`/admin/plans/${id}`, 'DELETE');
+    }
+
+    // Transactions & Ledger
+    async getTransactions(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._request('/admin/transactions' + (qs ? '?' + qs : ''));
+    }
+
+    async getTransactionReceipt(id) {
+        return this._request(`/admin/transactions/${id}`);
+    }
+
+    // Coupons
+    async getCoupons() {
+        return this._request('/admin/coupons');
+    }
+
+    async createCoupon(couponData) {
+        return this._request('/admin/coupons', 'POST', couponData);
+    }
+
+    async deleteCoupon(id) {
+        return this._request(`/admin/coupons/${id}`, 'DELETE');
+    }
+
+    // Country Pricing
+    async savePricingRule(ruleData) {
+        return this._request('/admin/pricing/rules', 'POST', ruleData);
+    }
+
+    async deletePricingRule(id) {
+        return this._request(`/admin/pricing/rules/${id}`, 'DELETE');
+    }
+
+    // Email Campaigns
+    async getEmailCampaigns() {
+        return this._request('/admin/email-campaigns');
+    }
+
+    async createEmailCampaign(campaignData) {
+        return this._request('/admin/email-campaigns', 'POST', campaignData);
+    }
+
+    // Deep-Dive Analytics
+    async getRevenueAnalytics(range = '30d') {
+        return this._request(`/admin/analytics/revenue?range=${range}`);
+    }
+
+    async getFeatureAnalytics(range = '30d') {
+        return this._request(`/admin/analytics/features?range=${range}`);
+    }
+
+    // Promotions
+    async getPromotions() {
+        return this._request('/admin/promotions');
+    }
+
+    async createPromotion(promoData) {
+        return this._request('/admin/promotions', 'POST', promoData);
+    }
+
+    async deletePromotion(id) {
+        return this._request(`/admin/promotions/${id}`, 'DELETE');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GOOGLE DATABASE (FIREBASE / FIRESTORE) API METHODS
+    // ══════════════════════════════════════════════════════════════
+    async getGoogleDatabaseConfig() {
+        return this._request('/admin/database/google-config');
+    }
+
+    async saveGoogleDatabaseConfig(config) {
+        return this._request('/admin/database/google-config', 'POST', config);
+    }
+
+    async testGoogleDatabaseConnection(projectId = 'edm-download-manager-live') {
+        return this._request('/admin/database/test-connection', 'POST', { projectId });
+    }
+
+    async syncGoogleDatabase() {
+        return this._request('/admin/database/sync', 'POST', {});
+    }
+
+    async getGoogleDatabaseCollections() {
+        return this._request('/admin/database/collections');
+    }
+
+    async validateCoupon(couponCode, planCode, userId = null, installationId = null, userEmail = null) {
+        return this.fetchJson('/pricing/validate-coupon', {
+            method: 'POST',
+            body: JSON.stringify({ couponCode, planCode, userId, installationId, userEmail })
+        });
     }
 }
 
-// Global live API instance
-window.edmApi = new EdmApiService(EDM_API_CONFIG);
+// ES Module helper exports
+export async function apiFetch(endpoint, options = {}) {
+    const token = localStorage.getItem('edm_token') || sessionStorage.getItem('edm_token');
+    const headers = {
+        'Accept': 'application/json',
+        ...(options.headers || {})
+    };
+
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(endpoint, {
+        ...options,
+        headers
+    });
+
+    if (!res.ok) {
+        let errMessage = `HTTP ${res.status}: ${res.statusText}`;
+        try {
+            const errData = await res.json();
+            if (errData && errData.message) errMessage = errData.message;
+            else if (errData && errData.error) errMessage = errData.error;
+        } catch { }
+        throw new Error(errMessage);
+    }
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        return await res.json();
+    }
+    return await res.text();
+}
+
+export function showToast(message, type = 'info') {
+    if (window.edmApp && typeof window.edmApp.showToast === 'function') {
+        window.edmApp.showToast(message, type);
+    } else {
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+}

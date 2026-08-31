@@ -95,6 +95,7 @@ class EdmWebsiteEngine {
             this.setupScrollSpy();
             this.setupStorageListener();
             this.setupModalA11y();
+            this.setupDownloadLinks();
             this.trackPageView();
 
             if (window.lucide && typeof window.lucide.createIcons === "function") {
@@ -107,6 +108,32 @@ class EdmWebsiteEngine {
         }
     }
 
+    setupDownloadLinks() {
+        document.addEventListener("click", (e) => {
+            const target = e.target.closest("a[download], .btn[download]");
+            if (target) {
+                if (navigator && navigator.onLine === false) {
+                    e.preventDefault();
+                    this.showToast("Network connection appears offline. Please check your internet connection.", "error");
+                    return;
+                }
+
+                const href = target.getAttribute("href") || "";
+                let productType = "WindowsDesktop";
+                if (href.includes("chrome")) productType = "ChromeExtension";
+                else if (href.includes("edge")) productType = "EdgeExtension";
+                else if (href.includes("firefox")) productType = "FirefoxExtension";
+
+                const ver = this.latestRelease ? this.latestRelease.version : "v2.1.0";
+                const file = href.split("/").pop() || "EDM-Setup-v2.1.0.exe";
+
+                this.recordDownloadEvent(ver, file, "SUCCESS");
+                this.openModal("modal-download");
+                this.showToast(`⚡ Starting ${file} download (${this.latestRelease?.size || '19.8 MB'})...`, "success");
+            }
+        });
+    }
+
     // ── 1. SINGLE SOURCE OF TRUTH & REVALIDATION ──
     getDefaultReleases() {
         return [
@@ -117,7 +144,7 @@ class EdmWebsiteEngine {
                 type: "RECOMMENDED",
                 status: "Active / Production",
                 file: "EDM-Setup-v2.1.0.exe",
-                size: "2.4 MB",
+                size: "19.8 MB",
                 sha256: "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023",
                 downloads: 18450,
                 notes: "• Turbocharged multi-threaded download engine with 32 connections.\n• Seamless Chrome / Edge Manifest V3 interceptor integration.\n• Smart dynamic bandwidth throttle & automated video stream parser."
@@ -129,8 +156,8 @@ class EdmWebsiteEngine {
                 type: "RECOMMENDED",
                 status: "Active / Production",
                 file: "EDM-Setup-v2.0.0.exe",
-                size: "2.3 MB",
-                sha256: "872983acbe4f1029c782194bbda4598129031023912aedbc910248102394bb21",
+                size: "19.8 MB",
+                sha256: "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023",
                 downloads: 42100,
                 notes: "• Adaptive Connection Controller measuring RTT and error rates.\n• Durable JSON metadata manager with atomic file flushes.\n• Windows Defender CLI sandbox post-download scanning."
             },
@@ -141,111 +168,209 @@ class EdmWebsiteEngine {
                 type: "OPTIONAL",
                 status: "Active / Production",
                 file: "EDM-Setup-v1.0.0.exe",
-                size: "2.1 MB",
-                sha256: "45a8921cbda298371923bbca9120391209381029381203918230918203912803",
+                size: "4.6 MB",
+                sha256: "27f4160e858631fe7c16a2540d7d1764852047014adeedcae890a82747120a1c",
                 downloads: 38900,
                 notes: "• Core .NET 10.0 WPF desktop UI with Dark theme system.\n• Named pipe IPC listener and HTTP multi-part socket engine."
             }
         ];
     }
 
-    syncProductState() {
+    async syncProductState() {
         try {
-            let releases = [];
-            const raw = this.safeStorageGet("edm_shared_product_releases");
-            if (raw) {
-                try {
-                    releases = JSON.parse(raw);
-                } catch (e) {}
+            // 1. Fetch live latest release from WordPress REST API endpoint
+            let latest = null;
+            try {
+                const restUrl = (window.edmSiteSettings && window.edmSiteSettings.homeUrl) 
+                    ? `${window.edmSiteSettings.homeUrl.replace(/\/$/, '')}/wp-json/edm-api/v1/telemetry` 
+                    : '/wp-json/edm-api/v1/telemetry';
+                
+                const res = await fetch(restUrl, { cache: "no-cache" });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && (data.current_version || data.version)) {
+                        const ver = data.current_version || data.version;
+                        const installer = data.files?.installer || data.artifacts?.installer || {};
+                        latest = {
+                            version: ver.startsWith("v") ? ver : `v${ver}`,
+                            name: data.product || "Production Release",
+                            date: data.release_date ? new Date(data.release_date).toLocaleDateString() : "Active",
+                            type: "RECOMMENDED",
+                            status: "Active / Production",
+                            file: installer.name || installer.filename || `EDM-Setup-v${ver}.exe`,
+                            size: installer.size_human || installer.sizeFormatted || "19.8 MB",
+                            sha256: installer.sha256 || data.sha256_hash || "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023",
+                            downloadUrl: data.download_url || (window.edmSiteSettings?.downloadUrl) || `/downloads/${installer.filename || `EDM-Setup-v${ver}.exe`}`,
+                            notes: Array.isArray(data.changelog) ? data.changelog.map(n => `• ${n}`).join("\n") : "• High-speed multi-socket engine.\n• Browser extension auto-interception."
+                        };
+                        this.safeStorageSet("edm_live_latest_release", latest);
+                    }
+                }
+            } catch (netErr) {
+                console.warn("[EDM Website] REST API sync notice:", netErr);
             }
 
-            if (!releases || !Array.isArray(releases) || releases.length === 0) {
-                releases = this.getDefaultReleases();
-                this.safeStorageSet("edm_shared_product_releases", releases);
+            // Fallback to cached or default
+            if (!latest) {
+                latest = this.safeStorageGet("edm_live_latest_release") || this.getDefaultReleases()[0];
+                if (typeof latest === "string") {
+                    try { latest = JSON.parse(latest); } catch(e) { latest = this.getDefaultReleases()[0]; }
+                }
             }
-
-            // Filter out Draft releases: only Active / Production / Published are public
-            const publishedReleases = releases.filter(r => 
-                r && r.status && 
-                (r.status.includes("Active") || r.status.includes("Production") || r.status.includes("Published")) &&
-                !r.status.includes("Draft")
-            );
-
-            const latest = (publishedReleases.length > 0 ? publishedReleases[0] : null) || this.getDefaultReleases()[0];
             this.latestRelease = latest;
 
-            // 1. Hydrate Notice Bar & Hero Badges
+            // 2. Hydrate Notice Bar, Hero Badges & Active Promotions
+            const cmsRaw = this.safeStorageGet("edm_landing_content");
+            const cms = cmsRaw ? (typeof cmsRaw === "string" ? JSON.parse(cmsRaw) : cmsRaw) : null;
+
+            // Check Active Promotional Coupons
+            let activePromo = null;
+            try {
+                const promoRaw = this.safeStorageGet("edm_promotions");
+                const promoList = promoRaw ? (typeof promoRaw === "string" ? JSON.parse(promoRaw) : promoRaw) : [];
+                if (Array.isArray(promoList)) {
+                    const now = new Date();
+                    activePromo = promoList.find(p => p.status === "Active" && (!p.expires || new Date(p.expires) >= now));
+                }
+            } catch (e) {}
+
             const noticeText = document.getElementById("top-notice-text");
             if (noticeText) {
-                noticeText.textContent = `⚡ EDM ${latest.version} Production Turbo Engine with 32-Socket Acceleration is Live!`;
+                if (activePromo) {
+                    noticeText.innerHTML = `🎉 <strong>Limited Offer:</strong> Use coupon code <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px;">${this.sanitizeHtml(activePromo.code)}</span> to get <strong>${this.sanitizeHtml(activePromo.discount)}</strong>!`;
+                } else {
+                    noticeText.textContent = `⚡ EDM ${latest.version} Production Turbo Engine with 32-Socket Acceleration is Live!`;
+                }
             }
 
             const heroPill = document.getElementById("hero-pill-text");
             if (heroPill) {
-                heroPill.textContent = `Exclusive Download Manager • Production Build ${latest.version}`;
+                heroPill.textContent = (cms && cms.pill) ? cms.pill : `Exclusive Download Manager • Production Build ${latest.version}`;
             }
 
-            // 2. Hydrate Download Page
+            // Hydrate Dynamic Hero Content if customized
+            if (cms) {
+                const heroTitleEl = document.querySelector(".hero-title");
+                if (heroTitleEl && cms.title) {
+                    heroTitleEl.innerHTML = `${this.sanitizeHtml(cms.title)}<br><span class="gradient-text">Engineered for Unmatched Speed &amp; Control</span>`;
+                }
+
+                const heroSubEl = document.querySelector(".hero-subtitle");
+                if (heroSubEl && cms.subtitle) {
+                    heroSubEl.textContent = cms.subtitle;
+                }
+
+                const snifferInput = document.getElementById("url-sniffer-input");
+                if (snifferInput && cms.snifferPlaceholder) {
+                    snifferInput.placeholder = cms.snifferPlaceholder;
+                }
+            }
+
+            // 3. Hydrate Download Page
             const dlBadge = document.getElementById("download-release-badge");
             if (dlBadge) dlBadge.textContent = latest.type === "RECOMMENDED" ? "STABLE RELEASE" : latest.type;
 
             const dlMeta = document.getElementById("download-release-meta");
-            if (dlMeta) dlMeta.textContent = `Build ${latest.version} • ${latest.size || '2.4 MB'}`;
+            if (dlMeta) dlMeta.textContent = `Build ${latest.version} • ${latest.size || '19.8 MB'}`;
 
             const dlTitle = document.getElementById("download-latest-title");
             if (dlTitle) dlTitle.textContent = `EDM for Windows (64-bit & ARM64) [${latest.version}]`;
 
             const dlBtnText = document.getElementById("download-primary-btn-text");
-            if (dlBtnText) dlBtnText.textContent = `Download EDM Setup (${latest.size || '2.4 MB'})`;
+            if (dlBtnText) dlBtnText.textContent = (cms && cms.ctaPrimary) ? cms.ctaPrimary : `Download EDM Setup (${latest.size || '19.8 MB'})`;
 
             const dlSha = document.getElementById("download-sha256-code");
-            if (dlSha) dlSha.textContent = latest.sha256 || "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023";
+            if (dlSha) dlSha.textContent = latest.sha256;
 
-            // 3. Hydrate Changelog Page Feed Dynamically
-            const changelogFeed = document.getElementById("public-changelog-feed");
-            if (changelogFeed) {
-                changelogFeed.innerHTML = publishedReleases.map((rel, idx) => {
-                    const notesList = rel.notes ? rel.notes.split("\n").map(n => {
-                        const clean = this.sanitizeHtml(n.replace(/^•\s*/, ''));
-                        return `<li style="display: flex; gap: 10px;"><strong style="color: var(--edm-green); flex-shrink: 0;">[Verified]</strong> ${clean}</li>`;
-                    }).join("") : "<li>General performance optimizations</li>";
-
-                    const ver = this.sanitizeHtml(rel.version);
-                    const name = this.sanitizeHtml(rel.name || 'Production Build');
-                    const date = this.sanitizeHtml(rel.date || 'Recent');
-                    const file = this.sanitizeHtml(rel.file || 'EDM-Setup.exe');
-                    const size = this.sanitizeHtml(rel.size || '2.4 MB');
-
-                    return `
-                        <div class="product-window-card" style="padding: 30px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--edm-border); padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
-                                <div>
-                                    <strong style="font-size: 20px; color: var(--edm-primary-light);">EDM ${ver} (${name})</strong>
-                                    <span style="font-size: 12px; color: var(--edm-text-muted); margin-left: 8px;">Released: ${date}</span>
-                                </div>
-                                <span class="badge-pulse" style="background: ${idx === 0 ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255,255,255,0.06)'}; color: ${idx === 0 ? 'var(--edm-green)' : 'var(--edm-text-muted)'};">
-                                    ${idx === 0 ? 'LATEST STABLE' : (rel.type || 'STABLE')}
-                                </span>
-                            </div>
-
-                            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; color: var(--edm-text-secondary);">
-                                ${notesList}
-                            </ul>
-
-                            <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--edm-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                                <span style="font-size: 11.5px; color: var(--edm-text-muted);">Installer: <code>${file}</code> (${size})</span>
-                                <a href="download.html" class="btn btn-primary btn-sm"><i data-lucide="download" style="width: 12px; height: 12px;"></i> Download ${ver}</a>
-                            </div>
-                        </div>
-                    `;
-                }).join("");
+            const dlPrimaryBtn = document.getElementById("download-primary-btn");
+            if (dlPrimaryBtn && latest.downloadUrl) {
+                dlPrimaryBtn.href = latest.downloadUrl;
             }
+
+            // Also update all general desktop download links
+            document.querySelectorAll('a[data-product="desktop"], a.hero-download-btn, a[href*="EDM-Setup"]').forEach(btn => {
+                if (latest.downloadUrl) {
+                    btn.href = latest.downloadUrl;
+                }
+            });
+
+            // 4. Hydrate Live Pricing from Backend
+            try {
+                const pricingRes = await fetch("/api/v1/pricing", { cache: "no-cache" });
+                if (pricingRes.ok) {
+                    const tiers = await pricingRes.json();
+                    if (Array.isArray(tiers) && tiers.length > 0) {
+                        this.hydratePricingCards(tiers);
+                    }
+                }
+            } catch (pErr) {}
+
+            // 5. Hydrate Live Changelog Feed
+            try {
+                const releasesRes = await fetch("/api/v1/releases?includeWithdrawn=false", { cache: "no-cache" });
+                if (releasesRes.ok) {
+                    const allReleases = await releasesRes.json();
+                    if (Array.isArray(allReleases) && allReleases.length > 0) {
+                        this.renderChangelogFeed(allReleases);
+                    }
+                }
+            } catch (rErr) {}
 
             if (window.lucide && typeof window.lucide.createIcons === "function") {
                 window.lucide.createIcons();
             }
         } catch (e) {
             console.error("[EDM Product State Sync Error]", e);
+        }
+    }
+
+    hydratePricingCards(tiers) {
+        // Update pricing cards if present on page
+    }
+
+    renderChangelogFeed(releases) {
+        const changelogFeed = document.getElementById("public-changelog-feed");
+        if (!changelogFeed) return;
+
+        changelogFeed.innerHTML = releases.map((rel, idx) => {
+            const ver = this.sanitizeHtml(rel.version);
+            const name = this.sanitizeHtml(rel.title || 'Production Build');
+            const date = rel.publishedAtUtc ? new Date(rel.publishedAtUtc).toLocaleDateString() : 'Recent';
+            const notes = rel.releaseNotes ? rel.releaseNotes.split("\n").map(n => {
+                const clean = this.sanitizeHtml(n.replace(/^•\s*/, ''));
+                return `<li style="display: flex; gap: 10px;"><strong style="color: var(--edm-green); flex-shrink: 0;">[Verified]</strong> ${clean}</li>`;
+            }).join("") : "<li>General performance and stability optimizations</li>";
+            const art = rel.artifacts?.[0];
+            const file = art?.artifactName || `EDM-Setup-${ver}.exe`;
+            const size = art?.fileSizeBytes > 0 ? `${(art.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB` : '19.8 MB';
+            const dlUrl = art?.downloadUrl || `/api/v1/releases/artifacts/${art?.id}/download` || "/api/v1/releases/latest/download";
+
+            return `
+                <div class="product-window-card" style="padding: 30px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--edm-border); padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="font-size: 20px; color: var(--edm-primary-light);">EDM ${ver} (${name})</strong>
+                            <span style="font-size: 12px; color: var(--edm-text-muted); margin-left: 8px;">Released: ${date}</span>
+                        </div>
+                        <span class="badge-pulse" style="background: ${idx === 0 ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255,255,255,0.06)'}; color: ${idx === 0 ? 'var(--edm-green)' : 'var(--edm-text-muted)'};">
+                            ${idx === 0 ? 'LATEST STABLE' : (rel.severity || 'STABLE')}
+                        </span>
+                    </div>
+
+                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; color: var(--edm-text-secondary);">
+                        ${notes}
+                    </ul>
+
+                    <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--edm-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span style="font-size: 11.5px; color: var(--edm-text-muted);">Installer: <code>${file}</code> (${size})</span>
+                        <a href="${dlUrl}" class="btn btn-primary btn-sm"><i data-lucide="download" style="width: 12px; height: 12px;"></i> Download ${ver}</a>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+            window.lucide.createIcons();
         }
     }
 
@@ -314,7 +439,7 @@ class EdmWebsiteEngine {
             timeFormatted: new Date().toLocaleTimeString(),
             releaseVersion: activeVer,
             installerFile: activeFile,
-            fileSize: this.latestRelease ? this.latestRelease.size : "2.4 MB",
+            fileSize: this.latestRelease ? this.latestRelease.size : "19.8 MB",
             downloadResult: result,
             operatingSystem: env.os,
             architecture: env.arch,
@@ -346,22 +471,60 @@ class EdmWebsiteEngine {
             } catch (e) {}
         }
 
-        // 3. Resilient API Dispatch with Timeout Controller
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-            fetch("/api/v1/telemetry/event", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ eventName: "WEBSITE_DOWNLOAD", payload: eventData }),
-                signal: controller.signal
-            })
-            .then(() => clearTimeout(timeoutId))
-            .catch(() => clearTimeout(timeoutId));
-        } catch (e) {}
+        // 3. Resilient API Dispatch to Analytics Ingestion Beacon
+        this.sendAnalyticsBeacon("download_started", {
+            releaseVersion: eventData.version || this.latestRelease?.version,
+            operatingSystem: eventData.operatingSystem
+        });
 
         console.log("[EDM Telemetry] Download Logged:", eventData);
+    }
+
+    getOrCreateSessionId() {
+        try {
+            let sid = sessionStorage.getItem("edm_session_id");
+            if (!sid) {
+                sid = "sess_" + Math.random().toString(36).substring(2, 15) + "_" + Date.now().toString(36);
+                sessionStorage.setItem("edm_session_id", sid);
+            }
+            return sid;
+        } catch (e) {
+            return "sess_anonymous";
+        }
+    }
+
+    sendAnalyticsBeacon(eventType, additionalData = {}) {
+        const env = this.detectClientEnvironment();
+        const payload = {
+            eventType: eventType || "pageview",
+            sessionId: this.getOrCreateSessionId(),
+            pagePath: window.location.pathname || "/",
+            pageTitle: document.title || "Exclusive Download Manager",
+            referrer: document.referrer || "Direct",
+            operatingSystem: env.os,
+            browser: env.browser,
+            deviceCategory: env.device,
+            releaseVersion: additionalData.releaseVersion || this.latestRelease?.version,
+            ...additionalData
+        };
+
+        const json = JSON.stringify(payload);
+        try {
+            if (navigator.sendBeacon) {
+                const blob = new Blob([json], { type: "application/json" });
+                navigator.sendBeacon("/api/v1/analytics/event", blob);
+                return;
+            }
+        } catch (e) {}
+
+        try {
+            fetch("/api/v1/analytics/event", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: json,
+                keepalive: true
+            }).catch(() => {});
+        } catch (e) {}
     }
 
     trackPageView() {
@@ -378,6 +541,8 @@ class EdmWebsiteEngine {
                 this.telemetryChannel.postMessage({ type: "PAGE_VIEW", data: pageData });
             } catch (e) {}
         }
+
+        this.sendAnalyticsBeacon("pageview");
     }
 
     // ── 3. THEME ENGINE ──

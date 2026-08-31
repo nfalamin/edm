@@ -5,34 +5,34 @@
  */
 
 :root, [data-theme="dark"] {
-    --edm-primary: #0284C7;
-    --edm-primary-hover: #0EA5E9;
-    --edm-primary-gradient: linear-gradient(135deg, #0284C7 0%, #0EA5E9 100%);
-    --edm-accent-cyan: #38BDF8;
-    --edm-accent-emerald: #10B981;
-    --edm-accent-purple: #8B5CF6;
-    --edm-accent-amber: #F59E0B;
-    --edm-accent-rose: #F43F5E;
+    --edm-primary: #06F0FB;
+    --edm-primary-hover: #25D4DC;
+    --edm-primary-gradient: linear-gradient(135deg, #06F0FB 0%, #25D4DC 100%);
+    --edm-accent-cyan: #25D4DC;
+    --edm-accent-emerald: #12A89C;
+    --edm-accent-purple: #06F0FB;
+    --edm-accent-amber: #F0D000;
+    --edm-accent-rose: #D51F32;
     
-    --edm-bg-app: #0B0F19;
-    --edm-bg-surface: #0F172A;
-    --edm-bg-surface-elevated: #1E293B;
-    --edm-bg-glass: rgba(15, 23, 42, 0.88);
-    --edm-bg-glass-card: rgba(30, 41, 59, 0.65);
+    --edm-bg-app: #05080C;
+    --edm-bg-surface: #0B0F14;
+    --edm-bg-surface-elevated: #10181C;
+    --edm-bg-glass: rgba(11, 15, 20, 0.92);
+    --edm-bg-glass-card: rgba(16, 24, 28, 0.80);
     
-    --edm-border: rgba(255, 255, 255, 0.1);
-    --edm-border-glass: rgba(255, 255, 255, 0.15);
-    --edm-border-focus: rgba(56, 189, 248, 0.6);
+    --edm-border: #26292D;
+    --edm-border-glass: rgba(38, 41, 45, 0.8);
+    --edm-border-focus: rgba(6, 240, 251, 0.6);
     
-    --edm-text-primary: #F8FAFC;
-    --edm-text-secondary: #94A3B8;
-    --edm-text-muted: #64748B;
-    --edm-text-inverse: #0F172A;
+    --edm-text-primary: #F0F0F0;
+    --edm-text-secondary: #7F8488;
+    --edm-text-muted: #7F8488;
+    --edm-text-inverse: #05080C;
     
-    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --edm-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --edm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
-    --edm-shadow-glow: 0 0 24px rgba(2, 132, 199, 0.35);
+    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --edm-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+    --edm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.85);
+    --edm-shadow-glow: 0 0 24px rgba(6, 240, 251, 0.35);
     
     --edm-radius-sm: 6px;
     --edm-radius-md: 10px;

@@ -38,16 +38,20 @@ namespace EDM.ControlPlane.Api.Models
         public const string ReleasesCreate = "releases.create";
         public const string ReleasesPublish = "releases.publish";
         public const string ReleasesRollback = "releases.rollback";
+        public const string ReleasesManage = "releases.manage";
 
         // Website & Pricing
         public const string WebsiteManage = "website.manage";
+        public const string PricingRead = "pricing.read";
         public const string PricingManage = "pricing.manage";
 
         // License Management
+        public const string LicensesRead = "licenses.read";
         public const string LicensesManage = "licenses.manage";
 
         // Support & Helpdesk
         public const string SupportManage = "support.manage";
+        public const string AnnouncementsManage = "announcements.manage";
 
         // Analytics & Telemetry
         public const string AnalyticsRead = "analytics.read";
@@ -63,9 +67,9 @@ namespace EDM.ControlPlane.Api.Models
             SystemSettingsRead, SystemSettingsWrite, SettingsManage, SecurityManage, AdminSecurityManage,
             AuditLogsRead,
             ReleasesRead, ReleasesCreate, ReleasesPublish, ReleasesRollback,
-            WebsiteManage, PricingManage,
-            LicensesManage,
-            SupportManage,
+            WebsiteManage, PricingRead, PricingManage,
+            LicensesRead, LicensesManage,
+            SupportManage, AnnouncementsManage,
             AnalyticsRead,
             SystemHealthRead
         };

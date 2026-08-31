@@ -32,10 +32,135 @@ namespace EDM.ControlPlane.Api.Controllers
     public class ContentController : ControllerBase
     {
         private readonly IContentAndPricingService _contentService;
+        private readonly IContentManagerService _contentManager;
 
-        public ContentController(IContentAndPricingService contentService)
+        public ContentController(
+            IContentAndPricingService contentService,
+            IContentManagerService contentManager)
         {
             _contentService = contentService ?? throw new ArgumentNullException(nameof(contentService));
+            _contentManager = contentManager ?? throw new ArgumentNullException(nameof(contentManager));
+        }
+
+        private string GetEditorName()
+        {
+            return User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("name")?.Value ?? "Admin";
+        }
+
+        private Guid? GetAdminUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            return claim != null && Guid.TryParse(claim.Value, out var id) ? id : null;
+        }
+
+        // ==========================================
+        // 0. DOCUMENT CMS (ABOUT, PRIVACY, TERMS, FAQ, HELP, DOCS, NOTES, ANNOUNCEMENTS)
+        // ==========================================
+        [HttpGet("content/doc/{slug}")]
+        public async Task<IActionResult> GetPublicDocumentAsync(string slug)
+        {
+            var doc = await _contentManager.GetDocumentBySlugAsync(slug, publishedOnly: true);
+            if (doc == null)
+            {
+                return NotFound(new { error = "DOC_NOT_FOUND", message = $"Published document '{slug}' not found." });
+            }
+            return Ok(doc);
+        }
+
+        [HttpGet("content/documents")]
+        public async Task<IActionResult> GetPublicDocumentsListAsync()
+        {
+            var docs = await _contentManager.GetAllDocumentsAsync(includeDrafts: false);
+            return Ok(docs);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpGet("admin/content/documents")]
+        public async Task<IActionResult> GetAllAdminDocumentsAsync([FromQuery] bool includeDrafts = true)
+        {
+            var docs = await _contentManager.GetAllDocumentsAsync(includeDrafts);
+            return Ok(docs);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpGet("admin/content/documents/{id}")]
+        public async Task<IActionResult> GetAdminDocumentByIdAsync(Guid id)
+        {
+            var doc = await _contentManager.GetDocumentByIdAsync(id);
+            if (doc == null) return NotFound(new { error = "NOT_FOUND", message = "Document not found." });
+            return Ok(doc);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/documents/{id}/draft")]
+        public async Task<IActionResult> SaveDocumentDraftAsync(Guid id, [FromBody] SaveDocumentDraftDto dto)
+        {
+            if (dto == null) return BadRequest(new { error = "INVALID_PAYLOAD" });
+            var updated = await _contentManager.SaveDraftAsync(id, dto, GetEditorName(), GetAdminUserId());
+            return Ok(updated);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/documents/{id}/publish")]
+        public async Task<IActionResult> PublishDocumentAsync(Guid id)
+        {
+            var published = await _contentManager.PublishDocumentAsync(id, GetEditorName(), GetAdminUserId());
+            return Ok(published);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/documents/{id}/unpublish")]
+        public async Task<IActionResult> UnpublishDocumentAsync(Guid id)
+        {
+            var unpublished = await _contentManager.UnpublishDocumentAsync(id, GetEditorName(), GetAdminUserId());
+            return Ok(unpublished);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/documents/{id}/replace-file")]
+        public async Task<IActionResult> ReplaceDocumentFileAsync(Guid id, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "NO_FILE", message = "Please upload a valid markdown file." });
+            }
+
+            using var stream = file.OpenReadStream();
+            var doc = await _contentManager.ReplaceFileAsync(id, stream, file.FileName, GetEditorName(), GetAdminUserId());
+            return Ok(doc);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpGet("admin/content/documents/{id}/history")]
+        public async Task<IActionResult> GetDocumentHistoryAsync(Guid id)
+        {
+            var history = await _contentManager.GetRevisionHistoryAsync(id);
+            return Ok(history);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/documents/{id}/restore/{version}")]
+        public async Task<IActionResult> RestoreDocumentRevisionAsync(Guid id, int version)
+        {
+            var doc = await _contentManager.RestoreRevisionAsync(id, version, GetEditorName(), GetAdminUserId());
+            return Ok(doc);
+        }
+
+        [Authorize]
+        [RequirePermission(Permissions.WebsiteManage)]
+        [HttpPost("admin/content/scan-workspace")]
+        public async Task<IActionResult> ScanContentWorkspaceAsync()
+        {
+            int discovered = await _contentManager.ScanLocalContentWorkspaceAsync();
+            return Ok(new { success = true, discoveredCount = discovered, message = $"Scanned local content workspace. Discovered/Updated {discovered} documents." });
         }
 
         // ==========================================

@@ -1970,3 +1970,83 @@ body {
     .banner-right .btn { width: 100%; }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   FULL-SCREEN AMBIENT SIDE GLOWS & MESH NET SYSTEM
+   ══════════════════════════════════════════════════════════════ */
+.site-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Ambient Left & Right Side Glows */
+.ambient-side-glow-left {
+    position: fixed;
+    top: 20%;
+    left: -200px;
+    width: 450px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 70%);
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ambient-side-glow-right {
+    position: fixed;
+    top: 40%;
+    right: -200px;
+    width: 450px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(56, 189, 248, 0.08) 50%, transparent 70%);
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Grid / Mesh Net Background */
+.bg-mesh-net {
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 70%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-position: center, center, center;
+}
+
+/* Live Stats & Ticker Pill */
+.live-stats-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 24px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(56, 189, 248, 0.1);
+    margin: 0 auto 32px auto;
+    width: fit-content;
+}
+
+.live-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.live-stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    animation: pulseGlow 1.5s infinite;
+}
+

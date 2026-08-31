@@ -430,9 +430,10 @@ namespace EDM.ControlPlane.Api.Services
 
         public async Task<Release?> GetLatestActiveReleaseAsync(ClientType platform, string channel = "stable")
         {
+            string cleanChannel = (channel ?? "stable").Trim().ToLowerInvariant();
             return await _dbContext.Releases
                 .Include(r => r.Artifacts)
-                .Where(r => r.Platform == platform && r.Channel == channel && r.IsPublished && !r.IsWithdrawn)
+                .Where(r => r.Platform == platform && (r.Channel == null || r.Channel.ToLower() == cleanChannel) && r.IsPublished && !r.IsWithdrawn)
                 .OrderByDescending(r => r.PublishedAtUtc)
                 .FirstOrDefaultAsync();
         }

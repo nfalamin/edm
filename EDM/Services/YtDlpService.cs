@@ -174,7 +174,12 @@ namespace EDM.Services
         /// Download the given url to the specified output path. The progress callback receives percent (0-100)
         /// and a short status string. Throws if the process fails.
         /// </summary>
-        public async Task DownloadAsync(string url, string outputPath, string formatArg, Action<int, string> progress, CancellationToken ct, string? cookies = null)
+        public async Task DownloadAsync(string url, string outputPath, string formatArg, Action<int, string>? progress, CancellationToken ct, string? cookies = null)
+        {
+            await DownloadInternalAsync(url, outputPath, formatArg, progress, ct, cookies, isRetry: false).ConfigureAwait(false);
+        }
+
+        private async Task DownloadInternalAsync(string url, string outputPath, string formatArg, Action<int, string>? progress, CancellationToken ct, string? cookies, bool isRetry)
         {
             _lastReportedProgressPercent = 0;
             string? execPath = await MediaDependencyManager.Instance.GetValidatedYtDlpPathAsync(_ytDlpPath, ct).ConfigureAwait(false);
@@ -201,26 +206,38 @@ namespace EDM.Services
             psi.ArgumentList.Add("20M");  // larger chunks = fewer round-trips = faster
             psi.ArgumentList.Add("--no-playlist");
             psi.ArgumentList.Add("--no-check-certificates");
-            // NOTE: --no-part removed — yt-dlp needs temp files for audio+video merge (adaptive streams)
             psi.ArgumentList.Add("--windows-filenames");
             psi.ArgumentList.Add("--retries");
-            psi.ArgumentList.Add("4");   // was 10 — fewer retries = faster fail-over
+            psi.ArgumentList.Add("4");   // fast failover
             psi.ArgumentList.Add("--fragment-retries");
-            psi.ArgumentList.Add("4");   // was 10
+            psi.ArgumentList.Add("4");
             psi.ArgumentList.Add("--file-access-retries");
             psi.ArgumentList.Add("3");
             psi.ArgumentList.Add("--user-agent");
             psi.ArgumentList.Add("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
             psi.ArgumentList.Add("--add-header");
             psi.ArgumentList.Add("Referer:https://www.youtube.com/");
-            psi.ArgumentList.Add("--extractor-args");
-            psi.ArgumentList.Add("youtube:player_client=android,ios,web"); // removed player_skip=configs — required for signature decryption
+
+            // Link Node.js runtime for solving modern YouTube JavaScript cipher challenges (n-sig, player signature)
+            string? nodePath = await MediaDependencyManager.Instance.GetValidatedNodePathAsync(ct).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(nodePath))
+            {
+                psi.ArgumentList.Add("--js-runtimes");
+                psi.ArgumentList.Add($"node:{nodePath}");
+            }
+            else
+            {
+                psi.ArgumentList.Add("--js-runtimes");
+                psi.ArgumentList.Add("node");
+            }
 
             string? ffmpegPath = await MediaDependencyManager.Instance.GetValidatedFfmpegPathAsync(null, ct).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(ffmpegPath))
             {
                 psi.ArgumentList.Add("--ffmpeg-location");
                 psi.ArgumentList.Add(ffmpegPath);
+                psi.ArgumentList.Add("--merge-output-format");
+                psi.ArgumentList.Add("mp4/mkv");
             }
 
             if (!string.IsNullOrWhiteSpace(cookies))
@@ -272,14 +289,14 @@ namespace EDM.Services
                 try
                 {
                     string safeArgs = ScrubArgumentListForLogs(psi.ArgumentList);
-                    LoggingService.Log($"[YtDlpService] Starting yt-dlp: '{_ytDlpPath}' Args: {safeArgs}");
+                    LoggingService.Log($"[YtDlpService] Starting yt-dlp: '{execPath}' Args: {safeArgs}");
                     proc.Start();
                     LoggingService.Log("[YtDlpService] Process started.");
                 }
                 catch (Exception ex)
                 {
                     LoggingService.LogException("[YtDlpService] Failed to start process", ex);
-                    throw new InvalidOperationException($"Failed to start yt-dlp process at '{_ytDlpPath}': {ex.Message}", ex);
+                    throw new InvalidOperationException($"Failed to start yt-dlp process at '{execPath}': {ex.Message}", ex);
                 }
 
                 proc.BeginOutputReadLine();
@@ -309,6 +326,20 @@ namespace EDM.Services
                     var stderr = stderrSb.ToString();
                     if (exit != 0)
                     {
+                        // Auto-healing: if first run failed and not canceled, update yt-dlp engine from GitHub and retry once
+                        if (!isRetry && !ct.IsCancellationRequested)
+                        {
+                            LoggingService.LogWarning($"[YtDlpService] yt-dlp exited with {exit}. Triggering Auto-Healing update before retrying...");
+                            progress?.Invoke(0, "Updating video engine...");
+                            bool updated = await AutoUpdateEngineAsync(ct).ConfigureAwait(false);
+                            if (updated)
+                            {
+                                LoggingService.Log("[YtDlpService] Auto-Healing complete. Retrying download with updated engine...");
+                                await DownloadInternalAsync(url, outputPath, formatArg, progress, ct, cookies, isRetry: true).ConfigureAwait(false);
+                                return;
+                            }
+                        }
+
                         try { LoggingService.LogException("[YtDlpService] yt-dlp exited with non-zero code", new InvalidOperationException($"Exit={exit}. stderr: {stderr}")); } catch (Exception logEx) { System.Diagnostics.Debug.WriteLine($"[YtDlpService] Logging failed: {logEx}"); }
                         throw new InvalidOperationException($"yt-dlp exited with code {exit}. {(string.IsNullOrEmpty(stderr) ? string.Empty : "stderr: " + stderr)}");
                     }
@@ -320,7 +351,7 @@ namespace EDM.Services
             }
         }
 
-        private void TryReportProgress(string line, Action<int, string> progress)
+        private void TryReportProgress(string line, Action<int, string>? progress)
         {
             if (YtDlpOutputParser.TryParseProgress(line, out var parsedPct, out _, out _, out _, out _))
             {
@@ -341,6 +372,11 @@ namespace EDM.Services
         /// <param name="ct">Cancellation token</param>
         /// <returns>JSON metadata string from yt-dlp</returns>
         public async Task<string?> GetVideoInfoAsync(string url, CancellationToken ct)
+        {
+            return await GetVideoInfoInternalAsync(url, ct, isRetry: false).ConfigureAwait(false);
+        }
+
+        private async Task<string?> GetVideoInfoInternalAsync(string url, CancellationToken ct, bool isRetry)
         {
             if (string.IsNullOrWhiteSpace(url))
                 return null;
@@ -365,8 +401,20 @@ namespace EDM.Services
 
                 psi.ArgumentList.Add("--dump-json");
                 psi.ArgumentList.Add("--no-download");
-                psi.ArgumentList.Add("--extractor-args");
-                psi.ArgumentList.Add("youtube:player_client=android,web");
+
+                // Link Node.js runtime for solving modern YouTube JavaScript cipher challenges
+                string? nodePath = await MediaDependencyManager.Instance.GetValidatedNodePathAsync(ct).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(nodePath))
+                {
+                    psi.ArgumentList.Add("--js-runtimes");
+                    psi.ArgumentList.Add($"node:{nodePath}");
+                }
+                else
+                {
+                    psi.ArgumentList.Add("--js-runtimes");
+                    psi.ArgumentList.Add("node");
+                }
+
                 psi.ArgumentList.Add(url);
 
                 using (var proc = new Process { StartInfo = psi, EnableRaisingEvents = true })
@@ -427,8 +475,15 @@ namespace EDM.Services
                         else
                         {
                             LoggingService.LogWarning($"[YtDlpService] Metadata extraction failed with exit code {proc.ExitCode}");
-                            // Attempt self-update and retry once if cipher changed
-                            _ = AutoUpdateEngineAsync();
+                            if (!isRetry && !ct.IsCancellationRequested)
+                            {
+                                LoggingService.Log("[YtDlpService] Attempting Auto-Healing engine update before retrying metadata extraction...");
+                                bool updated = await AutoUpdateEngineAsync(ct).ConfigureAwait(false);
+                                if (updated)
+                                {
+                                    return await GetVideoInfoInternalAsync(url, ct, isRetry: true).ConfigureAwait(false);
+                                }
+                            }
                             return null;
                         }
                     }
@@ -452,13 +507,14 @@ namespace EDM.Services
                 LoggingService.Log("[YtDlpService] Checking for YouTube extractor engine updates...");
 
                 // 1. Try running yt-dlp -U if binary exists
-                if (File.Exists(_ytDlpPath))
+                string? execPath = await MediaDependencyManager.Instance.GetValidatedYtDlpPathAsync(_ytDlpPath, ct).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(execPath) && File.Exists(execPath))
                 {
                     try
                     {
                         var psi = new ProcessStartInfo
                         {
-                            FileName = _ytDlpPath,
+                            FileName = execPath,
                             Arguments = "-U",
                             UseShellExecute = false,
                             CreateNoWindow = true,
@@ -479,25 +535,8 @@ namespace EDM.Services
                     catch { }
                 }
 
-                // 2. Download latest binary from official GitHub release
-                var localFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EDM", "tools");
-                if (!Directory.Exists(localFolder)) Directory.CreateDirectory(localFolder);
-                var targetExe = Path.Combine(localFolder, "yt-dlp.exe");
-
-                using var client = new System.Net.Http.HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("EDM-Download-Manager/6.0");
-                const string latestReleaseUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
-
-                var bytes = await client.GetByteArrayAsync(latestReleaseUrl, ct).ConfigureAwait(false);
-                if (bytes != null && bytes.Length > 100_000)
-                {
-                    var tempFile = targetExe + ".tmp";
-                    await File.WriteAllBytesAsync(tempFile, bytes, ct).ConfigureAwait(false);
-                    if (File.Exists(targetExe)) File.Delete(targetExe);
-                    File.Move(tempFile, targetExe);
-                    LoggingService.Log($"[YtDlpService] YouTube extractor successfully auto-updated at '{targetExe}' ({bytes.Length} bytes).");
-                    return true;
-                }
+                // 2. Provision from official GitHub release
+                return await MediaDependencyManager.Instance.ProvisionYtDlpAsync(null, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
                                 <span class="table-tag-recommended"><?php esc_html_e('RECOMMENDED', 'edm-theme'); ?></span>
                             </div>
                         </th>
-                        <th><?php esc_html_e('Traditional IDM', 'edm-theme'); ?></th>
+                        <th><?php esc_html_e('Legacy Download Tools', 'edm-theme'); ?></th>
                         <th><?php esc_html_e('Standard Browser', 'edm-theme'); ?></th>
                         <th><?php esc_html_e('Generic FDM', 'edm-theme'); ?></th>
                     </tr>

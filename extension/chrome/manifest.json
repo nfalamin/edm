@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Exclusive Download Manager (EDM) Video & Media Downloader",
   "version": "1.0.0",
-  "description": "IDM-grade media sniffer & stream capturer for YouTube and all web video players. Integrates directly with Exclusive Download Manager.",
+  "description": "Enterprise-grade media sniffer & stream capturer for YouTube and all web video players. Integrates directly with Exclusive Download Manager.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -16,7 +16,9 @@
     "activeTab",
     "scripting",
     "webRequest",
-    "cookies"
+    "cookies",
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"

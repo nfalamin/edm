@@ -61,6 +61,127 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="12,0,0,0">
 
+                    <!-- ⚡ 1-Click Live Speed Limiter Pill with Dropdown Flyout -->
+                    <Grid Margin="0,0,10,0">
+                        <Button x:Name="SpeedLimiterBtn" Click="SpeedLimiterBtn_Click"
+                                Height="36" Background="Transparent" BorderThickness="0"
+                                Cursor="Hand" ToolTip="1-Click Live Speed Limiter &amp; Bandwidth Allocation">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="SpeedLimiterBrd" Background="{DynamicResource CardInputBg}" 
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                            CornerRadius="10" Padding="10,0" Height="36">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="SpeedLimiterBrd" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                            <Setter TargetName="SpeedLimiterBrd" Property="BorderBrush" Value="#00C9A7"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="SpeedLimiterIcon" Text="⚡" FontSize="14" Foreground="#F59E0B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock x:Name="SpeedLimiterText" Text="Speed Limit: OFF" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text=" ▾" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Speed Limiter Preset Selection Popup -->
+                        <Popup x:Name="SpeedLimiterPopup" StaysOpen="False" AllowsTransparency="True"
+                               PlacementTarget="{Binding ElementName=SpeedLimiterBtn}" Placement="Bottom"
+                               HorizontalOffset="-40" VerticalOffset="8">
+                            <Border Width="220" Background="{DynamicResource SecondaryBackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="12" Padding="8">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.4"/>
+                                </Border.Effect>
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="⚡ Live Speed Limiter" FontWeight="Bold" FontSize="12" 
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="8,4,8,6"/>
+                                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,6"/>
+
+                                    <Button Tag="0" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🚀" FontSize="13" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Off (Unlimited Speed)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="250" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🐢" FontSize="13" Margin="0,0,8,0"/>
+                                            <TextBlock Text="250 KB/s (Ultra Low)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="500" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚡" FontSize="13" Foreground="#F59E0B" Margin="0,0,8,0"/>
+                                            <TextBlock Text="500 KB/s (Browsing Mode)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="1024" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚡" FontSize="13" Foreground="#10B981" Margin="0,0,8,0"/>
+                                            <TextBlock Text="1.0 MB/s (Balanced)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="2048" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚡" FontSize="13" Foreground="#06B6D4" Margin="0,0,8,0"/>
+                                            <TextBlock Text="2.0 MB/s (Standard)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="5120" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚡" FontSize="13" Foreground="#3B82F6" Margin="0,0,8,0"/>
+                                            <TextBlock Text="5.0 MB/s (Fast)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Tag="10240" Click="SelectSpeedLimitPreset_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⚡" FontSize="13" Foreground="#8B5CF6" Margin="0,0,8,0"/>
+                                            <TextBlock Text="10.0 MB/s (High Speed)" FontSize="11.5" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
+                    <!-- 📥 Always-On-Top Desktop Drop Basket Toggle Pill -->
+                    <Button x:Name="DropBasketBtn" Click="DropBasketBtn_Click"
+                            Height="36" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Toggle Always-On-Top Desktop Drop Basket (Drag &amp; Drop links or files from any browser)"
+                            Margin="0,0,10,0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="BasketPillBorder" Background="{DynamicResource CardInputBg}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                                        CornerRadius="10" Padding="10,0" Height="36">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="BasketPillBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                        <Setter TargetName="BasketPillBorder" Property="BorderBrush" Value="#A855F7"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock x:Name="BasketIcon" Text="📥" FontSize="14" Foreground="#A855F7" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="BasketLabel" Text="Drop Basket: OFF" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- AI Assistant Button (🤖) -->
                     <Button x:Name="TopAiBtn" Click="TopAiBtn_Click"
                             Width="36" Height="36" Background="Transparent" BorderThickness="0"
@@ -137,69 +258,159 @@
                         <!-- Language Selection Popup -->
                         <Popup x:Name="LanguagePopup" StaysOpen="False" AllowsTransparency="True"
                                PlacementTarget="{Binding ElementName=LanguageBtn}" Placement="Bottom"
-                               HorizontalOffset="-180" VerticalOffset="8">
-                            <Border Width="240" Background="{DynamicResource SecondaryBackgroundBrush}"
+                               HorizontalOffset="-190" VerticalOffset="8">
+                            <Border Width="260" Background="{DynamicResource SecondaryBackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                    CornerRadius="12" Padding="10">
+                                    CornerRadius="14" Padding="10">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.35"/>
+                                    <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="6" Opacity="0.40"/>
                                 </Border.Effect>
                                 <StackPanel Orientation="Vertical">
-                                    <TextBlock Text="Select Language" FontWeight="Bold" FontSize="12" 
-                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="8,4,8,8"/>
+                                    <!-- Header -->
+                                    <StackPanel Orientation="Horizontal" Margin="8,6,8,10">
+                                        <TextBlock Text="🌐" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Select Language" FontWeight="Bold" FontSize="12"
+                                                   Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
 
-                                    <Button Tag="en-US" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <!-- Auto Detect Country — special highlighted row -->
+                                    <Button x:Name="AutoDetectLangBtn" Click="AutoDetectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,0,0,4" Padding="0" HorizontalContentAlignment="Stretch"
+                                            ToolTip="Uses internet to detect your country. No data stored.">
+                                        <Border CornerRadius="10" Padding="10,8" Margin="0">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#1E1B4B" Offset="0"/>
+                                                    <GradientStop Color="#312E81" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Border.Effect>
+                                                <DropShadowEffect Color="#7C3AED" BlurRadius="8" ShadowDepth="0" Opacity="0.4"/>
+                                            </Border.Effect>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" x:Name="AutoDetectIcon" Text="🌍"
+                                                           FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="Auto Detect Country" FontSize="12"
+                                                               FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock x:Name="AutoDetectSubLabel"
+                                                               Text="Detect language from your IP"
+                                                               FontSize="10" Foreground="#A5B4FC"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="2" Background="#7C3AED" CornerRadius="6"
+                                                        Padding="6,3" VerticalAlignment="Center">
+                                                    <TextBlock Text="NEW" FontSize="9" FontWeight="Bold"
+                                                               Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Button>
+
+                                    <!-- Divider -->
+                                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,2,4,6" Opacity="0.5"/>
+
+                                    <!-- Built-in language list -->
+                                    <Button x:Name="LangBtn_enUS" Tag="en-US" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇺🇸" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="English (US)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇺🇸" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="English (US)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="bn-BD" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_bnBD" Tag="bn-BD" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇧🇩" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="বাংলা (Bengali)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇧🇩" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="বাংলা (Bengali)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="hi-IN" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_hiIN" Tag="hi-IN" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇮🇳" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="हिन्दी (Hindi)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇮🇳" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="हिन्दी (Hindi)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="te-IN" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_esES" Tag="es-ES" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇮🇳" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="తెలుగు (Telugu)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇪🇸" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Español (Spanish)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="es-ES" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_arSA" Tag="ar-SA" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇪🇸" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="Español (Spanish)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇸🇦" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="العربية (Arabic) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="ar-SA" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_urPK" Tag="ur-PK" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇸🇦" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="العربية (Arabic) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇵🇰" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="اردو (Urdu) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Tag="ur-PK" Click="SelectLanguage_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="0,1" Padding="8,6" HorizontalContentAlignment="Left">
+                                    <Button x:Name="LangBtn_frFR" Tag="fr-FR" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="🇵🇰" FontSize="14" Margin="0,0,10,0"/>
-                                            <TextBlock Text="اردو (Urdu) [RTL]" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            <TextBlock Text="🇫🇷" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Français (French)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
+
+                                    <Button x:Name="LangBtn_deDE" Tag="de-DE" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇩🇪" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="Deutsch (German)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button x:Name="LangBtn_jaJP" Tag="ja-JP" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇯🇵" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="日本語 (Japanese)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button x:Name="LangBtn_zhCN" Tag="zh-CN" Click="SelectLanguage_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Margin="0,1" Padding="8,7" HorizontalContentAlignment="Left">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🇨🇳" FontSize="15" Margin="0,0,10,0"/>
+                                            <TextBlock Text="简体中文 (Chinese)" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
                                 </StackPanel>
                             </Border>
                         </Popup>
                     </Grid>
+
 
                     <!-- Help / Support Button (❓) -->
                     <Button x:Name="TopSupportBtn" Click="TopSupportBtn_Click"
@@ -640,6 +851,43 @@
                                         <TextBlock Text="📅" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                     <TextBlock Text="Scheduler" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- Site Grabber -->
+                <Button Tag="Grabber" Click="ActionButton_Click" Cursor="Hand" Background="Transparent" BorderThickness="0" Margin="4,0" ToolTip="Crawl websites and batch extract all media files">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                                <Setter Property="BorderBrush" Value="#A855F7"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Grid Width="44" Height="44" Margin="0,0,0,7" HorizontalAlignment="Center">
+                                        <Ellipse>
+                                            <Ellipse.Fill>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="#A855F7" Offset="0"/>
+                                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Ellipse.Fill>
+                                            <Ellipse.Effect>
+                                                <DropShadowEffect Color="#A855F7" BlurRadius="18" ShadowDepth="2" Opacity="0.75"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <TextBlock Text="🕷️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock Text="Grabber" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
                         </ControlTemplate>

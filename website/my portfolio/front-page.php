@@ -68,7 +68,7 @@ get_header(); ?>
                 </div>
 
                 <!-- Right Visual (Hero Circle with 3D Pop-Out) -->
-                <div class="lg:col-span-5 flex justify-center relative items-end w-full">
+                <div class="lg:col-span-5 flex justify-center relative items-end w-full overflow-x-clip">
                     <div class="relative w-[65vw] h-[65vw] max-w-[240px] max-h-[240px] sm:max-w-[320px] sm:max-h-[320px] md:max-w-[380px] md:max-h-[380px] lg:max-w-[420px] lg:max-h-[420px] mt-6 sm:mt-10 lg:mt-16 mx-auto aspect-square">
                 
                         <!-- 1. Background Cyan Glowing Circle -->

@@ -548,6 +548,11 @@ namespace EDM.Services
                     {
                         throw new InvalidOperationException($"Segmented download failed to produce non-empty output file at '{savePath}'.");
                     }
+
+                    if (historyId > 0)
+                    {
+                        Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
+                    }
                     
                     // Trigger Next-Gen Post Download Pipeline (Subtitles, Smart Organizer, Cloud Handoff, Analytics)
                     await TriggerPostDownloadNextGenPipelineAsync(savePath, url, measuredSpeed).ConfigureAwait(false);
@@ -571,6 +576,11 @@ namespace EDM.Services
                     if (!File.Exists(savePath) || new FileInfo(savePath).Length == 0)
                     {
                         throw new InvalidOperationException($"Single-threaded download failed to produce non-empty output file at '{savePath}'.");
+                    }
+
+                    if (historyId > 0)
+                    {
+                        Services.History.DownloadHistoryRecorder.MarkCompleted(historyId);
                     }
                     
                     // Trigger Next-Gen Post Download Pipeline (Subtitles, Smart Organizer, Cloud Handoff, Analytics)

@@ -26,16 +26,16 @@ $download_url = edm_get_download_url();
                 <div class="cta-buttons-row">
                     <a href="<?php echo esc_url($download_url); ?>" class="btn btn-primary btn-lg" download>
                         <i data-lucide="download" style="width: 20px; height: 20px;"></i>
-                        <span><?php esc_html_e('Download EDM Setup (Free)', 'edm-theme'); ?></span>
+                        <span><?php printf(esc_html__('Download EDM Setup (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
                     </a>
-                    <a href="<?php echo esc_url(home_url('/nfdashbord/')); ?>" class="btn btn-outline btn-lg">
+                    <a href="<?php echo esc_url(home_url('/nf/')); ?>" class="btn btn-outline btn-lg">
                         <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
                         <span><?php esc_html_e('Open Control Plane', 'edm-theme'); ?></span>
                     </a>
                 </div>
 
                 <div class="cta-checksum-note">
-                    <span><?php esc_html_e('SHA-256 Checksum Verified · Size: 19.8 MB · Zero Telemetry/Adware', 'edm-theme'); ?></span>
+                    <span><?php printf(esc_html__('SHA-256 Checksum Verified · Size: %s · Zero Telemetry/Adware', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
                 </div>
             </div>
         </div>

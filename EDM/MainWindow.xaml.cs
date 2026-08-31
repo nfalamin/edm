@@ -78,6 +78,8 @@ namespace EDM
             _clipboardMonitor = (App.ServiceProvider?.GetService(typeof(EDM.Services.Interfaces.IClipboardMonitorService)) as ClipboardMonitorService)
                 ?? new ClipboardMonitorService();
 
+            _clipboardMonitor.UrlDetected += ClipboardMonitor_UrlDetected;
+
             this.SourceInitialized += (s, e) =>
             {
                 try
@@ -107,9 +109,15 @@ namespace EDM
             this.Closed += MainWindow_Closed;
         }
 
-        /// <summary>
-        /// Detect URLs from clipboard and trigger download dialog
-        /// </summary>
+        private void ClipboardMonitor_UrlDetected(object? sender, ClipboardUrlDetectedEventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(e.Url))
+            {
+                OnClipboardUrlDetected(e.Url);
+                e.Handled = true;
+            }
+        }
+
         /// <summary>
         /// Detect URLs from clipboard and trigger download dialog (single instance guarded)
         /// </summary>
@@ -185,6 +193,7 @@ namespace EDM
                 // Stop clipboard monitor
                 if (_clipboardMonitor != null)
                 {
+                    _clipboardMonitor.UrlDetected -= ClipboardMonitor_UrlDetected;
                     _clipboardMonitor.Stop();
                     // Only dispose if the service implements IDisposable
                     if (_clipboardMonitor is IDisposable disposable)

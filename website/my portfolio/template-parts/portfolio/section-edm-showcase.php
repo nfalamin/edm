@@ -57,6 +57,19 @@ $version      = function_exists('edm_get_latest_version') ? edm_get_latest_versi
                 <!-- Left Details & Metric Cards -->
                 <div class="lg:col-span-5 flex flex-col space-y-6">
                     
+                    <!-- Global Traction Badges (10,000+ Downloads & 9,651+ Active) -->
+                    <div class="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-blue-600/10 border border-blue-500/20">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono">
+                            <i class="fa-solid fa-download text-[10px]"></i> 10,000+ Downloads
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 text-xs font-bold font-mono">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> 9,651+ Active Users
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-bold">
+                            ★★★★★ 4.9/5
+                        </span>
+                    </div>
+
                     <!-- Quick Stats Badges -->
                     <div class="grid grid-cols-2 gap-3 sm:gap-4">
                         <div class="bg-navy-900/90 p-4 rounded-2xl border border-white/5 flex flex-col space-y-1">

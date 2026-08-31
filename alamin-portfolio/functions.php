@@ -274,15 +274,33 @@ add_action('init', 'portfolio_register_testimonial_cpt');
 // ─────────────────────────────────────────────────────────────
 // 5. HELPER FUNCTIONS & ROUTE DETECTORS
 // ─────────────────────────────────────────────────────────────
-function portfolio_get_profile_image() {
-    $custom_img = get_theme_mod('hero_profile_photo');
-    if (!empty($custom_img)) {
-        return esc_url($custom_img);
-    }
-    if (file_exists(get_template_directory() . '/nf.png')) {
+if ( ! function_exists( 'portfolio_get_profile_image' ) ) {
+    function portfolio_get_profile_image() {
+        $custom_img = get_theme_mod('hero_profile_photo');
+        if (!empty($custom_img)) {
+            return esc_url($custom_img);
+        }
+        $themeDir = get_template_directory();
+        $candidates = [
+            'nf.png',
+            'Assets/images/nf.png',
+            'assets/images/nf.png',
+            'Assets/images/profile.png',
+            'assets/images/profile.png'
+        ];
+        foreach ($candidates as $cand) {
+            if (file_exists($themeDir . '/' . $cand)) {
+                return esc_url(get_template_directory_uri() . '/' . $cand);
+            }
+        }
         return esc_url(get_template_directory_uri() . '/nf.png');
     }
-    return esc_url(get_template_directory_uri() . '/Assets/images/nf.png');
+}
+
+if ( ! function_exists( 'portfolio_get_hero_portrait_image' ) ) {
+    function portfolio_get_hero_portrait_image() {
+        return portfolio_get_profile_image();
+    }
 }
 
 function edm_get_latest_version() {
@@ -374,38 +392,109 @@ function edm_get_cv_url() {
     return esc_url(get_template_directory_uri() . '/downloads/Alamin-Hossain-CV.pdf');
 }
 
-function portfolio_get_hero_portrait_image() {
-    $themeDir = get_template_directory();
-    $candidates = [
-        'nf.png',
-        'Assets/images/nf.png',
-        'Assets/images/profile.png'
-    ];
-    foreach ($candidates as $cand) {
-        if (file_exists($themeDir . '/' . $cand)) {
-            return esc_url(get_template_directory_uri() . '/' . $cand);
+function edm_get_download_file_size() {
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $exeFiles = glob($downloadsDir . '/*.exe');
+        if (!empty($exeFiles)) {
+            usort($exeFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            $size = filesize($exeFiles[0]);
+            if ($size > 0) {
+                return size_format($size, 1);
+            }
         }
     }
-    return esc_url(get_template_directory_uri() . '/nf.png');
-}
-
-function portfolio_get_about_chair_image() {
-    $themeDir = get_template_directory();
-    $candidates = [
-        'Assets/images/nf011.png',
-        'nf011.png',
-        'Assets/images/chair.png'
-    ];
-    foreach ($candidates as $cand) {
-        if (file_exists($themeDir . '/' . $cand)) {
-            return esc_url(get_template_directory_uri() . '/' . $cand);
+    if (class_exists('EdmManifestManager')) {
+        $manifest = EdmManifestManager::getLiveManifest();
+        if (!empty($manifest['files']['installer']['size_human'])) {
+            return $manifest['files']['installer']['size_human'];
         }
     }
-    return esc_url(get_template_directory_uri() . '/Assets/images/nf011.png');
+    return '19.8 MB';
 }
 
-function portfolio_get_profile_image() {
-    return portfolio_get_hero_portrait_image();
+function edm_get_download_filename() {
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $exeFiles = glob($downloadsDir . '/*.exe');
+        if (!empty($exeFiles)) {
+            usort($exeFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            return basename($exeFiles[0]);
+        }
+    }
+    return 'EDM-Setup-v2.1.0.exe';
+}
+
+function edm_get_download_sha256() {
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $exeFiles = glob($downloadsDir . '/*.exe');
+        if (!empty($exeFiles)) {
+            usort($exeFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            return hash_file('sha256', $exeFiles[0]);
+        }
+    }
+    if (class_exists('EdmManifestManager')) {
+        $manifest = EdmManifestManager::getLiveManifest();
+        if (!empty($manifest['sha256_hash'])) {
+            return $manifest['sha256_hash'];
+        }
+    }
+    return '93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023';
+}
+
+function edm_get_extension_file_size($browser = 'chrome') {
+    $browser = strtolower($browser);
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $matches = glob($downloadsDir . '/*' . $browser . '*.zip');
+        if (!empty($matches)) {
+            $size = filesize($matches[0]);
+            if ($size > 0) {
+                return size_format($size, 1);
+            }
+        }
+    }
+    return '87.5 KB';
+}
+
+function edm_get_cv_file_size() {
+    $downloadsDir = get_template_directory() . '/downloads';
+    if (is_dir($downloadsDir)) {
+        $pdfFiles = glob($downloadsDir . '/*.pdf');
+        if (!empty($pdfFiles)) {
+            $size = filesize($pdfFiles[0]);
+            if ($size > 0) {
+                return size_format($size, 1);
+            }
+        }
+    }
+    return '1.2 MB';
+}
+
+if ( ! function_exists( 'portfolio_get_about_chair_image' ) ) {
+    function portfolio_get_about_chair_image() {
+        $themeDir = get_template_directory();
+        $candidates = [
+            'Assets/images/nf011.png',
+            'assets/images/nf011.png',
+            'nf011.png',
+            'Assets/images/chair.png',
+            'assets/images/chair.png'
+        ];
+        foreach ($candidates as $cand) {
+            if (file_exists($themeDir . '/' . $cand)) {
+                return esc_url(get_template_directory_uri() . '/' . $cand);
+            }
+        }
+        return esc_url(get_template_directory_uri() . '/Assets/images/nf011.png');
+    }
 }
 
 function edm_get_contact_email() {

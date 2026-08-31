@@ -1530,3 +1530,46 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
     .kpi-grid-6 { grid-template-columns: repeat(2, 1fr); }
     .status-grid-4 { grid-template-columns: 1fr; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   ACCESSIBILITY & INTERACTIVE MICRO-INTERACTIONS
+   ══════════════════════════════════════════════════════════════ */
+.spin {
+    animation: edm-spin 1s linear infinite;
+}
+
+@keyframes edm-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.password-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-eye-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-eye-btn:hover {
+    color: var(--color-text-main);
+}
+

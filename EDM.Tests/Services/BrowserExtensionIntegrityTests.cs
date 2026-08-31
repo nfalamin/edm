@@ -62,7 +62,7 @@ namespace EDM.Tests.Services
                 string cssText = File.ReadAllText(contentCssPath);
 
                 jsText.Should().Contain("MediaCandidateDetector", $"content.js in {extDir} must implement MediaCandidateDetector");
-                jsText.Should().Contain("IdmDownloadOverlay", $"content.js in {extDir} must implement IdmDownloadOverlay");
+                jsText.Should().Contain("EdmDownloadOverlay", $"content.js in {extDir} must implement EdmDownloadOverlay");
                 jsText.Should().Contain("MutationObserver", $"content.js in {extDir} must use MutationObserver for dynamic video detection");
                 jsText.Should().Contain("generateDownloadIdentity", $"content.js in {extDir} must implement deterministic DownloadIdentity calculation");
 

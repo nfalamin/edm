@@ -21,8 +21,13 @@ namespace EDM.ControlPlane.Api.Models
         public string Title { get; set; } = string.Empty;
         public string ReleaseNotes { get; set; } = string.Empty;
         public bool IsMandatory { get; set; } = false;
-        public bool IsPublished { get; set; } = true;
+        public bool IsDraft { get; set; } = true;
+        public bool IsPublished { get; set; } = false;
         public bool IsWithdrawn { get; set; } = false;
+        public bool IsWebsiteDownloadEnabled { get; set; } = true;
+        public bool IsAutoUpdateEnabled { get; set; } = true;
+        public bool IsLatest { get; set; } = false;
+        public string Component { get; set; } = "App"; // "App", "Extension", "NativeHost", "Other"
         public string? RollbackTargetVersion { get; set; }
         public string? RollbackReason { get; set; }
         public Guid? CreatedByUserId { get; set; }

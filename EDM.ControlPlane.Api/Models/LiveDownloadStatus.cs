@@ -10,14 +10,20 @@ namespace EDM.ControlPlane.Api.Models
         public string DownloadId { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public string? Host { get; set; }
         public string Category { get; set; } = "General";
         public long TotalBytes { get; set; } = 0;
         public long DownloadedBytes { get; set; } = 0;
         public double ProgressPercentage { get; set; } = 0.0;
         public double SpeedBytesPerSecond { get; set; } = 0.0;
         public long? EtaSeconds { get; set; }
-        public string Status { get; set; } = "Queued"; // Downloading, Paused, Completed, Failed, Queued, Stopped
+        public int Connections { get; set; } = 1;
+        public int RetryCount { get; set; } = 0;
+        public int? HttpStatusCode { get; set; } = 200;
+        public string Status { get; set; } = "Queued"; // Downloading, Paused, Completed, Failed, Cancelled, Queued, Stopped
         public string? ErrorMessage { get; set; }
+        public DateTime StartedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime? CompletedAtUtc { get; set; }
         public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 
         // Navigation

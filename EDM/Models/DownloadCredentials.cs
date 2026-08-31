@@ -7,7 +7,7 @@ namespace EDM.Models
     /// <summary>
     /// Optional per-download HTTP authentication (Basic auth). Used for links that
     /// sit behind a login wall (e.g. private file shares, internal servers, some
-    /// premium hosting providers) - a feature IDM calls "Authorization" on the
+    /// premium hosting providers) - standard HTTP Authorization support on the
     /// download properties dialog.
     /// </summary>
     public sealed class DownloadCredentials

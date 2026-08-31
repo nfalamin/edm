@@ -95,12 +95,17 @@ namespace EDM.ControlPlane.Api.Middleware
                 }
             }
 
-            // 4. API clients with explicit Authorization Bearer token bypass CSRF
+            // 4. Non-browser API clients with explicit Authorization Bearer token (without session cookies) bypass CSRF
+            bool hasCookieAuth = context.Request.Cookies.ContainsKey("edm_admin_jwt");
             string? authHeader = context.Request.Headers.Authorization.ToString();
-            if (!string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            if (!hasCookieAuth && !string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                await _next(context);
-                return;
+                string bearerToken = authHeader.Substring(7).Trim();
+                if (!string.IsNullOrEmpty(bearerToken) && bearerToken.Length > 20)
+                {
+                    await _next(context);
+                    return;
+                }
             }
 
             // 5. Extract CSRF token from request headers

@@ -25,7 +25,7 @@ $site_name = get_bloginfo('name');
     <!-- Primary SEO Meta Information -->
     <title>Exclusive Download Manager (EDM) - 32-Socket Turbo Accelerator for Windows 10 & 11</title>
     <meta name="description" content="Exclusive Download Manager (EDM) is the world's premier Windows download accelerator featuring 32 concurrent sockets, 4K/8K stream sniffing, Manifest V3 browser integration, and SQLite crash-proof resume.">
-    <meta name="keywords" content="exclusive download manager, edm setup, 32 socket download accelerator, idm alternative, 4k video ripper, manifest v3 chrome extension, download manager windows 11, fastest download software">
+    <meta name="keywords" content="exclusive download manager, edm setup, 32 socket download accelerator, high-speed download manager, 4k video ripper, manifest v3 chrome extension, download manager windows 11, fastest download software">
     <meta name="author" content="Alamin Hossain">
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
@@ -133,7 +133,11 @@ $site_name = get_bloginfo('name');
 <body <?php body_class('edm-site-body'); ?>>
 <?php wp_body_open(); ?>
 
-<div id="page" class="site-wrapper">
+<div id="page" class="site-wrapper bg-mesh-net">
+    <!-- Ambient Side Glowing Blobs -->
+    <div class="ambient-side-glow-left"></div>
+    <div class="ambient-side-glow-right"></div>
+
     <a class="skip-link screen-reader-text" href="#primary">
         <?php esc_html_e('Skip to content', 'portfolio'); ?>
     </a>

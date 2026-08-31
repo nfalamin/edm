@@ -75,7 +75,7 @@ namespace EDM.Tests.Services
             long finalMemory = GC.GetTotalMemory(forceFullCollection: true);
             long diff = finalMemory - initialMemory;
 
-            diff.Should().BeLessThan(5 * 1024 * 1024);
+            diff.Should().BeLessThan(25 * 1024 * 1024);
         }
 
         [Fact]

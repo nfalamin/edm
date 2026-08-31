@@ -402,7 +402,7 @@ namespace EDM.Services
                 finally
                 {
                     Interlocked.Decrement(ref activeWorkerCounter);
-                    accountant.OnWorkerBusy();
+                    accountant.OnWorkerIdle();
                 }
             }, fallbackCts.Token);
 
@@ -601,14 +601,16 @@ namespace EDM.Services
                 {
                     foreach (var chunk in chunkFiles)
                     {
-                        if (File.Exists(chunk))
+                        if (!File.Exists(chunk))
                         {
-                            using var partStream = new FileStream(chunk, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-                            int bytesRead;
-                            while ((bytesRead = await partStream.ReadAsync(mergeBuffer.AsMemory(0, mergeBuffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
-                            {
-                                await destStream.WriteAsync(mergeBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
-                            }
+                            throw new FileNotFoundException($"Missing segment chunk file during merge: {chunk}");
+                        }
+
+                        using var partStream = new FileStream(chunk, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                        int bytesRead;
+                        while ((bytesRead = await partStream.ReadAsync(mergeBuffer.AsMemory(0, mergeBuffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+                        {
+                            await destStream.WriteAsync(mergeBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
                         }
                     }
                     await destStream.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -621,10 +623,7 @@ namespace EDM.Services
                 if (mergeVerification.State == Models.VerificationState.VerificationFailed)
                 {
                     try { File.Delete(tempMergePath); } catch { }
-                    if (!string.IsNullOrEmpty(expectedHash))
-                    {
-                        throw new InvalidDataException($"Merged file verification failed: {mergeVerification.Message}");
-                    }
+                    throw new InvalidDataException($"Merged file verification failed: {mergeVerification.Message}");
                 }
 
                 // Atomic Finalization: Atomically replace the destination file

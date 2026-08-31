@@ -80,6 +80,10 @@ namespace EDM.Services.Interfaces
         void SetBrowserShowConfirmation(bool enable);
         bool GetBrowserShowNotification();
         void SetBrowserShowNotification(bool enable);
+        string GetBrowserDownloadMode() => "ShowDialog";
+        void SetBrowserDownloadMode(string mode) { }
+        string GetBrowserInterceptedExtensions() => "ZIP RAR 7Z TAR GZ ISO EXE MSI APK BIN MP4 MKV MP3 PDF DOCX XLSX PPTX DMG";
+        void SetBrowserInterceptedExtensions(string extensions) { }
 
         // Generic key-value settings (for theme, general preferences)
         string? GetSetting(string key);

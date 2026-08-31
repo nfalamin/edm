@@ -1,58 +1,58 @@
 :root {
     /* ══════════════════════════════════════════════════════════════
-       EDM DESIGN SYSTEM — PIXEL-PERFECT THEME TOKENS (DARK DEFAULT)
+       EDM DESIGN SYSTEM — PIXEL-PERFECT THEME TOKENS (OMNI CYBER)
        ══════════════════════════════════════════════════════════════ */
-    --color-bg-base: #0A0E1A;
-    --color-bg-sidebar: #0C101D;
-    --color-bg-header: rgba(12, 16, 29, 0.92);
-    --color-bg-card: #101727;
-    --color-bg-card-elevated: #131C31;
-    --color-bg-card-hover: #16223B;
-    --color-bg-subtle: #141C2E;
-    --color-bg-input: #0E1424;
-    --color-bg-modal: #101728;
-    --color-bg-dropdown: #121A2D;
+    --color-bg-base: #05080C;
+    --color-bg-sidebar: #10181C;
+    --color-bg-header: rgba(5, 8, 12, 0.94);
+    --color-bg-card: #0B0F14;
+    --color-bg-card-elevated: #10181C;
+    --color-bg-card-hover: #151F24;
+    --color-bg-subtle: #10181C;
+    --color-bg-input: #0B0F14;
+    --color-bg-modal: #0B0F14;
+    --color-bg-dropdown: #0B0F14;
 
-    /* Primary Purple / Indigo Accents (Exact Photo Match) */
-    --color-primary: #5856D6;
-    --color-primary-hover: #4B48C6;
-    --color-primary-light: #7C7AFA;
-    --color-primary-soft: rgba(88, 86, 214, 0.18);
-    --color-primary-glow: rgba(88, 86, 214, 0.4);
+    /* Primary Neon Cyan Accents (Exact OMNI Cyber Match) */
+    --color-primary: #06F0FB;
+    --color-primary-hover: #25D4DC;
+    --color-primary-light: #5EFAF9;
+    --color-primary-soft: rgba(6, 240, 251, 0.14);
+    --color-primary-glow: rgba(6, 240, 251, 0.45);
 
     /* Category Icon Solid Backgrounds */
-    --color-icon-purple: #5856D6;
-    --color-icon-blue: #2563EB;
-    --color-icon-amber: #D97706;
-    --color-icon-pink: #A855F7;
-    --color-icon-green: #10B981;
-    --color-icon-cyan: #0284C7;
+    --color-icon-purple: #06F0FB;
+    --color-icon-blue: #25D4DC;
+    --color-icon-amber: #F0D000;
+    --color-icon-pink: #EC4899;
+    --color-icon-green: #12A89C;
+    --color-icon-cyan: #06F0FB;
 
     /* Status Colors */
-    --color-success: #10B981;
-    --color-success-soft: rgba(16, 185, 129, 0.16);
-    --color-warning: #F59E0B;
-    --color-warning-soft: rgba(245, 158, 11, 0.16);
-    --color-danger: #EF4444;
-    --color-danger-soft: rgba(239, 68, 68, 0.16);
-    --color-info: #38BDF8;
+    --color-success: #12A89C;
+    --color-success-soft: rgba(18, 168, 156, 0.16);
+    --color-warning: #F0D000;
+    --color-warning-soft: rgba(240, 208, 0, 0.16);
+    --color-danger: #D51F32;
+    --color-danger-soft: rgba(213, 31, 50, 0.16);
+    --color-info: #25D4DC;
 
     /* Borders & Outlines */
-    --color-border: #1B2438;
-    --color-border-hover: #26334D;
-    --color-border-active: #5856D6;
+    --color-border: #26292D;
+    --color-border-hover: rgba(6, 240, 251, 0.35);
+    --color-border-active: #06F0FB;
 
     /* Typography Colors */
-    --color-text-main: #F8FAFC;
-    --color-text-secondary: #94A3B8;
-    --color-text-muted: #64748B;
-    --color-text-dim: #475569;
+    --color-text-main: #F0F0F0;
+    --color-text-secondary: #7F8488;
+    --color-text-muted: #7F8488;
+    --color-text-dim: #555A5F;
 
     /* Shadows & Glows */
-    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
-    --shadow-purple-glow: 0 0 16px rgba(88, 86, 214, 0.35);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
+    --shadow-purple-glow: 0 0 16px rgba(6, 240, 251, 0.35);
 
     /* Radii */
     --radius-sm: 6px;

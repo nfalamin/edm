@@ -249,6 +249,13 @@ namespace EDM.Views
                 }
                 catch { }
 
+                // Initialize Speed Limiter selection from current BandwidthThrottler active limit
+                int activeLimitKbps = BandwidthThrottler.Instance.LimitKbps;
+                SelectSpeedLimitInComboBox(activeLimitKbps);
+
+                // Listen for global bandwidth changes across open windows
+                BandwidthThrottler.Instance.LimitChanged += OnGlobalBandwidthLimitChanged;
+
                 if (!string.IsNullOrWhiteSpace(_downloadUrl))
                 {
                     await StartDownloadProcessAsync();
@@ -555,8 +562,8 @@ namespace EDM.Views
             }
             else
             {
-                // Smooth spring physics interpolation toward live instantaneous throughput
-                _displayCurSpeed += (_targetCurSpeed - _displayCurSpeed) * 0.35;
+                // High-responsiveness interpolation toward live instantaneous throughput (near zero lag)
+                _displayCurSpeed += (_targetCurSpeed - _displayCurSpeed) * 0.85;
             }
 
             // Render live dynamic area wave curve (30 FPS)
@@ -888,6 +895,29 @@ namespace EDM.Views
             _ = StartDownloadProcessAsync();
         }
 
+        private void RefreshAddressButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_downloadItem != null)
+                {
+                    var refreshWin = new RefreshAddressWindow(_downloadItem);
+                    refreshWin.Owner = this;
+                    bool? result = refreshWin.ShowDialog();
+                    if (result == true)
+                    {
+                        _downloadUrl = _downloadItem.Url;
+                        UrlSubtitleText.Text = _downloadUrl;
+                        RetryButton_Click(sender, e);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogException("[DownloadProgressWindow] RefreshAddressButton_Click failed", ex);
+            }
+        }
+
         private void ToggleConnectionsButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -921,18 +951,64 @@ namespace EDM.Views
 
                 _currentSpeedLimitBytesPerSec = tag switch
                 {
-                    "100 KB/s" => (limitKbps = 100) * 1024.0,
-                    "250 KB/s" => (limitKbps = 250) * 1024.0,
-                    "500 KB/s" => (limitKbps = 500) * 1024.0,
-                    "1 MB/s" => (limitKbps = 1024) * 1024.0,
-                    "2 MB/s" => (limitKbps = 2048) * 1024.0,
-                    "5 MB/s" => (limitKbps = 5120) * 1024.0,
-                    "10 MB/s" => (limitKbps = 10240) * 1024.0,
+                    "100 KB/s" or "100" => (limitKbps = 100) * 1024.0,
+                    "250 KB/s" or "250" => (limitKbps = 250) * 1024.0,
+                    "500 KB/s" or "500" => (limitKbps = 500) * 1024.0,
+                    "1 MB/s" or "1.0 MB/s" => (limitKbps = 1024) * 1024.0,
+                    "2 MB/s" or "2.0 MB/s" => (limitKbps = 2048) * 1024.0,
+                    "5 MB/s" or "5.0 MB/s" => (limitKbps = 5120) * 1024.0,
+                    "10 MB/s" or "10.0 MB/s" => (limitKbps = 10240) * 1024.0,
                     _ => -1 // Unlimited
                 };
 
-                BandwidthThrottler.Instance.SetLimit(limitKbps);
+                if (BandwidthThrottler.Instance.LimitKbps != limitKbps)
+                {
+                    BandwidthThrottler.Instance.SetLimit(limitKbps);
+                }
                 LoggingService.Log($"[DownloadProgressWindow] Speed limit updated: {tag} ({_currentSpeedLimitBytesPerSec} B/s)");
+            }
+        }
+
+        private void OnGlobalBandwidthLimitChanged(int kbps)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                SelectSpeedLimitInComboBox(kbps);
+            });
+        }
+
+        private void SelectSpeedLimitInComboBox(int kbps)
+        {
+            if (SpeedLimitComboBox == null) return;
+
+            string targetMatch = kbps switch
+            {
+                100 => "100",
+                250 => "250",
+                500 => "500",
+                1024 => "1",
+                2048 => "2",
+                5120 => "5",
+                10240 => "10",
+                _ => "Unlimited"
+            };
+
+            for (int i = 0; i < SpeedLimitComboBox.Items.Count; i++)
+            {
+                if (SpeedLimitComboBox.Items[i] is ComboBoxItem cbi)
+                {
+                    string content = cbi.Content?.ToString() ?? "";
+                    if (targetMatch == "Unlimited" && content.Contains("Unlimited", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (SpeedLimitComboBox.SelectedIndex != i) SpeedLimitComboBox.SelectedIndex = i;
+                        return;
+                    }
+                    if (targetMatch != "Unlimited" && content.StartsWith(targetMatch, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (SpeedLimitComboBox.SelectedIndex != i) SpeedLimitComboBox.SelectedIndex = i;
+                        return;
+                    }
+                }
             }
         }
 
@@ -940,6 +1016,7 @@ namespace EDM.Views
         {
             try
             {
+                BandwidthThrottler.Instance.LimitChanged -= OnGlobalBandwidthLimitChanged;
                 _graphTimer?.Stop();
                 _cts?.Cancel();
                 _cts?.Dispose();

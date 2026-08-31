@@ -69,11 +69,17 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
 
                 <!-- SHA-256 Checksum Authority -->
                 <div style="background: rgba(4, 8, 20, 0.9); border: 1px solid var(--edm-border); border-radius: 12px; padding: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <i data-lucide="lock" style="width: 15px; height: 15px; color: var(--edm-green);"></i>
-                        <span style="font-size: 12px; font-weight: 700; color: #fff;">Cryptographic SHA-256 Checksum Authority:</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="lock" style="width: 15px; height: 15px; color: var(--edm-green);"></i>
+                            <span style="font-size: 12px; font-weight: 700; color: #fff;">Cryptographic SHA-256 Checksum Authority:</span>
+                        </div>
+                        <button type="button" onclick="navigator.clipboard.writeText('<?php echo function_exists('edm_get_download_sha256') ? esc_attr(edm_get_download_sha256()) : '93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023'; ?>'); if(window.edmSite && window.edmSite.showToast) window.edmSite.showToast('SHA-256 Hash Copied to Clipboard!', 'success');" style="background: rgba(93, 95, 239, 0.15); border: 1px solid rgba(93, 95, 239, 0.3); color: var(--edm-primary-light); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
+                            <span>Copy</span>
+                        </button>
                     </div>
-                    <code style="display: block; font-family: var(--edm-font-mono); font-size: 11px; color: var(--edm-primary-light); word-break: break-all; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+                    <code style="display: block; font-family: var(--edm-font-mono); font-size: 11px; color: var(--edm-primary-light); word-break: break-all; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; user-select: all;">
                         <?php echo function_exists('edm_get_download_sha256') ? esc_html(edm_get_download_sha256()) : '93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023'; ?>
                     </code>
                 </div>
@@ -91,9 +97,9 @@ $chrome_ext_url = function_exists('edm_get_extension_url') ? edm_get_extension_u
                     <p style="font-size: 12.5px; color: var(--edm-text-secondary); line-height: 1.5; margin-bottom: 16px;">
                         Zero installation required. Run EDM directly from any USB flash drive or portable storage.
                     </p>
-                    <a href="<?php echo esc_url($download_url); ?>" class="btn btn-outline btn-sm btn-full" download>
+                    <a href="<?php echo function_exists('edm_get_portable_url') ? esc_url(edm_get_portable_url()) : esc_url($download_url); ?>" class="btn btn-outline btn-sm btn-full" download>
                         <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                        <span><?php printf(esc_html__('Download Portable Package (%s)', 'edm-theme'), function_exists('edm_get_download_file_size') ? esc_html(edm_get_download_file_size()) : '19.8 MB'); ?></span>
+                        <span><?php printf(esc_html__('Download Portable Package (%s)', 'edm-theme'), function_exists('edm_get_portable_file_size') ? esc_html(edm_get_portable_file_size()) : '19.2 MB'); ?></span>
                     </a>
                 </div>
 

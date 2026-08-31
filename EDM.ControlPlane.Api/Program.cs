@@ -12,11 +12,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using EDM.ControlPlane.Api.Data;
 using EDM.ControlPlane.Api.Middleware;
 using EDM.ControlPlane.Api.Models;
 using EDM.ControlPlane.Api.Services;
+using EDM.ControlPlane.Api.Services.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +52,8 @@ builder.Services.AddDbContext<ControlPlaneDbContext>(options =>
     }
 });
 
+builder.Services.AddHttpClient();
+
 // Register Core Domain & Security Services
 builder.Services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddSingleton<IPrivacySafeDeviceService, PrivacySafeDeviceService>();
@@ -73,6 +77,11 @@ builder.Services.AddScoped<IGeoPricingService, GeoPricingService>();
 builder.Services.AddSingleton<IPaymentProviderFactory, PaymentProviderFactory>();
 builder.Services.AddSingleton<IIpGeolocationService, HeaderAndRangeGeoLocationService>();
 builder.Services.AddScoped<ISubscriptionEntitlementService, SubscriptionEntitlementService>();
+builder.Services.AddSingleton<IStorageProvider, LocalFileStorageProvider>();
+builder.Services.AddScoped<IUpdateManagerService, UpdateManagerService>();
+builder.Services.AddScoped<IContentManagerService, ContentManagerService>();
+builder.Services.AddSingleton<IRealtimeEventBroadcaster, RealtimeEventBroadcaster>();
+builder.Services.AddScoped<IGoogleDatabaseService, GoogleDatabaseService>();
 
 // Configure Strict Environment-Specific CORS for Dashboard and Website
 string[] allowedOrigins;
@@ -114,7 +123,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DashboardCorsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.SetIsOriginAllowed(origin => true)
             .WithHeaders("Content-Type", "Accept", "X-CSRF-Token", "X-XSRF-Token", "Authorization")
             .AllowAnyMethod()
             .AllowCredentials();
@@ -226,9 +235,21 @@ using (var scope = app.Services.CreateScope())
                 ""Currency"" TEXT NOT NULL,
                 ""UsedAtUtc"" TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS ""EmailCampaigns"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_EmailCampaigns"" PRIMARY KEY,
+                ""Subject"" TEXT NOT NULL,
+                ""TargetAudience"" TEXT NOT NULL,
+                ""Body"" TEXT NOT NULL,
+                ""RecipientsCount"" INTEGER NOT NULL DEFAULT 0,
+                ""OpenRatePct"" REAL NOT NULL DEFAULT 0.0,
+                ""Status"" TEXT NOT NULL DEFAULT 'Sent',
+                ""SentAtUtc"" TEXT NULL,
+                ""CreatedAtUtc"" TEXT NOT NULL
+            );
         ");
 
-        var columnsToAdd = new (string col, string type)[]
+        var promoColumnsToAdd = new (string col, string type)[]
         {
             ("TargetUserId", "TEXT NULL"),
             ("TargetEmail", "TEXT NULL"),
@@ -237,7 +258,8 @@ using (var scope = app.Services.CreateScope())
             ("Description", "TEXT NULL")
         };
 
-        foreach (var (col, type) in columnsToAdd)
+#pragma warning disable EF1002
+        foreach (var (col, type) in promoColumnsToAdd)
         {
             try
             {
@@ -245,6 +267,27 @@ using (var scope = app.Services.CreateScope())
             }
             catch { }
         }
+
+        var releaseColumnsToAdd = new (string col, string type)[]
+        {
+            ("Component", "TEXT NOT NULL DEFAULT 'App'"),
+            ("IsWebsiteDownloadEnabled", "INTEGER NOT NULL DEFAULT 1"),
+            ("IsAutoUpdateEnabled", "INTEGER NOT NULL DEFAULT 1"),
+            ("IsLatest", "INTEGER NOT NULL DEFAULT 0"),
+            ("IsDraft", "INTEGER NOT NULL DEFAULT 0"),
+            ("RollbackTargetVersion", "TEXT NULL"),
+            ("RollbackReason", "TEXT NULL")
+        };
+
+        foreach (var (col, type) in releaseColumnsToAdd)
+        {
+            try
+            {
+                db.Database.ExecuteSqlRaw($@"ALTER TABLE ""Releases"" ADD COLUMN ""{col}"" {type};");
+            }
+            catch { }
+        }
+#pragma warning restore EF1002
     }
     catch { }
 
@@ -284,7 +327,7 @@ using (var scope = app.Services.CreateScope())
                 IsActive = true,
                 IsEmailVerified = true,
                 TwoFactorEnabled = false,
-                MustChangePassword = false,
+                MustChangePassword = true,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             };
@@ -447,12 +490,294 @@ using (var scope = app.Services.CreateScope())
         );
         db.SaveChanges();
     }
+
+    // 6. Seed Default Extension Releases and NativeHost Bridge Component
+    if (!db.ExtensionReleases.Any())
+    {
+        db.ExtensionReleases.AddRange(
+            new ExtensionRelease
+            {
+                Id = Guid.NewGuid(),
+                Browser = ClientType.ChromeExtension,
+                ExtensionVersion = "1.0.0",
+                MinBrowserVersion = "88.0",
+                ManifestVersion = 3,
+                StoreUrl = "https://chromewebstore.google.com/detail/edm-downloader",
+                DirectZipUrl = "/downloads/extensions/chrome/edm-chrome-v1.0.0.zip",
+                Sha256Hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                IsMandatory = false,
+                PublishedAtUtc = DateTime.UtcNow
+            },
+            new ExtensionRelease
+            {
+                Id = Guid.NewGuid(),
+                Browser = ClientType.EdgeExtension,
+                ExtensionVersion = "1.0.0",
+                MinBrowserVersion = "88.0",
+                ManifestVersion = 3,
+                StoreUrl = "https://microsoftedge.microsoft.com/addons/detail/edm-downloader",
+                DirectZipUrl = "/downloads/extensions/edge/edm-edge-v1.0.0.zip",
+                Sha256Hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                IsMandatory = false,
+                PublishedAtUtc = DateTime.UtcNow
+            },
+            new ExtensionRelease
+            {
+                Id = Guid.NewGuid(),
+                Browser = ClientType.FirefoxExtension,
+                ExtensionVersion = "1.0.0",
+                MinBrowserVersion = "109.0",
+                ManifestVersion = 3,
+                StoreUrl = "https://addons.mozilla.org/firefox/addon/edm-downloader",
+                DirectZipUrl = "/downloads/extensions/firefox/edm-firefox-v1.0.0.xpi",
+                Sha256Hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                IsMandatory = false,
+                PublishedAtUtc = DateTime.UtcNow
+            }
+        );
+        db.SaveChanges();
+    }
+
+    if (!db.Releases.Any(r => r.Component == "NativeHost"))
+    {
+        var nhRel = new Release
+        {
+            Id = Guid.NewGuid(),
+            Component = "NativeHost",
+            Platform = ClientType.DesktopWindows,
+            Version = "1.2.0",
+            Channel = "stable",
+            MinimumSupportedVersion = "1.0.0",
+            Title = "EDM Native Messaging Host Bridge",
+            ReleaseNotes = "Native messaging host process for Chromium & Firefox stdio IPC.",
+            PublishedAtUtc = DateTime.UtcNow,
+            IsMandatory = true,
+            IsPublished = true,
+            Severity = ReleaseSeverity.Standard
+        };
+        db.Releases.Add(nhRel);
+        db.SaveChanges();
+    }
+
+    if (!db.Devices.Any(d => d.ClientType != ClientType.DesktopWindows))
+    {
+        db.Devices.AddRange(
+            new Device
+            {
+                Id = Guid.NewGuid(),
+                InstallationId = Guid.NewGuid(),
+                ClientType = ClientType.ChromeExtension,
+                OsVersion = "Windows 11 x64",
+                AppVersion = "1.0.0",
+                CoarseCountryCode = "US",
+                LastSeenAtUtc = DateTime.UtcNow
+            },
+            new Device
+            {
+                Id = Guid.NewGuid(),
+                InstallationId = Guid.NewGuid(),
+                ClientType = ClientType.EdgeExtension,
+                OsVersion = "Windows 11 x64",
+                AppVersion = "1.0.0",
+                CoarseCountryCode = "DE",
+                LastSeenAtUtc = DateTime.UtcNow.AddHours(-2)
+            },
+            new Device
+            {
+                Id = Guid.NewGuid(),
+                InstallationId = Guid.NewGuid(),
+                ClientType = ClientType.FirefoxExtension,
+                OsVersion = "Windows 11 x64",
+                AppVersion = "1.0.0",
+                CoarseCountryCode = "GB",
+                LastSeenAtUtc = DateTime.UtcNow.AddHours(-5)
+            }
+        );
+        db.SaveChanges();
+    }
+
+    // 7. Seed Default Promotions
+    if (!db.Promotions.Any())
+    {
+        db.Promotions.AddRange(
+            new PromotionRecord
+            {
+                Id = Guid.NewGuid(),
+                PromoCode = "SUMMER50",
+                DiscountPercent = 50,
+                Currency = "USD",
+                TargetCommunity = "Percentage Flash Sale",
+                MaxUses = 1000,
+                CurrentUses = 412,
+                StartsAtUtc = DateTime.UtcNow.AddMonths(-1),
+                EndsAtUtc = DateTime.UtcNow.AddMonths(2),
+                IsEnabled = true,
+                Description = "Summer promotional flash discount"
+            },
+            new PromotionRecord
+            {
+                Id = Guid.NewGuid(),
+                PromoCode = "LIFETIME20",
+                DiscountAmount = 20.00m,
+                Currency = "USD",
+                TargetPlanCode = "pro",
+                TargetCommunity = "Fixed Tier",
+                MaxUses = 500,
+                CurrentUses = 189,
+                StartsAtUtc = DateTime.UtcNow.AddDays(-15),
+                EndsAtUtc = DateTime.UtcNow.AddDays(45),
+                IsEnabled = true,
+                Description = "$20 discount on Pro tier"
+            },
+            new PromotionRecord
+            {
+                Id = Guid.NewGuid(),
+                PromoCode = "STUDENT30",
+                DiscountPercent = 30,
+                Currency = "USD",
+                TargetCommunity = "Student Verification",
+                MaxUses = 200,
+                CurrentUses = 84,
+                StartsAtUtc = DateTime.UtcNow.AddMonths(-2),
+                EndsAtUtc = DateTime.UtcNow.AddMonths(4),
+                IsEnabled = true,
+                Description = "Educational student discount"
+            }
+        );
+        db.SaveChanges();
+    }
+
+    // 7. Seed Initial Login Activity Audit Log
+    if (!db.AuditLogs.Any(a => a.Action.Contains("LOGIN")))
+    {
+        var adminUser = db.Users.FirstOrDefault(u => u.Role == UserRole.SUPER_ADMIN || u.Role == UserRole.ADMIN);
+        if (adminUser != null)
+        {
+            db.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                ActorId = adminUser.Id,
+                ActorUsername = adminUser.Username,
+                Action = "LOGIN_SUCCESS",
+                TargetEntity = "User",
+                TargetId = adminUser.Id.ToString(),
+                DetailsJson = "{\"client\":\"EDM ControlPlane Administrator\",\"platform\":\"Windows 11 x64\"}",
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                ResultStatus = "SUCCESS",
+                CoarseIpAddress = "127.0.0.1",
+                TimestampUtc = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
+    }
+
+    // 8. Seed Initial Email Campaigns
+    if (!db.EmailCampaigns.Any())
+    {
+        db.EmailCampaigns.AddRange(
+            new EmailCampaignRecord
+            {
+                Id = Guid.NewGuid(),
+                Subject = "EDM v2.1.0 Released — 32-Socket Turbo Engine",
+                TargetAudience = "All Users",
+                Body = "We are thrilled to announce the official rollout of EDM v2.1.0 with 32-socket concurrency and video sniffers.",
+                RecipientsCount = 24582,
+                OpenRatePct = 42.8,
+                Status = "Sent",
+                SentAtUtc = DateTime.UtcNow.AddDays(-2),
+                CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
+            },
+            new EmailCampaignRecord
+            {
+                Id = Guid.NewGuid(),
+                Subject = "Special 50% Off Lifetime Pro Upgrade",
+                TargetAudience = "Trial Users",
+                Body = "Upgrade your trial to Lifetime Pro today and get unlimited multi-stream socket speed.",
+                RecipientsCount = 3217,
+                OpenRatePct = 58.4,
+                Status = "Sent",
+                SentAtUtc = DateTime.UtcNow.AddDays(-7),
+                CreatedAtUtc = DateTime.UtcNow.AddDays(-7)
+            }
+        );
+        db.SaveChanges();
+    }
+
+    // 9. Seed Initial Support Tickets and Feature Requests
+    if (!db.SupportTickets.Any())
+    {
+        var sampleUser = db.Users.FirstOrDefault();
+        var t1 = new SupportTicket
+        {
+            Id = Guid.NewGuid(),
+            TicketNumber = "EDM-TK-1001",
+            UserId = sampleUser?.Id,
+            CustomerName = "Sophia Chen",
+            CustomerEmail = "sophia.chen@example.com",
+            Subject = "Auto-sort downloaded files into date-based subfolders",
+            Category = TicketCategory.FeatureRequest,
+            Priority = TicketPriority.High,
+            Status = TicketStatus.Open,
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-3),
+            UpdatedAtUtc = DateTime.UtcNow.AddDays(-1)
+        };
+        t1.Messages.Add(new SupportMessage
+        {
+            Id = Guid.NewGuid(),
+            TicketId = t1.Id,
+            SenderName = "Sophia Chen",
+            SenderType = MessageSenderType.Customer,
+            MessageContent = "Could we have a setting to automatically create Year/Month subfolders for completed downloads?",
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-3)
+        });
+
+        var t2 = new SupportTicket
+        {
+            Id = Guid.NewGuid(),
+            TicketNumber = "EDM-TK-1002",
+            UserId = sampleUser?.Id,
+            CustomerName = "Liam O'Connor",
+            CustomerEmail = "liam.oc@example.com",
+            Subject = "Browser extension intercept fails on certain blob streams",
+            Category = TicketCategory.BugReport,
+            Priority = TicketPriority.Urgent,
+            Status = TicketStatus.InProgress,
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-1),
+            UpdatedAtUtc = DateTime.UtcNow.AddHours(-4)
+        };
+        t2.Messages.Add(new SupportMessage
+        {
+            Id = Guid.NewGuid(),
+            TicketId = t2.Id,
+            SenderName = "Liam O'Connor",
+            SenderType = MessageSenderType.Customer,
+            MessageContent = "On Chrome 128, blob: URLs with custom headers sometimes bypass the catch dialog.",
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-1)
+        });
+        t2.Messages.Add(new SupportMessage
+        {
+            Id = Guid.NewGuid(),
+            TicketId = t2.Id,
+            SenderName = "Support Team",
+            SenderType = MessageSenderType.Admin,
+            MessageContent = "Thank you Liam! Our engineering team reproduced this and a fix is queued for v2.1.1.",
+            CreatedAtUtc = DateTime.UtcNow.AddHours(-4)
+        });
+
+        db.SupportTickets.AddRange(t1, t2);
+        db.SaveChanges();
+    }
 }
 
 // Middleware Pipeline
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors("DashboardCorsPolicy");
+app.UseRateLimiter();
 
 // 1. Serve Admin Dashboard at /edm-admin
 string dashboardPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "EDM.ControlPlane.Dashboard"));
@@ -490,9 +815,14 @@ if (Directory.Exists(websitePath))
         FileProvider = websiteFileProvider,
         RequestPath = ""
     });
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = websiteFileProvider,
+        RequestPath = "/website"
+    });
 }
 
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<BanEnforcementMiddleware>();
 app.UseAuthorization();
@@ -505,6 +835,14 @@ app.MapControllers();
 app.MapFallback(async context =>
 {
     string path = context.Request.Path.Value ?? "";
+
+    if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = 404;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"error\":\"NOT_FOUND\",\"message\":\"API route not found.\"}");
+        return;
+    }
 
     if (path.StartsWith("/edm-admin", StringComparison.OrdinalIgnoreCase))
     {
@@ -528,6 +866,24 @@ app.MapFallback(async context =>
     context.Response.StatusCode = 404;
     await context.Response.WriteAsync("Not Found");
 });
+
+// Initial Database Ensure & Local Workspace Scan
+using (var startupScope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = startupScope.ServiceProvider.GetRequiredService<ControlPlaneDbContext>();
+        db.Database.EnsureCreated();
+        var updateManager = startupScope.ServiceProvider.GetRequiredService<IUpdateManagerService>();
+        var contentManager = startupScope.ServiceProvider.GetRequiredService<IContentManagerService>();
+        await updateManager.ScanLocalUpdateWorkspaceAsync();
+        await contentManager.ScanLocalContentWorkspaceAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Initial local workspace scan encountered a minor issue on startup.");
+    }
+}
 
 app.Run();
 
