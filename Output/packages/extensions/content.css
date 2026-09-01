@@ -1,0 +1,559 @@
+/**
+ * EDM (Exclusive Download Manager) - Production Glassmorphism UI Theme
+ * EDM Native Frosted-Glass Media Overlay & Format Selector
+ */
+
+/* ── 1. Root Floating Panel Scoping ── */
+.edm-floating-panel {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+    transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    line-height: 1.4 !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
+}
+
+.edm-thumb-panel {
+    top: 10px !important;
+    right: 10px !important;
+}
+
+.edm-floating-panel * {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ── 2. EDM Native Floating Download Bar ── */
+.edm-floating-btn,
+.edm-overlay-bar {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 24px !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0F4F8 40%, #DCE5EE 50%, #EBF1F7 100%) !important;
+    border: 1px solid #7B96B2 !important;
+    border-radius: 3px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    user-select: none !important;
+    cursor: grab !important;
+    padding: 0 !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    font-size: 11px !important;
+    color: #1E395B !important;
+    transition: all 0.15s ease !important;
+}
+
+.edm-spinner {
+    display: inline-block !important;
+    width: 14px !important;
+    height: 14px !important;
+    border: 2px solid rgba(6, 240, 251, 0.2) !important;
+    border-top-color: #06F0FB !important;
+    border-radius: 50% !important;
+    animation: edmSpin 0.8s linear infinite !important;
+}
+
+.edm-overlay-bar:hover {
+    border-color: #3880C7 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 #FFFFFF !important;
+}
+
+.edm-overlay-main-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 0 7px 0 5px !important;
+    height: 100% !important;
+}
+
+.edm-overlay-logo-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.edm-overlay-icon {
+    width: 12px !important;
+    height: 12px !important;
+    fill: #10B981 !important;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)) !important;
+}
+
+.edm-overlay-text {
+    font-size: 11px !important;
+    font-weight: bold !important;
+    color: #0A3158 !important;
+    white-space: nowrap !important;
+    line-height: 20px !important;
+    letter-spacing: 0.1px !important;
+    transition: color 0.15s ease, text-shadow 0.15s ease !important;
+}
+
+.edm-overlay-bar:hover .edm-overlay-text {
+    color: #0284C7 !important;
+    text-shadow: 0 0 1px rgba(2, 132, 199, 0.3) !important;
+}
+
+.edm-overlay-badge {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
+    font-size: 9.5px !important;
+    font-weight: 800 !important;
+    padding: 1px 5px !important;
+    border-radius: 8px !important;
+    margin-left: 2px !important;
+}
+
+.edm-overlay-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    border-left: 1px solid #B0C4DE !important;
+}
+
+.edm-overlay-btn-help,
+.edm-overlay-btn-close {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 16px !important;
+    height: 100% !important;
+    font-size: 10.5px !important;
+    font-weight: bold !important;
+    color: #4B6A90 !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.edm-overlay-btn-help:hover {
+    background: rgba(2, 132, 199, 0.15) !important;
+    color: #0284C7 !important;
+}
+
+.edm-overlay-btn-close:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #EF4444 !important;
+}
+
+/* ── 3. EDM Native Dark Dropdown Panel ── */
+.edm-dropdown-card,
+.edm-overlay-dropdown-panel {
+    position: absolute !important;
+    top: calc(100% + 2px) !important;
+    right: 0 !important;
+    min-width: 460px !important;
+    max-width: 650px !important;
+    background: #1C2028 !important;
+    border: 1px solid #3E4756 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75) !important;
+    border-radius: 1px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 3px 0 !important;
+    z-index: 2147483647 !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    user-select: none !important;
+    animation: edmOverlayFade 0.12s ease !important;
+}
+
+@keyframes edmOverlayFade {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.edm-overlay-header-opt {
+    padding: 4px 12px !important;
+    font-size: 11.5px !important;
+    color: #FFFFFF !important;
+    cursor: pointer !important;
+    line-height: 18px !important;
+    transition: background 0.1s ease !important;
+}
+
+.edm-overlay-header-opt:hover {
+    background: #0284C7 !important;
+    color: #FFFFFF !important;
+}
+
+.edm-overlay-divider {
+    height: 1px !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    margin: 2px 0 3px 0 !important;
+}
+
+.edm-overlay-variants-list {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 420px !important;
+    overflow-y: auto !important;
+}
+
+.edm-overlay-variants-list::-webkit-scrollbar {
+    width: 5px !important;
+}
+
+.edm-overlay-variants-list::-webkit-scrollbar-track {
+    background: #1C2028 !important;
+}
+
+.edm-overlay-variants-list::-webkit-scrollbar-thumb {
+    background: #485466 !important;
+}
+
+.edm-variant-row,
+.edm-audio-row,
+.edm-overlay-row {
+    display: flex !important;
+    align-items: center !important;
+    padding: 4px 12px !important;
+    font-size: 11.5px !important;
+    color: #E2E8F0 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 19px !important;
+    gap: 4px !important;
+    transition: background 0.08s ease, color 0.08s ease !important;
+}
+
+.edm-overlay-row:hover {
+    background: #10181C !important;
+    color: #06F0FB !important;
+}
+
+.edm-overlay-row:active {
+    background: #0B0F14 !important;
+}
+
+.edm-overlay-row-num {
+    color: inherit !important;
+    min-width: 14px !important;
+}
+
+.edm-overlay-row-title {
+    color: inherit !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 320px !important;
+}
+
+.edm-overlay-row-sep {
+    color: rgba(255, 255, 255, 0.6) !important;
+    padding: 0 4px !important;
+}
+
+.edm-overlay-row:hover .edm-overlay-row-sep {
+    color: #FFFFFF !important;
+}
+
+.edm-overlay-row-desc {
+    color: inherit !important;
+    white-space: nowrap !important;
+}
+
+/* Loading & Empty states inside list */
+.edm-overlay-state {
+    padding: 12px 16px !important;
+    font-size: 11.5px !important;
+    color: #94A3B8 !important;
+    text-align: center !important;
+}
+
+/* ── 4. EDM Native "Download File Info" Modal Dialog ── */
+.edm-dialog-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    z-index: 2147483646 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(2px) !important;
+}
+
+.edm-file-info-dialog {
+    width: 530px !important;
+    max-width: 95vw !important;
+    background: #0B0F14 !important;
+    border: 1px solid #26292D !important;
+    border-radius: 6px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    color: #F0F0F0 !important;
+    overflow: hidden !important;
+    user-select: none !important;
+    animation: edmModalZoom 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+@keyframes edmModalZoom {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.edm-dialog-titlebar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 30px !important;
+    background: #10181C !important;
+    border-bottom: 1px solid #26292D !important;
+    padding: 0 10px !important;
+}
+
+.edm-dialog-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    color: #F0F0F0 !important;
+}
+
+.edm-dialog-title-icon {
+    width: 13px !important;
+    height: 13px !important;
+    fill: #12A89C !important;
+}
+
+.edm-dialog-win-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+}
+
+.edm-dialog-close-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+    color: #7F8488 !important;
+    cursor: pointer !important;
+    border-radius: 3px !important;
+    transition: background 0.1s ease, color 0.1s ease !important;
+}
+
+.edm-dialog-close-btn:hover {
+    background: #D51F32 !important;
+    color: #FFFFFF !important;
+}
+
+.edm-dialog-body {
+    padding: 14px 16px 10px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+}
+
+.edm-form-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.edm-form-label {
+    width: 72px !important;
+    text-align: right !important;
+    color: #94A3B8 !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-form-control-wrap {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+}
+
+.edm-form-input {
+    flex: 1 !important;
+    height: 22px !important;
+    background: #181B20 !important;
+    border: 1px solid #3E4756 !important;
+    border-radius: 2px !important;
+    color: #F1F5F9 !important;
+    font-size: 11px !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    padding: 0 6px !important;
+    outline: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.edm-form-input:focus {
+    border-color: #06F0FB !important;
+    box-shadow: 0 0 6px rgba(6, 240, 251, 0.4) !important;
+}
+
+.edm-form-input[readonly] {
+    color: #7F8488 !important;
+    background: #05080C !important;
+}
+
+.edm-form-select {
+    height: 24px !important;
+    background: #10181C !important;
+    border: 1px solid #26292D !important;
+    border-radius: 4px !important;
+    color: #F0F0F0 !important;
+    font-size: 11px !important;
+    padding: 0 6px !important;
+    outline: none !important;
+    cursor: pointer !important;
+    width: 140px !important;
+}
+
+.edm-form-btn-small {
+    height: 24px !important;
+    padding: 0 10px !important;
+    background: #10181C !important;
+    border: 1px solid #26292D !important;
+    border-radius: 4px !important;
+    color: #F0F0F0 !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: background 0.1s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-form-btn-small:hover {
+    background: #1A242B !important;
+    border-color: #06F0FB !important;
+}
+
+.edm-file-badge-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 6px 0 10px !important;
+    flex-shrink: 0 !important;
+}
+
+.edm-file-badge-icon {
+    font-size: 20px !important;
+    line-height: 1 !important;
+}
+
+.edm-file-badge-size {
+    font-size: 10px !important;
+    font-weight: bold !important;
+    color: #06F0FB !important;
+    margin-top: 3px !important;
+    white-space: nowrap !important;
+}
+
+.edm-form-checkbox-row {
+    margin-left: 80px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}
+
+.edm-checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    color: #7F8488 !important;
+    cursor: pointer !important;
+}
+
+.edm-dialog-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    padding: 10px 16px 12px 16px !important;
+    background: #10181C !important;
+    border-top: 1px solid #26292D !important;
+}
+
+.edm-dialog-btn {
+    height: 24px !important;
+    padding: 0 14px !important;
+    border-radius: 4px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    transition: all 0.12s ease !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+}
+
+.edm-btn-secondary {
+    background: #10181C !important;
+    border: 1px solid #26292D !important;
+    color: #F0F0F0 !important;
+}
+
+.edm-btn-secondary:hover {
+    background: #1A242B !important;
+    border-color: #7F8488 !important;
+}
+
+.edm-btn-primary {
+    background: linear-gradient(135deg, #06F0FB 0%, #25D4DC 100%) !important;
+    border: 1px solid #06F0FB !important;
+    color: #05080C !important;
+    font-weight: bold !important;
+    box-shadow: 0 1px 6px rgba(6, 240, 251, 0.4) !important;
+}
+
+.edm-btn-primary:hover {
+    background: linear-gradient(135deg, #25D4DC 0%, #06F0FB 100%) !important;
+    box-shadow: 0 0 10px rgba(6, 240, 251, 0.6) !important;
+}
+
+/* Toast Notifications */
+.edm-toast-container {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    pointer-events: none !important;
+}
+
+.edm-toast {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 18px !important;
+    border-radius: 10px !important;
+    background: #0B0F14 !important;
+    color: #F0F0F0 !important;
+    border: 1px solid #26292D !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(6, 240, 251, 0.25) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    pointer-events: auto !important;
+    animation: edmToastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes edmToastIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}

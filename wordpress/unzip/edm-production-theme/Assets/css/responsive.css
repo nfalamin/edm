@@ -1,0 +1,238 @@
+/* ══════════════════════════════════════════════════════════════
+   EDM — RESPONSIVE ADAPTATIONS ENGINE
+   ══════════════════════════════════════════════════════════════
+   Target Breakpoints:
+   - Ultra-Wide / Desktop: 1920px, 1600px, 1440px, 1366px, 1280px
+   - Tablet: 1024px, 912px, 834px, 768px
+   - Mobile: 430px, 414px, 390px, 375px, 360px
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. LARGE TABLETS & DESKTOPS (<= 1200px) ── */
+@media (max-width: 1200px) {
+    .container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .hero-container {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .hero-title {
+        font-size: 42px;
+    }
+
+    .hero-widget-wrap {
+        max-width: 680px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .footer-grid {
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        gap: 30px;
+    }
+}
+
+/* ── 2. TABLETS & SMALL LAPTOPS (<= 1024px) ── */
+@media (max-width: 1024px) {
+    :root {
+        --edm-header-height: 66px;
+    }
+
+    .nav-links {
+        display: none; /* Collapses into mobile drawer */
+    }
+
+    .btn-hamburger {
+        display: flex;
+    }
+
+    .split-feature-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .features-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .browser-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pricing-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pricing-card-featured {
+        grid-column: span 2;
+        max-width: 580px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+    }
+}
+
+/* ── 3. PORTRAIT TABLETS (<= 768px) ── */
+@media (max-width: 768px) {
+    .top-notice-bar {
+        display: none; /* Hide announcement bar on small screens to conserve vertical height */
+    }
+
+    .mobile-drawer {
+        top: var(--edm-header-height);
+    }
+
+    .section {
+        padding: 50px 0;
+    }
+
+    .hero-title {
+        font-size: 32px;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 15px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+    }
+
+    .features-grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .browser-grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-card-featured {
+        grid-column: span 1;
+        max-width: 100%;
+    }
+
+    .turbo-comparison-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .footer-bottom-flex {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 14px;
+    }
+
+    .footer-badges {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    /* Dashboard Shell Mobile Adaptation */
+    .app-sidebar {
+        position: fixed;
+        left: -260px;
+        transition: left var(--edm-transition-normal);
+        z-index: 2000;
+        height: 100vh;
+    }
+
+    .app-sidebar.mobile-open {
+        left: 0;
+    }
+
+    .app-main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    .dash-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .dash-charts-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── 4. SMARTPHONES & MOBILE PHONES (<= 430px) ── */
+@media (max-width: 430px) {
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .brand-title {
+        font-size: 16px;
+    }
+
+    .brand-subtitle {
+        display: none;
+    }
+
+    .hero-title {
+        font-size: 26px;
+    }
+
+    .hero-specs-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .sim-card-header {
+        padding: 10px 12px;
+    }
+
+    .sim-card-body {
+        padding: 12px;
+    }
+
+    .sim-file-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .sim-speed-box {
+        align-self: flex-start;
+    }
+
+    .dash-kpi-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cta-buttons-row {
+        flex-direction: column;
+    }
+
+    .cta-buttons-row .btn {
+        width: 100%;
+    }
+}

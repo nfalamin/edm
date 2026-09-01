@@ -1,0 +1,283 @@
+/**
+ * EDM (Exclusive Download Manager) - Shared Design System CSS
+ * Version: 1.0.0
+ * Comprehensive Theme Variables, Dark/Light palettes, Glassmorphism, and Reusable UI Components.
+ */
+
+:root, [data-theme="dark"] {
+    --edm-primary: #06F0FB;
+    --edm-primary-hover: #25D4DC;
+    --edm-primary-gradient: linear-gradient(135deg, #06F0FB 0%, #25D4DC 100%);
+    --edm-accent-cyan: #25D4DC;
+    --edm-accent-emerald: #12A89C;
+    --edm-accent-purple: #06F0FB;
+    --edm-accent-amber: #F0D000;
+    --edm-accent-rose: #D51F32;
+    
+    --edm-bg-app: #05080C;
+    --edm-bg-surface: #0B0F14;
+    --edm-bg-surface-elevated: #10181C;
+    --edm-bg-glass: rgba(11, 15, 20, 0.92);
+    --edm-bg-glass-card: rgba(16, 24, 28, 0.80);
+    
+    --edm-border: #26292D;
+    --edm-border-glass: rgba(38, 41, 45, 0.8);
+    --edm-border-focus: rgba(6, 240, 251, 0.6);
+    
+    --edm-text-primary: #F0F0F0;
+    --edm-text-secondary: #7F8488;
+    --edm-text-muted: #7F8488;
+    --edm-text-inverse: #05080C;
+    
+    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --edm-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+    --edm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.85);
+    --edm-shadow-glow: 0 0 24px rgba(6, 240, 251, 0.35);
+    
+    --edm-radius-sm: 6px;
+    --edm-radius-md: 10px;
+    --edm-radius-lg: 16px;
+    --edm-radius-full: 9999px;
+    
+    --edm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="light"] {
+    --edm-primary: #0284C7;
+    --edm-primary-hover: #0369A1;
+    --edm-primary-gradient: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+    --edm-accent-cyan: #0284C7;
+    --edm-accent-emerald: #059669;
+    --edm-accent-purple: #7C3AED;
+    --edm-accent-amber: #D97706;
+    --edm-accent-rose: #E11D48;
+    
+    --edm-bg-app: #F8FAFC;
+    --edm-bg-surface: #FFFFFF;
+    --edm-bg-surface-elevated: #F1F5F9;
+    --edm-bg-glass: rgba(255, 255, 255, 0.92);
+    --edm-bg-glass-card: rgba(241, 245, 249, 0.85);
+    
+    --edm-border: rgba(0, 0, 0, 0.08);
+    --edm-border-glass: rgba(0, 0, 0, 0.12);
+    --edm-border-focus: rgba(2, 132, 199, 0.6);
+    
+    --edm-text-primary: #0F172A;
+    --edm-text-secondary: #475569;
+    --edm-text-muted: #94A3B8;
+    --edm-text-inverse: #F8FAFC;
+    
+    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --edm-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --edm-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+    --edm-shadow-glow: 0 0 20px rgba(2, 132, 199, 0.2);
+}
+
+/* Base Reset & Typography */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--edm-font);
+    background-color: var(--edm-bg-app);
+    color: var(--edm-text-primary);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Containers */
+.edm-glass-panel {
+    background: var(--edm-bg-glass);
+    border: 1px solid var(--edm-border-glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: var(--edm-radius-lg);
+    box-shadow: var(--edm-shadow-lg);
+}
+
+.edm-glass-card {
+    background: var(--edm-bg-glass-card);
+    border: 1px solid var(--edm-border);
+    border-radius: var(--edm-radius-md);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.edm-glass-card:hover {
+    border-color: var(--edm-border-focus);
+    box-shadow: var(--edm-shadow-md), var(--edm-shadow-glow);
+}
+
+/* Action Buttons */
+.edm-btn-primary {
+    background: var(--edm-primary-gradient);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--edm-radius-md);
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.18s ease;
+    box-shadow: var(--edm-shadow-sm);
+    text-decoration: none;
+}
+
+.edm-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--edm-shadow-md), 0 0 16px rgba(56, 189, 248, 0.5);
+}
+
+.edm-btn-secondary {
+    background: var(--edm-bg-surface-elevated);
+    color: var(--edm-text-primary);
+    border: 1px solid var(--edm-border);
+    border-radius: var(--edm-radius-md);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.edm-btn-secondary:hover {
+    background: var(--edm-border-glass);
+    color: var(--edm-text-primary);
+}
+
+.edm-btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: var(--edm-radius-sm);
+}
+
+/* Quality & Status Badges */
+.edm-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: var(--edm-radius-sm);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.edm-badge-4k { background: linear-gradient(135deg, #F59E0B, #FBBF24); color: #1E1B4B; }
+.edm-badge-2k { background: linear-gradient(135deg, #8B5CF6, #A78BFA); color: #FFFFFF; }
+.edm-badge-1080p { background: linear-gradient(135deg, #0284C7, #38BDF8); color: #FFFFFF; }
+.edm-badge-720p { background: linear-gradient(135deg, #059669, #10B981); color: #FFFFFF; }
+.edm-badge-sd { background: var(--edm-bg-surface-elevated); color: var(--edm-text-secondary); border: 1px solid var(--edm-border); }
+.edm-badge-audio { background: linear-gradient(135deg, #EC4899, #F472B6); color: #FFFFFF; }
+
+/* Status Dot */
+.edm-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.edm-status-online { background: #10B981; box-shadow: 0 0 8px #10B981; }
+.edm-status-connecting { background: #F59E0B; box-shadow: 0 0 8px #F59E0B; animation: edmPulse 1.5s infinite; }
+.edm-status-offline { background: #EF4444; box-shadow: 0 0 8px #EF4444; }
+
+@keyframes edmPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Form Controls & Switches */
+.edm-switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 22px;
+}
+
+.edm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.edm-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--edm-bg-surface-elevated);
+    border: 1px solid var(--edm-border);
+    transition: .2s;
+    border-radius: var(--edm-radius-full);
+}
+
+.edm-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #FFFFFF;
+    transition: .2s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+input:checked + .edm-slider {
+    background: var(--edm-primary);
+    border-color: var(--edm-accent-cyan);
+}
+
+input:checked + .edm-slider:before {
+    transform: translateX(16px);
+}
+
+/* Progress Bar */
+.edm-progress-track {
+    width: 100%;
+    height: 6px;
+    background: var(--edm-bg-surface-elevated);
+    border-radius: var(--edm-radius-full);
+    overflow: hidden;
+    position: relative;
+}
+
+.edm-progress-fill {
+    height: 100%;
+    background: var(--edm-primary-gradient);
+    border-radius: var(--edm-radius-full);
+    transition: width 0.2s ease;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--edm-border);
+    border-radius: var(--edm-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--edm-text-muted);
+}

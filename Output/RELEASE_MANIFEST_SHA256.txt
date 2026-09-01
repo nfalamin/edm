@@ -1,0 +1,20 @@
+﻿================================================================================
+EXCLUSIVE DOWNLOAD MANAGER (EDM) & NFALAMIN PORTFOLIO - RELEASE MANIFEST
+Release Version  : v2.1.0
+Team / Publisher : nfalamin
+Build Timestamp  : 2026-09-01 18:57:58
+Target Runtime   : .NET 10.0 (win-x64 Self-Contained)
+================================================================================
+
+File   : EDM-Complete-Production-Bundle-v2.1.0.zip
+Size   : 80.43 MB (84332881 bytes)
+SHA256 : 49A55818CBA71BE9272E26A0F67396968A27BC93DA429A060749FA459D291CAD
+--------------------------------------------------------------------------------
+File   : EDM-v2.1.0-Portable-win-x64.zip
+Size   : 74.08 MB (77673701 bytes)
+SHA256 : CE5DFB92DB865F986C098CE451F5C3821D6E3E18F1A7798F9EA514A39442BD2C
+--------------------------------------------------------------------------------
+File   : nfalamin-portfolio-theme-v2.1.0.zip
+Size   : 6.42 MB (6734892 bytes)
+SHA256 : 8A1966598FADAC13EDC29EF6947DE67DD0D9CDE0ECA57E46B28C08A28A4091FA
+--------------------------------------------------------------------------------

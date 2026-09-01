@@ -1,0 +1,10 @@
+﻿{
+    "minimumSupportedVersion":  "1.0.0",
+    "releaseNotes":  "High-performance 32-socket multi-threaded engine with instant pause/resume, Manifest V3 extensions, and adaptive network scheduling.",
+    "mandatory":  false,
+    "title":  "Exclusive Download Manager v2.1.0 Production Release",
+    "channel":  "stable",
+    "releaseDate":  "2026-08-24T00:00:00Z",
+    "version":  "2.1.0",
+    "severity":  "Recommended"
+}

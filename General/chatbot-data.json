@@ -1,0 +1,98 @@
+{
+  "siteName": "Alamin Hossain",
+  "siteTagline": "Digital Marketing & SEO Expert",
+  "botName": "alamin hossain",
+  "botUsername": "@nfalaminhossain_bot",
+  "contact": {
+    "email": "nfxalamin@gmail.com",
+    "phone": "01888567189",
+    "whatsapp": "+8801888567189",
+    "website": "https://nfalaminhossain.xyz",
+    "telegram": "@nfalaminhossain_bot"
+  },
+  "about": "Alamin Hossain is a freelance digital marketer and SEO specialist focused on growth, lead generation, paid ads, content strategy, and conversion-focused marketing systems.",
+  "services": [
+    {
+      "name": "SEO Strategy & Audit",
+      "description": "Technical SEO, on-page optimization, keyword research, audits, and search visibility improvements."
+    },
+    {
+      "name": "Google Ads Campaigns",
+      "description": "Search, display, remarketing, and conversion-focused paid campaigns for businesses."
+    },
+    {
+      "name": "Meta Ads & Funnel Setup",
+      "description": "Facebook and Instagram ads, audience targeting, and lead capture funnels."
+    },
+    {
+      "name": "Social Media Marketing",
+      "description": "Content planning, social presence management, and audience growth."
+    },
+    {
+      "name": "Website Optimization",
+      "description": "Landing page improvements, conversion-focused design guidance, and analytics tracking."
+    },
+    {
+      "name": "Lead Generation Systems",
+      "description": "Systems that help attract qualified leads and improve the sales pipeline."
+    }
+  ],
+  "pricing": {
+    "summary": "Pricing depends on project scope, channel mix, and campaign complexity. Typical engagement options include audit-only, monthly management, and growth-system setup.",
+    "examples": [
+      {
+        "package": "Growth Foundation",
+        "startingPrice": "$149"
+      },
+      {
+        "package": "Professional Growth Plan",
+        "startingPrice": "$399/month"
+      }
+    ]
+  },
+  "skills": [
+    "SEO",
+    "Google Ads",
+    "Meta Ads",
+    "Lead Generation",
+    "Content Strategy",
+    "Analytics",
+    "Conversion Optimization"
+  ],
+  "portfolioHighlights": [
+    {
+      "project": "SEO Growth Audit",
+      "result": "Improved search visibility and higher qualified traffic for client websites."
+    },
+    {
+      "project": "Paid Ads Funnel",
+      "result": "Created conversion-oriented funnels that improved lead quality and campaign efficiency."
+    },
+    {
+      "project": "Brand Growth System",
+      "result": "Strengthened social media presence and customer engagement across digital channels."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "What services do you offer?",
+      "answer": "I offer SEO, Google Ads, Meta Ads, social media marketing, website optimization, and growth-focused lead generation systems."
+    },
+    {
+      "question": "How much do your services cost?",
+      "answer": "Pricing depends on the project. I usually provide custom packages based on scope, timeline, and expected results."
+    },
+    {
+      "question": "Can you help with a new website or landing page?",
+      "answer": "Yes, I can help improve visibility, messaging, conversion flow, and campaign setup for new or existing websites."
+    },
+    {
+      "question": "Do you work with small businesses?",
+      "answer": "Yes, I work with small businesses, startups, and growing brands that need better online visibility and measurable lead generation."
+    }
+  ],
+  "chatbotGuidelines": {
+    "tone": "professional, warm, concise, and client-focused",
+    "responseStyle": "answer clearly, ask one helpful follow-up question when useful, and escalate only when the request is urgent, legally sensitive, or highly specific."
+  }
+}

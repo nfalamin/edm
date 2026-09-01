@@ -10,6 +10,75 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// 1. Enforce Search Engine Blocking
+if (!headers_sent()) {
+    header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet', true);
+}
+
+// 2. Handle Sign In Request
+$login_error = '';
+if (isset($_POST['nf_login_submit'])) {
+    if (!isset($_POST['nf_auth_nonce']) || !wp_verify_nonce($_POST['nf_auth_nonce'], 'nf_dashboard_auth')) {
+        $login_error = 'Security check failed. Please refresh and try again.';
+    } else {
+        $creds = [
+            'user_login'    => sanitize_text_field($_POST['nf_username']),
+            'user_password' => $_POST['nf_password'],
+            'remember'      => true
+        ];
+        $user = wp_signon($creds, is_ssl());
+        if (!is_wp_error($user)) {
+            wp_safe_redirect(home_url('/nf/'));
+            exit;
+        } else {
+            $login_error = $user->get_error_message();
+        }
+    }
+}
+
+// 3. Authentication Check: User must be logged in with read permissions
+if (!is_user_logged_in() || !current_user_can('read')) {
+    get_header();
+    ?>
+    <div class="min-h-[85vh] flex items-center justify-center px-4 py-16 bg-navy-950">
+        <div class="w-full max-w-md glass-panel p-8 rounded-2xl border border-cyan-500/30 shadow-2xl shadow-cyan-500/10 text-center">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-teal-400 flex items-center justify-center font-bold text-white text-2xl shadow-lg shadow-cyan-500/30 border border-white/20">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-white font-display mb-2">EDM Control Plane</h1>
+            <p class="text-xs text-slate-400 mb-6">Private executive telemetry system. Please authenticate to access system metrics.</p>
+
+            <?php if (!empty($login_error)) : ?>
+                <div class="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-left">
+                    <i class="fa-solid fa-circle-exclamation mr-1.5"></i> <?php echo wp_kses_post($login_error); ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="" class="space-y-4 text-left">
+                <?php wp_nonce_field('nf_dashboard_auth', 'nf_auth_nonce'); ?>
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Username or Email</label>
+                    <input type="text" name="nf_username" required autocomplete="username" class="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Password</label>
+                    <input type="password" name="nf_password" required autocomplete="current-password" class="w-full bg-slate-900/90 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="••••••••">
+                </div>
+                <button type="submit" name="nf_login_submit" class="w-full btn-premium btn-premium-primary !py-3 !text-xs !font-bold mt-2">
+                    <i class="fa-solid fa-lock text-xs"></i> Secure Login
+                </button>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-white/10 text-[11px] text-slate-500">
+                <a href="<?php echo esc_url(home_url('/')); ?>" class="hover:text-cyan transition-colors">← Return to Portfolio Home</a>
+            </div>
+        </div>
+    </div>
+    <?php
+    get_footer();
+    exit;
+}
+
 get_header();
 ?>
 
@@ -88,6 +157,11 @@ get_header();
                             <span class="kpi-trend trend-up"><i data-lucide="activity"></i> Worldwide telemetry</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- REAL GEOGRAPHIC VECTOR LIVE MAP WIDGET -->
+                <div class="dash-map-widget-wrap" style="margin-bottom: 24px;">
+                    <div id="live-map-container" style="min-height: 520px;"></div>
                 </div>
 
                 <!-- CHARTS ROW -->
@@ -196,42 +270,42 @@ get_header();
                                     <td><code>hero.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>1</td>
-                                    <td><button class="btn-action-icon" onclick="if(window.edmDashboard) window.edmDashboard.openModal('modal-content-hero');"><i data-lucide="edit-2"></i></button></td>
+                                    <td><button class="btn-action-icon" title="Edit Hero Section" onclick="if(window.edmDashboard) window.edmDashboard.openModal('modal-content-hero');"><i data-lucide="edit-2"></i></button></td>
                                 </tr>
                                 <tr>
                                     <td><strong>2. Features & 32x Turbo Architecture</strong></td>
                                     <td><code>features.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>2</td>
-                                    <td><button class="btn-action-icon"><i data-lucide="eye"></i></button></td>
+                                    <td><button class="btn-action-icon" title="Edit Features" onclick="if(window.edmDashboard) window.edmDashboard.editCmsSection('features');"><i data-lucide="edit-2"></i></button></td>
                                 </tr>
                                 <tr>
                                     <td><strong>3. CTA & Primary Download Hub</strong></td>
                                     <td><code>download-cta.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>3</td>
-                                    <td><button class="btn-action-icon"><i data-lucide="edit-2"></i></button></td>
+                                    <td><button class="btn-action-icon" title="Edit Download CTA" onclick="if(window.edmDashboard) window.edmDashboard.editCmsSection('download-cta');"><i data-lucide="edit-2"></i></button></td>
                                 </tr>
                                 <tr>
                                     <td><strong>4. Browser Extensions (3 Browsers)</strong></td>
                                     <td><code>browser-extensions.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>4</td>
-                                    <td><button class="btn-action-icon" onclick="if(window.edmDashboard) window.edmDashboard.navigate('extensions');"><i data-lucide="external-link"></i></button></td>
+                                    <td><button class="btn-action-icon" title="View Extensions" onclick="if(window.edmDashboard) window.edmDashboard.navigate('extensions');"><i data-lucide="external-link"></i></button></td>
                                 </tr>
                                 <tr>
                                     <td><strong>5. FAQ Accordion Section</strong></td>
                                     <td><code>faq-section.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>5</td>
-                                    <td><button class="btn-action-icon"><i data-lucide="edit-2"></i></button></td>
+                                    <td><button class="btn-action-icon" title="Edit FAQ Section" onclick="if(window.edmDashboard) window.edmDashboard.editCmsSection('faq-section');"><i data-lucide="edit-2"></i></button></td>
                                 </tr>
                                 <tr>
                                     <td><strong>6. Global Footer & Legal Columns</strong></td>
                                     <td><code>footer.php</code></td>
                                     <td><span class="badge-status-active">Visible</span></td>
                                     <td>6</td>
-                                    <td><button class="btn-action-icon"><i data-lucide="edit-2"></i></button></td>
+                                    <td><button class="btn-action-icon" title="Edit Footer" onclick="if(window.edmDashboard) window.edmDashboard.editCmsSection('footer');"><i data-lucide="edit-2"></i></button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -290,7 +364,7 @@ get_header();
                                     <td><span class="badge-status-active">Retained</span></td>
                                     <td>12,210</td>
                                     <td>
-                                        <button class="btn-action-icon" title="Inspect"><i data-lucide="eye"></i></button>
+                                        <button class="btn-action-icon" title="Inspect Release v2.0.0" onclick="if(window.edmDashboard) window.edmDashboard.inspectRelease('v2.0.0');"><i data-lucide="eye"></i></button>
                                     </td>
                                 </tr>
                                 <tr>
@@ -301,7 +375,7 @@ get_header();
                                     <td><span class="badge-status-withdrawn">Archived</span></td>
                                     <td>5,400</td>
                                     <td>
-                                        <button class="btn-action-icon" title="Inspect"><i data-lucide="eye"></i></button>
+                                        <button class="btn-action-icon" title="Inspect Release v1.0.0" onclick="if(window.edmDashboard) window.edmDashboard.inspectRelease('v1.0.0');"><i data-lucide="eye"></i></button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -637,6 +711,18 @@ get_header();
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <!-- ── VIEW 10: DEDICATED LIVE WORLD MAP ── -->
+            <section class="dash-page-view" id="view-live-map">
+                <div class="view-header">
+                    <div>
+                        <h1 class="view-title"><?php esc_html_e('Global Telemetry & Sovereign Heatmap', 'edm-theme'); ?></h1>
+                        <p class="view-subtitle"><?php esc_html_e('Real-time geographic distribution of active desktop clients, browser extensions, and activations across 190+ countries.', 'edm-theme'); ?></p>
+                    </div>
+                </div>
+
+                <div id="live-map-page-container" style="min-height: 580px;"></div>
             </section>
 
         </main>

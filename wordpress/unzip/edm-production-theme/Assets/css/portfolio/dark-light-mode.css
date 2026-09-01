@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* =========================================
+   1. Dark & Light Mode Styles
+   ========================================= */
+html:not(.dark) { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+html:not(.dark) h1, html:not(.dark) h2, html:not(.dark) h3, html:not(.dark) h4, html:not(.dark) .font-display { font-family: 'Outfit', sans-serif !important; }
+
+/* 1. Premium Light Mode Background */
+html:not(.dark) body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%) !important;
+    background-size: 400% 400% !important;
+    animation: lightGradientBG 15s ease infinite !important;
+    color: #334155 !important;
+}
+/* Subtle texture overlay for premium feel */
+html:not(.dark) body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(0, 0, 0, 0) 70%);
+    pointer-events: none;
+    z-index: -9999;
+}
+
+@keyframes lightGradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 2. Hero Section Seamless Transition */
+html:not(.dark) .bg-navy-950,
+html:not(.dark) .bg-navy-900,
+html:not(.dark) .bg-navy-900\/10,
+html:not(.dark) .bg-navy-900\/20,
+html:not(.dark) .bg-navy-900\/30,
+html:not(.dark) .bg-navy-900\/40,
+html:not(.dark) .bg-navy-900\/85 { background-color: transparent !important; }
+html:not(.dark) section.bg-gradient-to-b,
+html:not(.dark) .from-navy-950,
+html:not(.dark) .from-navy-900,
+html:not(.dark) .to-navy-900,
+html:not(.dark) .to-navy-900\/30 {
+    background: transparent !important;
+    --tw-gradient-from: transparent !important;
+    --tw-gradient-to: transparent !important;
+    --tw-gradient-stops: transparent !important;
+}
+
+/* 3. Typography & 100% Visibility */
+html:not(.dark) .text-slate-200, html:not(.dark) .text-slate-300 { color: #334155 !important; }
+html:not(.dark) .text-slate-400 { color: #475569 !important; }
+html:not(.dark) .text-slate-500 { color: #64748b !important; }
+html:not(.dark) .text-white { color: #0f172a !important; font-weight: 800 !important; text-shadow: none !important; } 
+html:not(.dark) p { text-shadow: none !important; }
+html:not(.dark) h1, html:not(.dark) h2, html:not(.dark) h3, html:not(.dark) h4 { text-shadow: none !important; }
+
+/* Preserve white text inside buttons and active tabs */
+html:not(.dark) a.text-white, html:not(.dark) button.text-white, html:not(.dark) .btn-premium-primary, html:not(.dark) .btn-premium-primary .text-white, html:not(.dark) .active-tab { color: #ffffff !important; font-weight: 700 !important; }
+
+html:not(.dark) .text-gradient-cyan { 
+    background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%) !important; 
+    background-clip: text !important; 
+    -webkit-background-clip: text !important; 
+    -webkit-text-fill-color: transparent !important; 
+}
+html:not(.dark) .text-gradient-gold { 
+    background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #ea580c 100%) !important; 
+    background-clip: text !important; 
+    -webkit-background-clip: text !important; 
+    -webkit-text-fill-color: transparent !important; 
+}
+
+/* Other Utility Colors for Better Visibility */
+html:not(.dark) .border-blue-500\/10 { border-color: rgba(15, 23, 42, 0.08) !important; }
+html:not(.dark) .border-blue-500\/20, html:not(.dark) .border-cyan-500\/20 { border-color: rgba(15, 23, 42, 0.12) !important; }
+html:not(.dark) .bg-blue-600\/10, html:not(.dark) .bg-cyan-600\/10, html:not(.dark) .bg-amber-600\/10 { background-color: rgba(15, 23, 42, 0.05) !important; }
+html:not(.dark) .text-cyan, html:not(.dark) .text-blue-400, html:not(.dark) .text-amber-400, html:not(.dark) .text-gold { color: #1e293b !important; }
+html:not(.dark) .bg-blue-900\/10, html:not(.dark) .bg-cyan-900\/10, html:not(.dark) .bg-blue-950\/20 { background-color: rgba(15, 23, 42, 0.05) !important; }
+
+/* 4. Image, Shadow, and Ring Styling */
+html:not(.dark) .hero-photo,
+html:not(.dark) .hero-photo-premium,
+html:not(.dark) .chair-portrait {
+    filter: drop-shadow(-15px 15px 25px rgba(15, 23, 42, 0.15)) drop-shadow(0 10px 15px rgba(15, 23, 42, 0.1)) !important;
+}
+
+html:not(.dark) .premium-circle {
+    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.15), inset 0 5px 20px rgba(255, 255, 255, 0.8) !important;
+    border: 4px solid #60a5fa !important;
+    background: linear-gradient(135deg, #e0e7ff, #f8fafc) !important;
+}
+
+html:not(.dark) .glass-panel { 
+    background: rgba(255, 255, 255, 0.85) !important; 
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important; 
+    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04) !important; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+html:not(.dark) .glass-panel-hover:hover,
+html:not(.dark) .glass-panel:hover { 
+    background: rgba(255, 255, 255, 0.95) !important; 
+    border: 1px solid rgba(148, 163, 184, 0.3) !important; 
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.12), 0 10px 15px -3px rgba(15, 23, 42, 0.05) !important; 
+    transform: translateY(-4px) !important; 
+}
+
+/* 5. Service Tabs & Buttons Coloring */
+html:not(.dark) .portfolio-tab-container {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(203, 213, 225, 0.5) !important;
+    box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05) !important;
+}
+
+html:not(.dark) .active-tab { 
+    background: linear-gradient(135deg, #1e3a8a, #2563eb) !important; 
+    color: #ffffff !important; 
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important; 
+    border-color: transparent !important;
+}
+html:not(.dark) .inactive-tab { 
+    color: #475569 !important; 
+    background: transparent !important;
+    font-weight: 700 !important;
+}
+html:not(.dark) .inactive-tab:hover { 
+    color: #0f172a !important; 
+    background: rgba(241, 245, 249, 0.8) !important; 
+    border-radius: 0.5rem !important;
+}
+
+html:not(.dark) .btn-premium-primary, html:not(.dark) .cta-button {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3) !important;
+    border: none !important;
+}
+html:not(.dark) .btn-premium-primary:hover, html:not(.dark) .cta-button:hover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%) !important;
+    box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.4) !important;
+    transform: translateY(-3px) scale(1.02) !important;
+}
+
+html:not(.dark) .btn-premium-outline {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #1e3a8a !important;
+    border: 2px solid #2563eb !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.05) !important;
+}
+html:not(.dark) .btn-premium-outline:hover {
+    background: #f0fdfa !important;
+    color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15) !important;
+    transform: translateY(-3px) scale(1.02) !important;
+}
+
+/* Miscellaneous Light Mode Fixes */
+html:not(.dark) .portfolio-pagination .page-numbers { background: #ffffff !important; border-color: rgba(0, 0, 0, 0.1) !important; color: #475569 !important; }
+html:not(.dark) .portfolio-pagination .page-numbers:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+html:not(.dark) .portfolio-pagination .page-numbers.current { background: #4b5563 !important; border-color: #374151 !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important; }
+html:not(.dark) input, html:not(.dark) textarea, html:not(.dark) select { background-color: #ffffff !important; color: #0f172a !important; border-color: rgba(15, 23, 42, 0.15) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important; font-weight: 600 !important; transition: border-color 0.3s ease !important; }
+html:not(.dark) ::placeholder { color: #94a3b8 !important; }
+html:not(.dark) .border-white\/5 { border-color: rgba(15, 23, 42, 0.08) !important; }
+html:not(.dark) .border-white\/10 { border-color: rgba(15, 23, 42, 0.12) !important; }
+html:not(.dark) .hero-grid-lines { background-image: linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px) !important; }
+html:not(.dark) ::-webkit-scrollbar-track { background: #faf9f6 !important; }
+html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1 !important; }
+html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #6366f1 !important; }
+html:not(.dark) main {
+    filter: drop-shadow(0 15px 35px rgba(107, 114, 128, 0.1)) !important;
+}
+
+/* Polished Trust Section */
+html:not(.dark) .trust-section {
+    border-top: 1px solid rgba(0, 0, 0, 0.03) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
+}

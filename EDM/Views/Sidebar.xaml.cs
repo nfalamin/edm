@@ -277,6 +277,17 @@ namespace EDM.Views
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
                     return;
                 }
+                else if (category == "Approvals")
+                {
+                    try
+                    {
+                        var win = new PendingApprovalWindow();
+                        win.Owner = Window.GetWindow(this);
+                        win.ShowDialog();
+                    }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
+                    return;
+                }
                 else if (category == "Settings")
                 {
                     try

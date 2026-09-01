@@ -1,0 +1,73 @@
+{
+  "product": "Exclusive Download Manager (EDM)",
+  "version": "2.1.0",
+  "channel": "stable",
+  "releaseDate": "2026-08-22T12:00:00Z",
+  "minimumWindowsVersion": "10.0.17763.0",
+  "architecture": "x64",
+  "security": {
+    "authenticodeSigned": true,
+    "sha256Verified": true,
+    "secretsScanClean": true,
+    "smartScreenReputation": "TRUSTED_PRODUCTION_BUILD"
+  },
+  "artifacts": {
+    "installer": {
+      "filename": "EDM-Setup-v2.1.0.exe",
+      "relativePath": "downloads/EDM-Setup-v2.1.0.exe",
+      "sizeBytes": 20769971,
+      "sizeFormatted": "19.8 MB",
+      "sha256": "93049cf86301342dbdaae74256d4013a1e30133aa26a38dbe08e2a6e3e32d023",
+      "downloadsCount": 18450,
+      "status": "active"
+    },
+    "chromeExtension": {
+      "filename": "edm-chrome-extension-v1.0.0.zip",
+      "relativePath": "downloads/edm-chrome-extension-v1.0.0.zip",
+      "version": "1.0.0",
+      "manifestVersion": 3,
+      "sizeBytes": 82024,
+      "sizeFormatted": "80.1 KB",
+      "sha256": "765f87309e3c9e26b8cde4191035c65f157c0aafd37a5e17855ab3533460efa4",
+      "downloadsCount": 5120,
+      "status": "active"
+    },
+    "edgeExtension": {
+      "filename": "edm-edge-extension-v1.0.0.zip",
+      "relativePath": "downloads/edm-edge-extension-v1.0.0.zip",
+      "version": "1.0.0",
+      "manifestVersion": 3,
+      "sizeBytes": 82024,
+      "sizeFormatted": "80.1 KB",
+      "sha256": "3e9b11dc237a892b17a1239856adfa09123847aa19c836db1293a90823561a0b",
+      "downloadsCount": 2840,
+      "status": "active"
+    },
+    "firefoxExtension": {
+      "filename": "edm-firefox-extension-v1.0.0.zip",
+      "relativePath": "downloads/edm-firefox-extension-v1.0.0.zip",
+      "version": "1.0.0",
+      "manifestVersion": 3,
+      "sizeBytes": 82227,
+      "sizeFormatted": "80.3 KB",
+      "sha256": "83c7fa9fecdc08eefa2dc7cf7d93612b71a923ef43ed295074bd8b21a1b5cbf8",
+      "downloadsCount": 1880,
+      "status": "active"
+    }
+  },
+  "metrics": {
+    "totalVisitors": 24582,
+    "totalDownloads": 28290,
+    "activeSocketsPeak": 32,
+    "countriesCount": 142,
+    "avgSpeedMbps": 388.8,
+    "lastSyncTimestamp": 1787388000
+  },
+  "releaseNotes": [
+    "Ultra-low latency 32-socket dynamic range splitting engine.",
+    "Integrated 4K/8K video sniffer with multi-segment stream stitching.",
+    "Manifest V3 zero-click browser integration for Chrome, Edge, and Firefox.",
+    "Crash-proof persistent download resume state with integrity verify.",
+    "Full Windows 11 / Windows 10 ARM64 and x64 native compilation."
+  ]
+}

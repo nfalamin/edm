@@ -1,57 +1,135 @@
 /*
-Theme Name: Alamin Portfolio & EDM Ecosystem
+Theme Name: EDM — Exclusive Download Manager & Portfolio Ecosystem
 Theme URI: https://nfalaminhossain.xyz/
-Author: N F Alamin Hossain
+Author: nfalamin
 Author URI: https://nfalaminhossain.xyz/
-Description: Ultra-Premium, Production-Ready WordPress Theme & SaaS Ecosystem combining digital marketing portfolio architecture with high-performance EDM (Exclusive Download Manager) product landing hub and private telemetry control plane dashboard.
+Description: Production-Grade WordPress Theme & SaaS Ecosystem for Exclusive Download Manager (EDM) and N F Alamin Hossain Master Portfolio. Features 32x socket multi-threaded download simulator, 4K video grabber showcase, real-time live telemetry map, and unified responsive dark-mode design system.
 Version: 2.1.0
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-License: GNU General Public License v2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Text Domain: alamin-portfolio
-Tags: portfolio, software, saas, dashboard, custom-background, custom-colors, custom-header, custom-menu, featured-images, full-width-template, theme-options, translation-ready, dark-mode, responsive
+License: Proprietary / Commercial
+Text Domain: edm-theme
+Tags: software, saas, portfolio, dashboard, dark-mode, responsive, translation-ready, accessibility-ready
 */
 
 /* ══════════════════════════════════════════════════════════════
-   PORTFOLIO MASTER BASELINE & LUXURY DEEP GRADIENTS
+   GLOBAL EDM DESIGN SYSTEM TOKENS
    ══════════════════════════════════════════════════════════════ */
-@import url('global-colors.css');
-@import url('dark-light-mode.css');
-@import url('hero-image.css');
-@import url('components.css');
-@import url('responsive.css');
+:root {
+    /* ── 1. COLOR TOKENS (OMNI CYBER DARK THEME) ── */
+    --edm-bg-base: #05080C;               /* 🖤 Main Background */
+    --edm-bg-surface: #10181C;            /* 🌘 Secondary Background (Dark Teal) */
+    --edm-bg-card: #0B0F14;               /* 🌑 Card Background (Dark Navy/Black) */
+    --edm-bg-card-elevated: #10181C;      /* 🌘 Secondary Background */
+    --edm-bg-card-hover: #151F24;
+    --edm-bg-subtle: #10181C;
+    --edm-bg-input: #0B0F14;
+    --edm-bg-header: rgba(5, 8, 12, 0.94);
+    --edm-bg-modal: #0B0F14;
+    --edm-bg-dropdown: #0B0F14;
 
-html {
-    scroll-behavior: smooth;
-    box-sizing: border-box;
+    /* ── 2. BRAND & ACCENT COLOR FAMILY ── */
+    --edm-primary: #06F0FB;               /* 🩵 Main Neon (Cyan) */
+    --edm-primary-hover: #25D4DC;         /* 🟦 Cyan Glow (Bright Cyan) */
+    --edm-primary-light: #5EFAF9;
+    --edm-primary-soft: rgba(6, 240, 251, 0.14);
+    --edm-primary-glow: rgba(6, 240, 251, 0.45);
+
+    --edm-blue: #25D4DC;                  /* 🟦 Cyan Glow */
+    --edm-blue-hover: #06F0FB;
+    --edm-blue-soft: rgba(37, 212, 220, 0.15);
+    --edm-blue-glow: rgba(37, 212, 220, 0.40);
+
+    --edm-cyan: #06F0FB;                  /* 🩵 Main Neon */
+    --edm-cyan-soft: rgba(6, 240, 251, 0.15);
+
+    --edm-green: #12A89C;                 /* 🟢 Positive/BUY (Neon Green) */
+    --edm-green-soft: rgba(18, 168, 156, 0.16);
+    --edm-green-glow: rgba(18, 168, 156, 0.35);
+    --edm-green-accent: #06A660;          /* 🟢 Green Accent */
+
+    --edm-amber: #F0D000;                 /* 🟡 Logo/Highlight (Gold/Yellow) */
+    --edm-amber-soft: rgba(240, 208, 0, 0.16);
+    --edm-warning: #C0A84D;               /* 🟡 Warning Accent (Amber/Gold) */
+
+    --edm-pink: #EC4899;
+    --edm-pink-soft: rgba(236, 72, 153, 0.16);
+
+    --edm-danger: #D51F32;                /* 🔴 Window Dot Red */
+    --edm-danger-soft: rgba(213, 31, 50, 0.16);
+
+    /* ── 3. WINDOW DOTS ── */
+    --edm-dot-red: #D51F32;               /* 🔴 Window Dot */
+    --edm-dot-yellow: #D6A400;            /* 🟡 Window Dot */
+    --edm-dot-green: #0BA04A;             /* 🟢 Window Dot */
+
+    /* ── 4. BORDERS & STROKES ── */
+    --edm-border: #26292D;                /* 🔲 Border (Dark Gray) */
+    --edm-border-hover: rgba(6, 240, 251, 0.35);
+    --edm-border-accent: rgba(6, 240, 251, 0.45);
+    --edm-border-blue: rgba(37, 212, 220, 0.45);
+
+    /* ── 5. TYPOGRAPHY SYSTEM ── */
+    --edm-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --edm-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    
+    --edm-text-main: #F0F0F0;             /* 🩶 Primary Text (Light Gray) */
+    --edm-text-secondary: #7F8488;        /* 🩶 Secondary Text (Gray) */
+    --edm-text-muted: #7F8488;            /* 🩶 Secondary Text (Gray) */
+    --edm-text-dim: #555A5F;
+
+    /* ── 6. ELEVATIONS & SHADOWS ── */
+    --edm-shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --edm-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.6);
+    --edm-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.7);
+    --edm-shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.85);
+    --edm-shadow-xl: 0 22px 55px rgba(0, 0, 0, 0.95);
+    --edm-shadow-glow: 0 0 32px rgba(6, 240, 251, 0.35);
+
+    /* ── 6. RADII ── */
+    --edm-radius-sm: 6px;
+    --edm-radius-md: 10px;
+    --edm-radius-lg: 16px;
+    --edm-radius-xl: 24px;
+    --edm-radius-full: 9999px;
+
+    /* ── 7. DIMENSIONS & TRANSITIONS ── */
+    --edm-container-max: 1280px;
+    --edm-header-height: 72px;
+    --edm-transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    --edm-transition-normal: 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-*, *::before, *::after {
-    box-sizing: inherit;
-}
+/* ══════════════════════════════════════════════════════════════
+   LIGHT THEME DESIGN TOKENS (ICE-BLUE ROYAL PALETTE)
+   ══════════════════════════════════════════════════════════════ */
+body.light-theme {
+    --edm-bg-base: #E8F2FD;
+    --edm-bg-surface: #F0F6FE;
+    --edm-bg-card: #FFFFFF;
+    --edm-bg-card-elevated: #FFFFFF;
+    --edm-bg-card-hover: #F8FAFC;
+    --edm-bg-subtle: #E2EDF9;
+    --edm-bg-input: #FFFFFF;
+    --edm-bg-header: rgba(232, 242, 253, 0.94);
+    --edm-bg-modal: #FFFFFF;
+    --edm-bg-dropdown: #FFFFFF;
 
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: #050811;
-    color: #F8FAFC;
-    overflow-x: hidden;
-}
+    --edm-text-main: #0B192C;
+    --edm-text-secondary: #334155;
+    --edm-text-muted: #64748B;
+    --edm-text-dim: #94A3B8;
 
-/* Smooth Soft Hover Effects */
-a, button {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
+    --edm-border: rgba(15, 23, 42, 0.12);
+    --edm-border-hover: rgba(15, 23, 42, 0.24);
+    --edm-border-accent: rgba(93, 95, 239, 0.60);
+    --edm-border-blue: rgba(2, 132, 199, 0.50);
 
-.btn-premium {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-
-.btn-premium:hover {
-    transform: translateY(-1.5px);
+    --edm-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --edm-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+    --edm-shadow-md: 0 6px 18px rgba(15, 23, 42, 0.12);
+    --edm-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+    --edm-shadow-xl: 0 20px 48px rgba(15, 23, 42, 0.20);
+    --edm-shadow-glow: 0 0 28px rgba(93, 95, 239, 0.25);
 }

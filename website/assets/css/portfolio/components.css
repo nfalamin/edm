@@ -166,18 +166,21 @@ p {
 
 /* Premium Professional Buttons */
 .btn-premium {
-    padding: 1.125rem 2.5rem;
+    padding: 0.6875rem 1.75rem;
     border-radius: 9999px;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    letter-spacing: 0.08em;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
     border: 1px solid transparent;
+    line-height: 1.4;
+    white-space: nowrap;
+    gap: 0.4rem;
 }
 
 .btn-premium-primary {
@@ -219,12 +222,14 @@ html:not(.dark) .btn-premium-outline:hover {
     transform: translateY(-3px) scale(1.02) !important;
 }
 
-/* Smooth Hovers */
+/* Smooth Hovers — buttons without specific hover handle subtle lift */
 a, button, .glass-panel {
-    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
-a:hover, button:hover {
-    transform: translateY(-2px);
+/* Only non-premium links/buttons get the generic lift */
+a:not(.btn-premium):not(.nav-link):hover,
+button:not(.btn-premium):not(.portfolio-tab):hover {
+    transform: translateY(-1px);
 }
 .cta-button:hover, .btn-primary:hover {
     box-shadow: 0 15px 30px -5px rgba(6, 182, 212, 0.6);

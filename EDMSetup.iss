@@ -4,7 +4,7 @@
 #define MyAppName       "Exclusive Download Manager"
 #define MyAppShortName  "EDM"
 #define MyAppVersion    "2.1.0"
-#define MyAppPublisher  "Exclusive Download Manager Technologies"
+#define MyAppPublisher  "nfalamin"
 #define MyAppExeName    "EDM.exe"
 #define MyAppNativeHost "EDM.NativeHost.exe"
 #define MyAppURL        "https://edm-app.com"
@@ -21,7 +21,7 @@ AppUpdatesURL={#MyAppURL}/update
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-OutputDir=.\Output
+OutputDir=.\Output\installer
 OutputBaseFilename=EDM_Setup_v{#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes

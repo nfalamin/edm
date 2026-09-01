@@ -318,6 +318,30 @@
                     </Button.Template>
                 </Button>
 
+                <!-- Approvals -->
+                <Button x:Name="ApprovalsNavBtn" Click="NavCategory_Click" Tag="Approvals" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="8" Padding="12,9">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="IconText" Grid.Column="0" Text="&#xE730;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#10B981"/>
+                                    <TextBlock x:Name="LabelText" Grid.Column="1" Text="Approvals" FontSize="12" Foreground="{DynamicResource SidebarTextBrush}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource NavHoverBg}"/>
+                                    <Setter TargetName="LabelText" Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
                 <!-- Settings -->
                 <Button x:Name="SettingsNavBtn" Click="NavCategory_Click" Tag="Settings" Cursor="Hand" Margin="0,1" BorderThickness="0" Padding="0">
                     <Button.Template>

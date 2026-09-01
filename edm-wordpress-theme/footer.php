@@ -1,12 +1,36 @@
-    <!-- Load Footer & Widgets properly via Template Part (Portfolio only) -->
-    <?php 
-    if ( ! ( is_page_template('page-nfdashbord.php') || is_page_template('page-dashboard.php') || is_page('nfdashbord') || is_page('dashboard') || is_page_template('page-edm.php') || is_page('edm') ) ) :
-        get_template_part( 'footer-widgets' ); 
-    ?>
-    <!-- Socket.IO Integration for Real-time Messaging -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <?php endif; ?>
+<?php
+/**
+ * Global Footer Template
+ *
+ * @package EDM_Theme
+ */
 
-    <?php wp_footer(); ?>
+if (!defined('ABSPATH')) {
+    exit;
+}
+?>
+    </main><!-- #primary -->
+
+    <!-- Global Footer -->
+    <footer class="site-footer" id="colophon">
+        <?php 
+        // 4-Column Footer Links & Bio
+        get_template_part('template-parts/footer/footer-main'); 
+
+        // Bottom Copyright & Technical Badges
+        get_template_part('template-parts/footer/footer-bottom'); 
+        ?>
+    </footer>
+
+    <?php 
+    // Global Components: Action Modals, Video Modal & Toast Container
+    get_template_part('template-parts/components/action-modals');
+    get_template_part('template-parts/components/video-modal');
+    get_template_part('template-parts/components/toast');
+    ?>
+
+</div><!-- #page -->
+
+<?php wp_footer(); ?>
 </body>
 </html>

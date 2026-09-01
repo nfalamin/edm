@@ -91,6 +91,8 @@ class EdmWebsiteEngine {
             this.updateCurrencyUI();
             this.initStreamsGrid();
             this.startEngineSimulation();
+            this.initHeroSpeedWaveform();
+            this.setupHeroInteractions();
             this.setupKeyboardShortcuts();
             this.setupScrollSpy();
             this.setupStorageListener();
@@ -693,6 +695,153 @@ class EdmWebsiteEngine {
                 if (p) p.classList.remove("turbo");
             }
         }, 4000);
+    }
+
+    // ── 6B. HERO SPEED WAVEFORM CANVAS ANIMATOR ──
+    initHeroSpeedWaveform() {
+        const canvas = document.getElementById("hero-speed-canvas");
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        let width = canvas.offsetWidth || 560;
+        let height = canvas.offsetHeight || 90;
+        let step = 0;
+
+        const resize = () => {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            width = rect.width || 560;
+            height = rect.height || 90;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+        };
+
+        window.addEventListener("resize", resize);
+        resize();
+
+        const render = () => {
+            step += 0.025;
+            ctx.clearRect(0, 0, width, height);
+
+            const isLight = document.body.classList.contains("light-theme");
+            
+            // Wave Colors
+            const cyanColor = isLight ? "#0284C7" : "#00F0FF";
+            const cyanGrad = ctx.createLinearGradient(0, 0, 0, height);
+            cyanGrad.addColorStop(0, isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(0, 240, 255, 0.35)");
+            cyanGrad.addColorStop(1, isLight ? "rgba(2, 132, 199, 0.0)" : "rgba(0, 240, 255, 0.0)");
+
+            const purpleColor = isLight ? "#7C3AED" : "#BD00FF";
+            const purpleGrad = ctx.createLinearGradient(0, 0, 0, height);
+            purpleGrad.addColorStop(0, isLight ? "rgba(124, 58, 237, 0.20)" : "rgba(189, 0, 255, 0.30)");
+            purpleGrad.addColorStop(1, isLight ? "rgba(124, 58, 237, 0.0)" : "rgba(189, 0, 255, 0.0)");
+
+            // 1. Draw Secondary Wave (Purple)
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for (let x = 0; x <= width; x += 3) {
+                const y = height * 0.55 + 
+                          Math.sin(x * 0.018 + step * 1.2) * 16 + 
+                          Math.sin(x * 0.035 - step * 0.8) * 8;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(width, height);
+            ctx.closePath();
+            ctx.fillStyle = purpleGrad;
+            ctx.fill();
+
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += 3) {
+                const y = height * 0.55 + 
+                          Math.sin(x * 0.018 + step * 1.2) * 16 + 
+                          Math.sin(x * 0.035 - step * 0.8) * 8;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = purpleColor;
+            ctx.lineWidth = isLight ? 2 : 2.5;
+            ctx.stroke();
+
+            // 2. Draw Primary Wave (Cyan)
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for (let x = 0; x <= width; x += 3) {
+                const y = height * 0.42 + 
+                          Math.sin(x * 0.022 + step * 1.5) * 20 + 
+                          Math.cos(x * 0.012 + step) * 10;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(width, height);
+            ctx.closePath();
+            ctx.fillStyle = cyanGrad;
+            ctx.fill();
+
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += 3) {
+                const y = height * 0.42 + 
+                          Math.sin(x * 0.022 + step * 1.5) * 20 + 
+                          Math.cos(x * 0.012 + step) * 10;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = cyanColor;
+            ctx.lineWidth = isLight ? 2.2 : 2.8;
+            ctx.stroke();
+
+            requestAnimationFrame(render);
+        };
+
+        render();
+
+        // Speed fluctuation simulation
+        setInterval(() => {
+            const speedEl = document.getElementById("hero-live-speed-num");
+            if (speedEl) {
+                const current = parseFloat(speedEl.textContent) || 112.4;
+                const jitter = (Math.random() * 4.8 - 2.4);
+                const nextSpeed = Math.max(98.5, Math.min(148.2, current + jitter)).toFixed(1);
+                speedEl.textContent = nextSpeed;
+            }
+        }, 800);
+    }
+
+    setupHeroInteractions() {
+        // Tab switching in mockup
+        document.querySelectorAll(".mockup-tabs .tab-item").forEach(tab => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".mockup-tabs .tab-item").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                this.showToast(`Switched view to ${tab.textContent} downloads`, "info");
+            });
+        });
+
+        // Pause/Resume toggles on mockup tasks
+        document.querySelectorAll(".mockup-task-item .btn-sim-toggle").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const item = btn.closest(".mockup-task-item");
+                const taskName = item?.querySelector(".task-name")?.textContent || "Download";
+                const isPaused = btn.classList.toggle("paused");
+                
+                btn.innerHTML = isPaused ? 
+                    '<i data-lucide="play" style="width: 13px; height: 13px;"></i>' : 
+                    '<i data-lucide="pause" style="width: 13px; height: 13px;"></i>';
+                
+                if (window.lucide && typeof window.lucide.createIcons === "function") {
+                    window.lucide.createIcons();
+                }
+
+                const trackFill = item?.querySelector(".task-progress-fill");
+                if (trackFill) {
+                    trackFill.style.opacity = isPaused ? "0.4" : "1";
+                }
+
+                this.showToast(isPaused ? `Paused ${taskName}` : `Resumed ${taskName}`, isPaused ? "info" : "success");
+            });
+        });
     }
 
     // ── 7. URL SNIFFER DEMO ──
